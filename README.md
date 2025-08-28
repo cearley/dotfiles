@@ -1,26 +1,24 @@
 # Dotfiles
 
+[![CI](https://github.com/cearley/dotfiles/workflows/CI/badge.svg)](https://github.com/cearley/dotfiles/actions)
+
 This repository contains my personal dotfiles and configuration for various tools and applications.
 
-# Prerequisites
+## Quick Start
 
-This is how to bootstrap a new macOS machine with chezmoi and my dotfiles.
+Bootstrap a new macOS machine with a single command:
 
-- Git (installed with `xcode-select --install`)
-- Homebrew (installed with `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`)
-- Syncthing (`brew install syncthing`)
-- chezmoi (`brew install chezmoi`)
-- Clone this repo with `chezmoi init` and `chezmoi apply`
+```sh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/chezmoi/remote_install.sh)"
+```
 
-# Corequisites
+This automatically installs all dependencies (Git, Homebrew, chezmoi, KeePassXC, etc.) and applies your dotfiles.
 
-- [1Password](https://1password.com/)
-- [KeepassXC](https://keepassxc.org/)
+**Requirement:** A KeePassXC database file is needed for password management.
 
+## Daily operations
 
-# Daily operations
-
-## Edit your dotfiles
+### Edit your dotfiles
 
 Edit a dotfile with:
 
@@ -59,7 +57,7 @@ sequenceDiagram
     W->>H: chezmoi edit --watch
 ```
 
-## Pull the latest changes from your repo and apply them
+### Pull the latest changes from your repo and apply them
 
 You can pull the changes from your repo and apply them in a single command:
 
@@ -79,7 +77,7 @@ sequenceDiagram
     R->>H: chezmoi update
 ```
 
-## Pull the latest changes from your repo and see what would change, without actually applying the changes
+### Pull the latest changes from your repo and see what would change, without actually applying the changes
 
 Run:
 
@@ -110,7 +108,7 @@ sequenceDiagram
     W->>H: chezmoi apply
 ```
 
-## Automatically commit and push changes to your repo
+### Automatically commit and push changes to your repo
 
 chezmoi can automatically commit and push changes to your source directory to
 your repo. This feature is disabled by default. To enable it, add the following
@@ -162,40 +160,4 @@ sequenceDiagram
     participant R as remote repo
     W->>L: autoCommit
     W->>R: autoPush
-```
-
-## Install chezmoi and your dotfiles on a new machine with a single command
-
-chezmoi's install script can run `chezmoi init` for you by passing extra
-arguments to the newly installed chezmoi binary. If your dotfiles repo is
-`github.com/$GITHUB_USERNAME/dotfiles` then installing chezmoi, running
-`chezmoi init`, and running `chezmoi apply` can be done in a single line of
-shell:
-
-```sh
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply $GITHUB_USERNAME
-```
-
-If your dotfiles repo has a different name to `dotfiles`, or if you host your
-dotfiles on a different service, then see the [reference manual for `chezmoi
-init`](../reference/commands/init.md).
-
-For setting up transitory environments (e.g. short-lived Linux containers) you
-can install chezmoi, install your dotfiles, and then remove all traces of
-chezmoi, including the source directory and chezmoi's configuration directory,
-with a single command:
-
-```sh
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --one-shot $GITHUB_USERNAME
-```
-
-```mermaid
-sequenceDiagram
-    participant H as home directory
-    participant W as working copy
-    participant L as local repo
-    participant R as remote repo
-    R->>W: chezmoi init $GITHUB_USERNAME
-    R->>H: chezmoi init --apply $GITHUB_USERNAME
-    R->>H: chezmoi init --one-shot $GITHUB_USERNAME
 ```
