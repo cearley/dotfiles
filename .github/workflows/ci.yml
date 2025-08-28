@@ -7,10 +7,38 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@main
-      
+
       - name: Run bootstrap
         shell: bash
         run: |
           ./hooks/pre/bootstrap
         env:
           REPO: ${{github.workspace}}
+
+      - name: Verify Xcode Command Line Tools installation
+        shell: bash
+        run: |
+          if ! xcode-select -p >/dev/null 2>&1; then
+            echo "Error: Xcode Command Line Tools are not installed"
+            exit 1
+          fi
+          echo "✅ Xcode Command Line Tools are installed: $(xcode-select -p)"
+          echo "✅ Git is available: $(git --version)"
+
+      - name: Verify brew installation
+        shell: bash
+        run: |
+          if ! command -v brew >/dev/null 2>&1; then
+            echo "Error: Homebrew is not installed"
+            exit 1
+          fi
+          echo "✅ Homebrew is installed: $(brew --version | head -n1)"
+
+      - name: Verify KeePassXC CLI installation
+        shell: bash
+        run: |
+          if ! command -v keepassxc-cli >/dev/null 2>&1; then
+            echo "Error: KeePassXC CLI is not installed"
+            exit 1
+          fi
+          echo "✅ KeePassXC CLI is installed: $(keepassxc-cli --version)"
