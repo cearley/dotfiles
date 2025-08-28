@@ -1,6 +1,6 @@
 # Dotfiles
 
-[![CI](https://github.com/cearley/dotfiles/workflows/CI/badge.svg)](https://github.com/cearley/dotfiles/actions)
+[![CI](https://github.com/cearley/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/cearley/dotfiles/actions)
 
 This repository contains my personal dotfiles and configuration for various tools and applications.
 
