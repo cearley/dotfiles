@@ -36,9 +36,9 @@
     stripComponents = 1
 [".local/share/zsh-llm-suggestions"]
     type = "git-repo"
-    url = "https://github.com/stefanheule/zsh-llm-suggestions.git"
+    url = "https://github.com/cearley/zsh-llm-suggestions.git"
     exact = true
-    refreshPeriod = "168h"
+    refreshPeriod = "1h"
 [".jenv"]
     type = "git-repo"
     url = "https://github.com/jenv/jenv.git"
