@@ -31,9 +31,10 @@
     refreshPeriod = "168h"
 [".oh-my-zsh/custom/themes/powerlevel10k"]
     type = "archive"
-    url = "https://github.com/romkatv/powerlevel10k/archive/refs/tags/v1.20.0.tar.gz"
+    url = "https://github.com/romkatv/powerlevel10k/archive/master.tar.gz"
     exact = true
     stripComponents = 1
+    refreshPeriod = "168h"
 [".local/share/zsh-llm-suggestions"]
     type = "git-repo"
     url = "https://github.com/cearley/zsh-llm-suggestions.git"
@@ -46,7 +47,7 @@
     refreshPeriod = "168h"
 [".nvm"]
     type = "archive"
-    url = "https://github.com/nvm-sh/nvm/archive/refs/tags/v0.40.3.tar.gz"
+    url = "https://github.com/nvm-sh/nvm/archive/master.tar.gz"
     exact = true
     stripComponents = 1
 {{- end }}
