@@ -3,6 +3,7 @@
 
 # Claude
 .claude/
+PROJECT_REVIEW.md
 
 # Syncthing
 .stignore
