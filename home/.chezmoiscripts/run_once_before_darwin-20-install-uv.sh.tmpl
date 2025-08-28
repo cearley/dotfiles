@@ -1,0 +1,26 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+# Exit immediately if uv is already in $PATH
+type uv >/dev/null 2>&1 && exit
+
+# Install uv - Python package manager
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Enable shell autocompletion for bash
+if [ -f ~/.bashrc ] && ! grep -q "uv generate-shell-completion bash" ~/.bashrc; then
+    echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc
+fi
+if [ -f ~/.bashrc ] && ! grep -q "uvx --generate-shell-completion bash" ~/.bashrc; then
+    echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc
+fi
+
+# Enable shell autocompletion for zsh
+if [ -f ~/.zshrc ] && ! grep -q "uv generate-shell-completion zsh" ~/.zshrc; then
+    echo 'eval "$(uv generate-shell-completion zsh)"' >> ~/.zshrc
+fi
+if [ -f ~/.zshrc ] && ! grep -q "uvx --generate-shell-completion zsh" ~/.zshrc; then
+    echo 'eval "$(uvx --generate-shell-completion zsh)"' >> ~/.zshrc
+fi
+
+{{ end -}}

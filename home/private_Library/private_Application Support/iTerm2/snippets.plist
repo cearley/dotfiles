@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>snippets</key>
+	<array>
+		<dict>
+			<key>escaping</key>
+			<integer>2</integer>
+			<key>guid</key>
+			<string>4CE9F137-0FD9-4EC6-BB08-685E1B9C3E60</string>
+			<key>tags</key>
+			<array/>
+			<key>title</key>
+			<string>brew list | xargs -n1 brew desc</string>
+			<key>value</key>
+			<string>brew list | xargs -n1 brew desc</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+	</array>
+</dict>
+</plist>

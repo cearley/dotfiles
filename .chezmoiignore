@@ -1,0 +1,12 @@
+# Mac OS
+.DS_Store
+
+# Claude
+.claude
+
+# JetBrains
+.idea
+
+# Syncthing
+.stfolder
+.stignore

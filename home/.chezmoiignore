@@ -1,0 +1,23 @@
+# Common
+**/cache
+
+## Brewfiles
+mbp-brewfile
+studio-brewfile
+
+# Files compiled with the zcompile builtin
+.oh-my-zsh/**/*.zwc
+
+
+# Files and folders to ignore in the home directory
+.Box_*
+.DS_Store
+.Trash
+.nvm
+Desktop
+Documents
+Downloads
+Movies
+Music
+Pictures
+Public

@@ -1,0 +1,4 @@
+{{- $model := output "sh" "-c" "system_profiler SPHardwareDataType | awk '/Model Name/ {print substr($0, index($0, $3))}'" | trim -}}
+{{- if contains "Mac Studio" $model -}}
+{{ .chezmoi.sourceDir }}/studio-brewfile
+{{- end -}}

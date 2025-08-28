@@ -1,0 +1,16 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+if command -v rustup >/dev/null 2>&1; then
+    echo "Rust is already installed. Updating..."
+    rustup update
+    exit 0
+fi
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+(
+    echo
+    echo 'source "$HOME/.cargo/env"'
+) >>"$HOME"/.zprofile
+
+{{ end -}}

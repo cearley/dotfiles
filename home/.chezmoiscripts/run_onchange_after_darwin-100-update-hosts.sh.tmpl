@@ -1,0 +1,105 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+# Chezmoi script to update /etc/hosts with entries from ~/.hosts-data.json
+# This script runs once before chezmoi applies other changes on macOS
+
+set -e
+
+HOSTS_FILE="/etc/hosts"
+BACKUP_FILE="/etc/hosts.backup.$(date +%Y%m%d_%H%M%S)"
+
+# HOSTS_FILE hash: {{ include (joinPath .chezmoi.homeDir ".hosts-data.json") | sha256sum }}
+
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >&2
+}
+
+
+create_host_entries() {
+    log "Creating host entries from chezmoi template data"
+    
+    # Create a temporary file to store the parsed entries
+    TEMP_ENTRIES=$(mktemp)
+    
+    # Use chezmoi template data to generate host entries
+{{- $hostsData := include (joinPath .chezmoi.homeDir ".hosts-data.json") | fromJson }}
+{{- range $hostsData.hosts }}
+    echo "{{ .address }} {{ .name }}" >> "$TEMP_ENTRIES"
+{{- end }}
+    
+    # Check if we got any entries
+    if [ ! -s "$TEMP_ENTRIES" ]; then
+        log "Warning: No host entries found in chezmoi template data"
+        rm -f "$TEMP_ENTRIES"
+        exit 0
+    fi
+    
+    echo "$TEMP_ENTRIES"
+}
+
+backup_hosts() {
+    log "Creating backup of $HOSTS_FILE to $BACKUP_FILE"
+    sudo cp "$HOSTS_FILE" "$BACKUP_FILE"
+}
+
+update_hosts() {
+    local temp_entries_file="$1"
+    
+    log "Updating $HOSTS_FILE with entries from chezmoi data"
+    
+    TEMP_HOSTS=$(mktemp)
+    
+    # Start with the current hosts file, removing any existing chezmoi-managed entries
+    sudo grep -v "# chezmoi-managed" "$HOSTS_FILE" > "$TEMP_HOSTS" || true
+    
+    # Add a separator comment
+    echo "" >> "$TEMP_HOSTS"
+    echo "# chezmoi-managed entries - do not edit manually" >> "$TEMP_HOSTS"
+    
+    # Add the new entries
+    while IFS= read -r line; do
+        echo "$line # chezmoi-managed" >> "$TEMP_HOSTS"
+    done < "$temp_entries_file"
+    
+    # Replace the original hosts file
+    sudo mv "$TEMP_HOSTS" "$HOSTS_FILE"
+    
+    # Clean up
+    rm -f "$temp_entries_file"
+    
+    log "Successfully updated $HOSTS_FILE"
+}
+
+show_changes() {
+    log "Current chezmoi-managed entries in $HOSTS_FILE:"
+    sudo grep "# chezmoi-managed" "$HOSTS_FILE" | sed 's/# chezmoi-managed//' || log "No chezmoi-managed entries found"
+}
+
+main() {
+    log "Starting hosts file update from chezmoi template data"
+    
+    # Create host entries from template data
+    temp_entries_file=$(create_host_entries)
+    
+    # Ensure temp file exists
+    if [ ! -f "$temp_entries_file" ]; then
+        log "Error: Temporary entries file not found: $temp_entries_file"
+        exit 1
+    fi
+    
+    # Backup the current hosts file
+    backup_hosts
+    
+    # Update the hosts file
+    update_hosts "$temp_entries_file"
+    
+    # Show the changes
+    show_changes
+    
+    log "Hosts file update completed successfully"
+}
+
+main "$@"
+
+{{ end -}}

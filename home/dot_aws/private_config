@@ -1,0 +1,12 @@
+[default]
+region = us-east-1
+output = json
+
+[profile ces]
+region = us-east-1
+output = json
+
+[profile localstack]
+region = us-east-1
+output = json
+

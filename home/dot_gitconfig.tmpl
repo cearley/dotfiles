@@ -1,0 +1,10 @@
+[user]
+	name = {{ .fullname }}
+	email = {{ .gh_email }}
+	signingkey = {{ .chezmoi.homeDir }}/.ssh/id_ed25519.pub
+[credential]
+	helper = osxkeychain
+[gpg]
+	format = ssh
+[core]
+	autocrlf = input

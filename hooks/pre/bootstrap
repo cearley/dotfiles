@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+
+case "$(uname -s)" in
+Darwin)
+    if ! xcode-select -p >/dev/null 2>&1; then
+        echo "Installing Xcode command line tools..."
+        xcode-select --install
+    fi
+
+    SCRIPT_PATH="$(realpath "$BASH_SOURCE")"
+    SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+
+    "${SCRIPT_DIR}"/install-package-manager.sh
+    "${SCRIPT_DIR}"/install-password-manager.sh
+    ;;
+Linux)
+    echo "Bootstrap for Linux is not implemented"
+    exit 1
+    ;;
+*)
+    echo "unsupported OS"
+    exit 1
+    ;;
+esac

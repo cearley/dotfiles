@@ -1,0 +1,13 @@
+export PATH=/usr/local/smlnj/bin:"$PATH"
+# AWS cli for use with LocalStack. (See https://github.com/localstack/awscli-local#alternative.)
+alias awslocal="AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=${DEFAULT_REGION:-$AWS_DEFAULT_REGION} aws --endpoint-url=http://${LOCALSTACK_HOST:-localhost}:4566"
+. "$HOME/.cargo/env"
+
+# Added by LM Studio CLI (lms)
+export PATH="$PATH:$HOME/.cache/lm-studio/bin"
+# End of LM Studio CLI section
+
+
+. "$HOME/.local/bin/env"
+eval "$(uv generate-shell-completion bash)"
+eval "$(uvx --generate-shell-completion bash)"

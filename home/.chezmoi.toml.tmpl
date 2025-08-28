@@ -1,0 +1,43 @@
+{{- $fullname := promptStringOnce . "fullname" "Your full name" -}}
+{{- $gh_email := promptStringOnce . "gh_email" "GitHub email address" -}}
+{{- $gh_username := promptStringOnce . "gh_username" "GitHub user name" -}}
+{{- $keepassxc_db := promptStringOnce . "keepassxc_db" "keepassxc database (e.g., ~/Sync/data2.kdbx)" -}}
+{{- $choices := list "ai" "ml" "mobile" "personal" "school" "work" -}}
+{{- $tags := promptMultichoiceOnce . "tags" "list of tags for this machine (e.g., ai, mobile, work)"
+    $choices (list "work")
+-}}
+
+[data]
+fullname = {{ $fullname | quote }}
+gh_email = {{ $gh_email | quote }}
+gh_username = {{ $gh_username | quote }}
+keepassxc_db = {{ $keepassxc_db | quote }}
+tags = {{ $tags | toToml }}
+
+[scriptEnv]
+GITHUB_USERNAME = {{ $gh_username | quote }}
+
+[keepassxc]
+database = {{ $keepassxc_db | quote }}
+
+[hooks.read-source-state.pre]
+command = ".local/share/chezmoi/hooks/pre/bootstrap"
+
+[hooks.apply.post]
+command = {{ if contains "work" ($tags | toString) -}} ".local/share/chezmoi/hooks/post/test-ssh-github.sh" {{- else -}} "echo" {{- end }}
+
+[edit]
+ command = "code"
+ args = ["--wait"]
+
+[diff]
+exclude = ["scripts"]
+command = "code"
+args = ["--wait", "--diff"]
+
+[merge]
+command = "bash"
+args = [
+    "-c",
+    "cp {{ "{{" }} .Target {{ "}}" }} {{ "{{" }} .Target {{ "}}" }}.base && code --new-window --wait --merge {{ "{{" }} .Destination {{ "}}" }} {{ "{{" }} .Target {{ "}}" }} {{ "{{" }} .Target {{ "}}" }}.base {{ "{{" }} .Source {{ "}}" }}"
+]

@@ -1,0 +1,14 @@
+# Mac OS
+.DS_Store
+
+# Claude
+.claude/
+
+# Syncthing
+.stignore
+.stfolder
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace

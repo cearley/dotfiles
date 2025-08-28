@@ -1,0 +1,18 @@
+{{- if eq .chezmoi.os "IGNOREdarwin" -}}
+#!/bin/bash
+
+# MacOS-specific script to install packages using Homebrew
+# This script is intended to be run after the initial setup of the system.
+
+{{- $model := output "sh" "-c" "system_profiler SPHardwareDataType | awk '/Model Name/ {print substr($0, index($0, $3))}'" | trim -}}
+{{- if contains "MacBook Pro" $model -}}
+brewfile="{{ .chezmoi.sourceDir }}/mbp-brewfile"
+{{- else if contains "Mac Studio" $model -}}
+brewfile="{{ .chezmoi.sourceDir }}/studio-brewfile"
+{{- else -}}
+brewfile=""
+{{- end }}
+
+# Brewfile hash: {{ include (joinPath .chezmoi.sourceDir "mbp-brewfile") | sha256sum }}
+brew bundle -v --no-lock --file=$brewfile
+{{ end -}}

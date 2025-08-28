@@ -1,0 +1,3 @@
+{{- if contains "mac.studio" .chezmoi.fqdnHostname -}}
+{{- keepassxcAttribute "SSH (Mac Studio)" "known_hosts" -}}
+{{- end }}
