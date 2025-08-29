@@ -1,6 +1,8 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
-conda init zsh
+if command -v conda >/dev/null 2>&1; then
+    conda init zsh
+fi
 
 {{ end -}}
