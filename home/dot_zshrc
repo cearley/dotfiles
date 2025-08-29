@@ -172,10 +172,10 @@ alias lc='colorls -lA --sd'
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-# Add custom functions directory to fpath
-if [[ -d "$HOME/.zsh_functions" ]]; then
-  fpath=( "$HOME/.zsh_functions" "${fpath[@]}" )
-  autoload -Uz $HOME/.zsh_functions/*
+# Add zsh-functions to fpath and autoload all functions
+if [[ -d "$HOME/.local/share/zsh-functions" ]]; then
+  fpath=( "$HOME/.local/share/zsh-functions/autoload" "${fpath[@]}" )
+  autoload -Uz "$HOME"/.local/share/zsh-functions/autoload/*
 fi
 
 # Added by LM Studio CLI (lms)
