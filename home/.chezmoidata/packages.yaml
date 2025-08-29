@@ -24,7 +24,7 @@ packages:
     - 'tree'
     casks:
     - 'chronoagent'
-    - 'docker'
+    - 'docker-desktop'
     - 'dotnet-sdk3'
     - 'dotnet-sdk6'
     - 'font-hack-nerd-font'
