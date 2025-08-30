@@ -11,22 +11,43 @@ This is a personal dotfiles repository managed by chezmoi, designed to bootstrap
 - **chezmoi source directory**: `/Users/$USER/.local/share/chezmoi`
 - **Target directory**: User's home directory (`~`)
 - **Machine-specific configurations**: Uses templates and conditionals to handle different Mac models (MacBook Pro vs Mac Studio)
-- **Custom source directory structure**: This repository uses a customized source directory with `home/` as the root (see https://www.chezmoi.io/user-guide/advanced/customize-your-source-directory/). Data files are located at `home/.chezmoidata/` rather than `.chezmoidata/`
+- **Custom source directory structure**: This repository uses a customized source directory with `home/` as the root (see `.chezmoiroot` file). Data files are located at `home/.chezmoidata/` rather than `.chezmoidata/`
 
 ### Key Components
 
 - `home/`: Contains all dotfiles and configuration templates
-- `bootstrap_darwin.sh`: Installs KeePassXC on macOS  
 - `remote_install.sh`: One-command remote installation script
-- `mbp-brewfile` / `studio-brewfile`: Machine-specific Homebrew package lists
+- `hooks/`: Pre and post hooks for chezmoi operations
+- `home/.chezmoiscripts/`: Automated setup scripts with execution ordering
+- `home/.chezmoidata/packages.yaml`: Static package definitions for Homebrew
+- `home/.chezmoitemplates/`: Reusable template snippets
 - Template files (`.tmpl`): Dynamic configuration using chezmoi templating
+
+### Script Execution System
+
+Scripts in `home/.chezmoiscripts/` follow a naming convention that controls execution:
+- `run_once_*`: Execute only once per machine
+- `run_onchange_*`: Execute when script content changes
+- Numbers in filenames (e.g., `-05-`, `-10-`) control execution order
+- Key scripts:
+  - `run_once_before_darwin-05-install-rosetta.sh.tmpl`: Installs Rosetta 2 on Apple Silicon
+  - `run_once_before_darwin-10-install-rust.sh.tmpl`: Installs Rust toolchain
+  - `run_once_before_darwin-20-install-uv.sh.tmpl`: Installs Python package manager
+  - `run_onchange_before_darwin-30-install-packages.sh.tmpl`: Main package installation
+  - `run_onchange_after_darwin-100-update-hosts.sh.tmpl`: Dynamic `/etc/hosts` management
+
+### Hooks System
+
+- `hooks/pre/bootstrap`: Ensures Homebrew and KeePassXC are installed before chezmoi operations
+- `hooks/post/test-ssh-github.sh`: Verifies SSH GitHub connection (runs only with "work" tag)
 
 ### Configuration Structure
 
 - **Shell**: zsh with p10k theme, custom functions in `dot_zfunc/`
 - **Security**: SSH config, AWS credentials (templated), git config (templated)
-- **Package Management**: Homebrew Brewfiles for different machine types
+- **Package Management**: Uses `packages.yaml` data file with brew bundle
 - **Development Tools**: VS Code extensions, various CLI tools, cloud SDKs
+- **External Dependencies**: Managed via `home/.chezmoiexternal.toml` (Oh My Zsh, plugins, jenv, nvm)
 
 ## Common Commands
 
@@ -57,22 +78,42 @@ chezmoi apply
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/chezmoi/remote_install.sh)"
 ```
 
-### Package Management
+### Template Testing and Debugging
 ```bash
-# Install packages based on machine type
-brew bundle --file="$brewfile"
+# Test template execution
+chezmoi execute-template < filename.tmpl
+
+# Debug template scripts
+cat {name-of-template-script}.tmpl | chezmoi execute-template
 ```
 
 ## Templates and Variables
 
-The repository uses chezmoi's templating system to handle:
-- Machine-specific configurations (MacBook Pro vs Mac Studio)
-- Secret management (AWS credentials, SSH keys, etc.)
-- Dynamic configuration based on system detection
+The repository uses chezmoi's templating system extensively:
 
-Template files use `.tmpl` extension and leverage Go templating syntax with chezmoi functions.
+### Machine Detection
+- Uses `system_profiler` output to detect Mac model (MacBook Pro vs Mac Studio)
+- Templates conditionally apply configurations based on `.chezmoi.fqdnHostname`
 
-**Important**: Files in `.chezmoidata` directories cannot be templates because they must be present prior to the start of the template engine (see https://www.chezmoi.io/reference/special-directories/chezmoidata/). Data files must be static JSON/YAML/TOML files.
+### Secret Management
+- Integrates with KeePassXC via `keepassxcAttribute` template function
+- No secrets stored in repository - all fetched at apply time
+- Reusable template `ssh_secret` constructs machine-specific KeePassXC entries
+
+### User Configuration
+- `home/.chezmoi.toml.tmpl` prompts for user data on first run
+- Uses `promptStringOnce` and `promptMultichoiceOnce` for setup
+- Data stored in `.chezmoi.data.json` for template reuse
+
+**Important**: Files in `.chezmoidata` directories cannot be templates because they must be present prior to the start of the template engine. Data files must be static JSON/YAML/TOML files.
+
+## File Naming Conventions
+
+- `private_` prefix: Sensitive or machine-specific files
+- `.tmpl` suffix: Template files processed by chezmoi
+- `dot_` prefix: Creates dotfiles (hidden files starting with `.`)
+- `run_once_` / `run_onchange_`: Script execution frequency
+- Numbers in script names: Execution order (`-05-`, `-10-`, etc.)
 
 ## Documentation References
 
@@ -88,18 +129,9 @@ Use the WebFetch tool to access these docs when encountering unfamiliar chezmoi 
 ## Security Considerations
 
 - Private files are prefixed with `private_`
-- Sensitive data (credentials, keys) use templating for secure injection
+- Sensitive data (credentials, keys) use templating for secure injection via KeePassXC
 - SSH configuration includes host-specific settings
 - Git configuration templates allow for different identities per machine
-- Any scripts should be installed to @home/.chezmoiscripts/
-- Templates (files with .tmpl suffix) can be tested and debugged with `chezmoi execute-template`. (See https://www.chezmoi.io/user-guide/templating/#testing-templates)
-- When troubleshooting or testing template scripts, use the command `cat {name-of-template-script}.tmpl | chezmoi execute-template` and examine the output. The output will produce the actual resolved script that is executed during `chezmoi apply`. Always use this approach to test run scripts.
-
-## Chezmoi Source and Target Locations
-
-- All chezmoi managed dot files, data, scripts, templates, etc. are always placed at the root of the chezmoi codebase, unless a subfolder is specified as the root in @.chezmoiroot
-
-## Development Notes
-
-- **Script Locations**: 
-  - run scripts are always placed in .chezmoiscripts/ located in the root folder
+- Scripts should be installed to `home/.chezmoiscripts/`
+- Templates (files with .tmpl suffix) can be tested and debugged with `chezmoi execute-template`
+- Machine-specific SSH keys use reusable template pattern with hardware serial numbers
