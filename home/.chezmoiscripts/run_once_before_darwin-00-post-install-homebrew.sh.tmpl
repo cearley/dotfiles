@@ -1,13 +1,14 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+echo "Skipping Homebrew post-install setup: script is disabled for now"
 exit 0 # The following is diabled for now.
 
 # On macOS Sequoia, installing some packages via Homebrew causes the error: 'Permission denied @rb_sysopen'.
 # To mitigate, the following section sets the correct permissions on the LaunchAgents directory.
 
 if [[ "$(sw_vers --productVersion)" < "15" ]]; then
-    # No need to set permissions on versions earlier than 15.0.
+    echo "Skipping LaunchAgents permissions fix: macOS version is earlier than 15.0"
     exit 0
 fi
 

@@ -3,6 +3,8 @@
 
 if command -v conda >/dev/null 2>&1; then
     conda init zsh
+else
+    echo "Skipping conda initialization: conda command not found"
 fi
 
 {{ end -}}

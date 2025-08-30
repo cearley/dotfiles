@@ -93,4 +93,13 @@ Use the WebFetch tool to access these docs when encountering unfamiliar chezmoi 
 - Git configuration templates allow for different identities per machine
 - Any scripts should be installed to @home/.chezmoiscripts/
 - Templates (files with .tmpl suffix) can be tested and debugged with `chezmoi execute-template`. (See https://www.chezmoi.io/user-guide/templating/#testing-templates)
-- When troubleshooting template scripts, use the command `cat {name-of-template-script}.tmpl | chezmoi execute-template` and examine the output. The output will produce the actual resolved script that is executed during `chezmoi apply`.
+- When troubleshooting or testing template scripts, use the command `cat {name-of-template-script}.tmpl | chezmoi execute-template` and examine the output. The output will produce the actual resolved script that is executed during `chezmoi apply`. Always use this approach to test run scripts.
+
+## Chezmoi Source and Target Locations
+
+- All chezmoi managed dot files, data, scripts, templates, etc. are always placed at the root of the chezmoi codebase, unless a subfolder is specified as the root in @.chezmoiroot
+
+## Development Notes
+
+- **Script Locations**: 
+  - run scripts are always placed in .chezmoiscripts/ located in the root folder
