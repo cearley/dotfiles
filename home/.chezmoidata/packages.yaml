@@ -12,6 +12,7 @@ packages:
     - 'gh'
     - 'git'
     - 'git-gui'
+    - 'go'
     - 'jq'
     - 'localstack-cli'
     - 'mas'

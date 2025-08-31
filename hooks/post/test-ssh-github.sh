@@ -1,36 +1,240 @@
 #!/bin/sh
 
-echo "Running post-apply hook: test-ssh-github.sh..."
+# SSH GitHub connectivity test for chezmoi post-apply hook
+# Only runs when "work" tag is present
+set -e
+set -u
+
+# Constants
+readonly SCRIPT_NAME="test-ssh-github.sh"
+readonly GITHUB_SSH_HOST="git@github.com"
+readonly SSH_SUCCESS_EXIT_CODE=1  # GitHub returns 1 on successful auth without shell access
+readonly SSH_TIMEOUT=10
+readonly SSH_CONNECT_TIMEOUT=5
+
+# Utility functions
+print_message() {
+    local level="$1"
+    local message="$2"
+    case "$level" in
+        "info") echo "[INFO] $message" ;;
+        "success") echo "[SUCCESS] $message" ;;
+        "warning") echo "[WARNING] $message" ;;
+        "error") echo "[ERROR] $message" ;;
+        "skip") echo "[SKIP] $message" ;;
+    esac
+}
+
+# Check if common SSH key files exist
+check_ssh_keys() {
+    if [ ! -d "$HOME/.ssh" ]; then
+        return 1
+    fi
+    
+    # Check for common SSH key types (private keys only)
+    for key_type in ed25519 rsa ecdsa dsa; do
+        key_path="$HOME/.ssh/id_${key_type}"
+        if [ -f "$key_path" ]; then
+            # Verify it's a private key (not a .pub file)
+            if [ "$(basename "$key_path")" = "$(basename "$key_path" .pub)" ]; then
+                return 0
+            fi
+        fi
+    done
+    return 1
+}
+
+# Check SSH key file permissions
+check_ssh_key_permissions() {
+    local has_permission_issues=0
+    
+    for key in "$HOME/.ssh"/id_*; do
+        # Skip if file doesn't exist or is a .pub file
+        if [ ! -f "$key" ] || [ "$key" != "${key%.pub}" ]; then
+            continue
+        fi
+        
+        # Check permissions (works on both macOS and Linux)
+        if command -v stat >/dev/null 2>&1; then
+            # Try macOS format first, fall back to Linux
+            perms=$(stat -f "%Lp" "$key" 2>/dev/null || stat -c "%a" "$key" 2>/dev/null || echo "unknown")
+            if [ "$perms" != "600" ] && [ "$perms" != "unknown" ]; then
+                print_message "warning" "SSH key $key has permissions $perms (should be 600)"
+                echo "  Fix with: chmod 600 '$key'"
+                has_permission_issues=1
+            fi
+        fi
+    done
+    
+    return $has_permission_issues
+}
+
+# Check if SSH agent is running and has keys loaded
+check_ssh_agent() {
+    if [ -z "${SSH_AUTH_SOCK:-}" ]; then
+        print_message "warning" "SSH agent not detected"
+        echo "  Start with: eval \"\$(ssh-agent -s)\""
+        echo "  Add key with: ssh-add ~/.ssh/id_ed25519"
+        return 1
+    fi
+    
+    # Check if any keys are loaded
+    if ! ssh-add -l >/dev/null 2>&1; then
+        print_message "warning" "No SSH keys loaded in agent"
+        echo "  Add key with: ssh-add ~/.ssh/id_ed25519"
+        return 1
+    fi
+    
+    return 0
+}
+
+# Print helpful error messages for permission denied
+print_permission_denied_help() {
+    local output="$1"
+    print_message "error" "SSH connection failed: Permission denied"
+    echo
+    echo "Common solutions (try in order):"
+    echo
+    echo "1. Add your SSH key to GitHub:"
+    echo "   • Copy your public key:"
+    echo "     pbcopy < ~/.ssh/id_ed25519.pub"
+    echo "   • Add it at: https://github.com/settings/ssh/new"
+    echo
+    echo "2. Start SSH agent and add your key:"
+    echo "   • eval \"\$(ssh-agent -s)\""
+    echo "   • ssh-add ~/.ssh/id_ed25519"
+    echo
+    echo "3. Check SSH key permissions:"
+    echo "   • chmod 600 ~/.ssh/id_ed25519"
+    echo "   • chmod 644 ~/.ssh/id_ed25519.pub"
+    echo
+    echo "4. Test SSH key format:"
+    echo "   • ssh-keygen -l -f ~/.ssh/id_ed25519"
+    echo
+    echo "📚 Troubleshooting guide:"
+    echo "   https://docs.github.com/en/authentication/troubleshooting-ssh/error-permission-denied-publickey"
+    echo
+    echo "Full SSH output:"
+    echo "$output"
+}
+
+# Print helpful error messages for network issues
+print_network_error_help() {
+    local output="$1"
+    print_message "error" "SSH connection failed: Network issue"
+    echo
+    echo "Possible causes:"
+    echo "• No internet connection"
+    echo "• DNS resolution issues"
+    echo "• Corporate firewall blocking SSH (port 22)"
+    echo "• VPN interfering with connections"
+    echo
+    echo "Try these steps:"
+    echo "1. Check internet: ping -c 3 github.com"
+    echo "2. Check DNS: nslookup github.com"
+    echo "3. Try HTTPS instead of SSH for git operations"
+    echo
+    echo "Full SSH output:"
+    echo "$output"
+}
+
+# Print error message for unknown issues
+print_unknown_error_help() {
+    local output="$1"
+    print_message "error" "SSH connection failed with unexpected error"
+    echo
+    echo "This might be a temporary issue. Try:"
+    echo "• Waiting a few minutes and running again"
+    echo "• Checking GitHub status: https://www.githubstatus.com/"
+    echo "• Running the test manually: ssh -T git@github.com"
+    echo
+    echo "Full SSH output:"
+    echo "$output"
+}
+
+# Analyze SSH output and provide appropriate feedback
+analyze_ssh_output() {
+    local output="$1"
+    local exit_code="$2"
+    
+    # GitHub returns exit code 1 for successful authentication (no shell access)
+    if [ $exit_code -eq $SSH_SUCCESS_EXIT_CODE ] && echo "$output" | grep -q "successfully authenticated"; then
+        print_message "success" "SSH connection to GitHub successful!"
+        echo "$output"
+        return 0
+    fi
+    
+    # Check for specific error patterns
+    if echo "$output" | grep -q "Permission denied"; then
+        print_permission_denied_help "$output"
+    elif echo "$output" | grep -q "Could not resolve hostname\|Name or service not known"; then
+        print_network_error_help "$output"
+    elif echo "$output" | grep -q "Connection timed out\|Connection refused"; then
+        print_network_error_help "$output"
+    else
+        print_unknown_error_help "$output"
+    fi
+    
+    return 1
+}
 
 # Test SSH connection to GitHub
-ssh_output=$(ssh -T git@github.com 2>&1)
-ssh_exit_code=$?
+test_ssh_connection() {
+    print_message "info" "Testing SSH connection to GitHub..."
+    
+    # Use timeout and connection timeout for better error handling
+    local ssh_cmd="ssh -T -o ConnectTimeout=$SSH_CONNECT_TIMEOUT -o BatchMode=yes $GITHUB_SSH_HOST"
+    
+    # Check if timeout command is available
+    if command -v timeout >/dev/null 2>&1; then
+        ssh_output=$(timeout "$SSH_TIMEOUT" $ssh_cmd 2>&1)
+    elif command -v gtimeout >/dev/null 2>&1; then  # macOS with coreutils
+        ssh_output=$(gtimeout "$SSH_TIMEOUT" $ssh_cmd 2>&1)
+    else
+        # Fallback without timeout
+        print_message "warning" "timeout command not available, SSH may hang"
+        ssh_output=$($ssh_cmd 2>&1)
+    fi
+    
+    ssh_exit_code=$?
+    
+    # Handle timeout specifically
+    if [ $ssh_exit_code -eq 124 ] || [ $ssh_exit_code -eq 142 ]; then
+        print_message "error" "SSH connection timed out after ${SSH_TIMEOUT}s"
+        echo "This usually indicates network connectivity issues."
+        return 1
+    fi
+    
+    analyze_ssh_output "$ssh_output" $ssh_exit_code
+}
 
-if [ $ssh_exit_code -eq 1 ] && echo "$ssh_output" | grep -q "successfully authenticated"; then
-    echo "✅ SSH connection to GitHub successful!"
-    echo "$ssh_output"
-    exit 0
-elif echo "$ssh_output" | grep -q "Permission denied"; then
-    echo "❌ SSH connection failed: Permission denied"
-    echo "This usually means:"
-    echo "  - SSH key is not added to your GitHub account"
-    echo "  - SSH key is not loaded in your SSH agent"
-    echo "  - SSH key file permissions are incorrect"
-    echo ""
-    echo "See: https://docs.github.com/en/authentication/troubleshooting-ssh/error-permission-denied-publickey"
-    echo ""
-    echo "Full output:"
-    echo "$ssh_output"
-    exit 1
-elif echo "$ssh_output" | grep -q "Could not resolve hostname"; then
-    echo "❌ SSH connection failed: Network issue"
-    echo "Check your internet connection"
-    echo "Full output:"
-    echo "$ssh_output"
-    exit 1
-else
-    echo "❌ SSH connection failed with unexpected error"
-    echo "Full output:"
-    echo "$ssh_output"
-    exit 1
-fi
+# Main function
+main() {
+    print_message "info" "Running post-apply hook: $SCRIPT_NAME"
+    
+    # Check for SSH keys first
+    if ! check_ssh_keys; then
+        print_message "skip" "No SSH keys found in ~/.ssh folder"
+        echo
+        echo "Generate SSH keys first:"
+        echo "  ssh-keygen -t ed25519 -C \"your_email@example.com\""
+        echo "  ssh-keygen -t rsa -b 4096 -C \"your_email@example.com\"  # if ed25519 not supported"
+        exit 0
+    fi
+    
+    # Check SSH key permissions (non-fatal)
+    check_ssh_key_permissions || true
+    
+    # Check SSH agent (non-fatal)
+    check_ssh_agent || true
+    
+    # Perform the actual SSH test
+    if test_ssh_connection; then
+        exit 0
+    else
+        exit 1
+    fi
+}
+
+# Run main function with all arguments
+main "$@"
