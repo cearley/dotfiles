@@ -25,16 +25,61 @@ This is a personal dotfiles repository managed by chezmoi, designed to bootstrap
 
 ### Script Execution System
 
-Scripts in `home/.chezmoiscripts/` follow a naming convention that controls execution:
-- `run_once_*`: Execute only once per machine
-- `run_onchange_*`: Execute when script content changes
-- Numbers in filenames (e.g., `-05-`, `-10-`) control execution order
-- Key scripts:
-  - `run_once_before_darwin-05-install-rosetta.sh.tmpl`: Installs Rosetta 2 on Apple Silicon
-  - `run_once_before_darwin-10-install-rust.sh.tmpl`: Installs Rust toolchain
-  - `run_once_before_darwin-20-install-uv.sh.tmpl`: Installs Python package manager
-  - `run_onchange_before_darwin-30-install-packages.sh.tmpl`: Main package installation
-  - `run_onchange_after_darwin-100-update-hosts.sh.tmpl`: Dynamic `/etc/hosts` management
+Scripts in `home/.chezmoiscripts/` follow a structured naming convention that controls execution:
+
+#### Naming Pattern: `{frequency}_{timing}_{os}-{order}-{description}.sh.tmpl`
+
+**Frequency Control:**
+- `run_once_*`: Execute only once per machine (initialization tasks)
+- `run_onchange_*`: Re-execute when script content changes (maintenance tasks)
+
+**Execution Timing:**
+- `before`: Run before chezmoi applies dotfiles
+- `after`: Run after chezmoi applies dotfiles
+
+**Platform Targeting:**
+- `darwin`: macOS-specific scripts
+
+**Execution Order (5-point spacing):**
+Scripts use consistent 5-point numbering for logical grouping and future expandability:
+
+- **System Foundation (00-09):**
+  - `00` - Install Homebrew (foundation)
+  - `05` - Install Rosetta 2 (Apple Silicon compatibility)
+
+- **Development Toolchains (10-19):**
+  - `10` - Install Rust (development toolchain)
+  - `15` - Install uv (Python package manager)
+
+- **Package Management (20-29):**
+  - `20` - Brew bundle install (package definitions)
+  - `25` - Install additional packages (custom packages)
+
+- **Environment Setup (40-59):**
+  - `50` - Initialize conda (Python environment setup)
+
+- **System Configuration (90-99):**
+  - `90` - Update hosts (system-level modifications)
+
+**Platform-Specific Scripts:**
+All darwin-targeted scripts must be wrapped in conditional templates:
+```go-template
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+# script content here
+{{ end -}}
+```
+
+**Current Script Inventory:**
+- `run_once_before_darwin-00-install-homebrew.sh.tmpl`: Homebrew installation
+- `run_once_before_darwin-05-install-rosetta.sh.tmpl`: Rosetta 2 for Apple Silicon
+- `run_once_before_darwin-10-install-rust.sh.tmpl`: Rust toolchain
+- `run_once_before_darwin-15-install-uv.sh.tmpl`: Python package manager uv
+- `run_onchange_before_darwin-20-brew-bundle-install.sh.tmpl`: Homebrew package definitions
+- `run_onchange_before_darwin-25-install-additional-packages.sh.tmpl`: Custom package installation
+- `run_once_after_darwin-50-initialize-conda.sh.tmpl`: Conda environment setup
+- `run_onchange_after_darwin-90-update-hosts.sh.tmpl`: Dynamic `/etc/hosts` management
+- `run_onchange_after_darwin-95-restart-syncthing.sh.tmpl`: Syncthing service management
 
 ### Hooks System
 
@@ -113,7 +158,8 @@ The repository uses chezmoi's templating system extensively:
 - `.tmpl` suffix: Template files processed by chezmoi
 - `dot_` prefix: Creates dotfiles (hidden files starting with `.`)
 - `run_once_` / `run_onchange_`: Script execution frequency
-- Numbers in script names: Execution order (`-05-`, `-10-`, etc.)
+- Numbers in script names: Execution order with 5-point spacing (see Script Execution System above)
+- Platform targeting: Scripts targeting specific platforms (e.g., `darwin`) must use conditional templates
 
 ## Documentation References
 
@@ -133,5 +179,7 @@ Use the WebFetch tool to access these docs when encountering unfamiliar chezmoi 
 - SSH configuration includes host-specific settings
 - Git configuration templates allow for different identities per machine
 - Scripts should be installed to `home/.chezmoiscripts/`
+- Platform-specific scripts must be wrapped in conditional templates (e.g., `{{- if eq .chezmoi.os "darwin" -}}`)
 - Templates (files with .tmpl suffix) can be tested and debugged with `chezmoi execute-template`
 - Machine-specific SSH keys use reusable template pattern with hardware serial numbers
+- Whenever a script targets a platform, such as darwin, then its contents should be enclosed within a conditional template, e.g., {{- if eq .chezmoi.os "darwin" -}} ... content of script ... {{ end -}}

@@ -1,0 +1,29 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+# syncthing version: {{ output "syncthing" "--version" }}
+
+echo "Restarting syncthing service..."
+
+# Check if syncthing is installed
+if ! command -v syncthing >/dev/null 2>&1; then
+    echo "⚠️  syncthing is not installed - skipping restart"
+    exit 0
+fi
+
+# Check if syncthing service is loaded in brew services
+if brew services list | grep -q "syncthing"; then
+    echo "🔄 Restarting syncthing service..."
+    brew services restart syncthing
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ syncthing service restarted successfully"
+    else
+        echo "❌ Failed to restart syncthing service"
+        exit 1
+    fi
+else
+    echo "⚠️  syncthing service not found in brew services - skipping restart"
+    exit 0
+fi
+{{ end -}}
