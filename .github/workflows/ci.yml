@@ -54,13 +54,9 @@ jobs:
           # Test the remote install script as a user would on a new macOS machine
           # This simulates running: sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/remote_install.sh)"
           
-          ls -al 
-          
-          # Since we're in CI, we'll run the script directly from the repo instead of downloading it
-          chmod +x ./remote_install.sh
-          
-          # Run the script with timeout to prevent hanging
-          timeout 300s ./remote_install.sh || {
+          # Run the script with timeout to prevent hanging (using gtimeout from coreutils)
+          brew install coreutils
+          gtimeout 300s ./remote_install.sh || {
             exit_code=$?
             if [ $exit_code -eq 124 ]; then
               echo "❌ Remote install script timed out after 5 minutes"
