@@ -55,11 +55,14 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
   - `20` - Brew bundle install (package definitions)
   - `25` - Install additional packages (custom packages)
 
-- **Environment Setup (40-59):**
+- **Environment Setup (30-59):**
+  - `35` - Install nvm (Node Version Manager)
   - `50` - Initialize conda (Python environment setup)
 
-- **System Configuration (90-99):**
+- **System Configuration (80-99):**
+  - `85` - Configure system defaults (macOS preferences)
   - `90` - Update hosts (system-level modifications)
+  - `95` - Restart services (service management)
 
 **Platform-Specific Scripts:**
 All darwin-targeted scripts must be wrapped in conditional templates:
@@ -77,7 +80,9 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 - `run_once_before_darwin-15-install-uv.sh.tmpl`: Python package manager uv
 - `run_onchange_before_darwin-20-brew-bundle-install.sh.tmpl`: Homebrew package definitions
 - `run_onchange_before_darwin-25-install-additional-packages.sh.tmpl`: Custom package installation
+- `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager (work tag only)
 - `run_once_after_darwin-50-initialize-conda.sh.tmpl`: Conda environment setup
+- `run_once_after_darwin-85-configure-system-defaults.sh.tmpl`: macOS system preferences and iTerm2 settings
 - `run_onchange_after_darwin-90-update-hosts.sh.tmpl`: Dynamic `/etc/hosts` management
 - `run_onchange_after_darwin-95-restart-syncthing.sh.tmpl`: Syncthing service management
 
@@ -92,6 +97,7 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 - **Security**: SSH config, AWS credentials (templated), git config (templated)
 - **Package Management**: Uses `packages.yaml` data file with brew bundle
 - **Development Tools**: VS Code extensions, various CLI tools, cloud SDKs
+- **System Defaults**: macOS preferences and application settings via `defaults` commands
 - **External Dependencies**: Managed via `home/.chezmoiexternal.toml` (Oh My Zsh, plugins, jenv, nvm)
 
 ## Common Commands
@@ -182,4 +188,3 @@ Use the WebFetch tool to access these docs when encountering unfamiliar chezmoi 
 - Platform-specific scripts must be wrapped in conditional templates (e.g., `{{- if eq .chezmoi.os "darwin" -}}`)
 - Templates (files with .tmpl suffix) can be tested and debugged with `chezmoi execute-template`
 - Machine-specific SSH keys use reusable template pattern with hardware serial numbers
-- Whenever a script targets a platform, such as darwin, then its contents should be enclosed within a conditional template, e.g., {{- if eq .chezmoi.os "darwin" -}} ... content of script ... {{ end -}}

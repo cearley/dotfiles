@@ -2,9 +2,11 @@
 
 case "$(uname -s)" in
 Darwin)
-    if ! xcode-select -p >/dev/null 2>&1; then
-        echo "Installing Xcode command line tools..."
-        xcode-select --install
+    if ! command -v git >/dev/null 2>&1 || ! command -v clang >/dev/null 2>&1; then
+        echo "❌ Xcode Command Line Tools not found"
+        echo "📋 Please install manually: xcode-select --install"
+        echo "🔄 Then re-run this script"
+        exit 1
     fi
 
     SCRIPT_PATH="$(realpath "$BASH_SOURCE")"

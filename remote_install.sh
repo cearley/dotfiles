@@ -3,8 +3,13 @@
 # Install remotely from single shell command
 # Usage : sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/chezmoi/remote_install.sh)"
 
-# Install Xcode Command Line Tools to ensure `git` is available.
-xcode-select --install || echo "Xcode command line tools already installed"
+# Check for Xcode Command Line Tools to ensure `git` is available.
+if ! command -v git >/dev/null 2>&1 || ! command -v clang >/dev/null 2>&1; then
+    echo "❌ Xcode Command Line Tools not found"
+    echo "📋 Please install manually: xcode-select --install"
+    echo "🔄 Then re-run this script"
+    exit 1
+fi
 
 set -e # -e: exit on error
 
