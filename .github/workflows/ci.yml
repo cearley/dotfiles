@@ -54,6 +54,8 @@ jobs:
           # Test the remote install script as a user would on a new macOS machine
           # This simulates running: sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/remote_install.sh)"
           
+          ls -al 
+          
           # Since we're in CI, we'll run the script directly from the repo instead of downloading it
           chmod +x ./remote_install.sh
           
