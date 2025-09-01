@@ -1,0 +1,27 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+echo "Configuring system defaults..."
+
+# iTerm2: Enable 'Close windows when quitting an application'
+defaults write com.googlecode.iterm2 NSQuitAlwaysKeepsWindows -bool true
+
+# iTerm2: Disable 'Clicking on a command selects it to restrict Find and Filter'
+defaults write com.googlecode.iterm2 ClickToSelectCommand -bool false
+
+# iTerm2: Load settings from custom folder
+defaults write com.googlecode.iterm2 PrefsCustomFolder -string "~/.dotfiles/iTerm/settings"
+defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool true
+
+# iTerm2: Save changes when quitting
+defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile -bool true
+defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile_selection -int 2
+
+# iTerm2: Set default profile font to MesloLGSNF size 13
+defaults write com.googlecode.iterm2 "New Bookmarks" -array-add '{
+    "Normal Font" = "MesloLGSNF-Regular 13";
+    "Name" = "Default";
+}'
+
+echo "✅ System defaults configured successfully"
+{{ end -}}
