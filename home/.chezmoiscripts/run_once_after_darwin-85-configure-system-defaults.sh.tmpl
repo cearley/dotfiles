@@ -18,10 +18,7 @@ defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile -b
 defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile_selection -int 2
 
 # iTerm2: Set default profile font to MesloLGSNF size 13
-defaults write com.googlecode.iterm2 "New Bookmarks" -array-add '{
-    "Normal Font" = "MesloLGSNF-Regular 13";
-    "Name" = "Default";
-}'
+/usr/libexec/PlistBuddy -c "Set 'New Bookmarks':0:'Normal Font' 'MesloLGSNF-Regular 13'" ~/Library/Preferences/com.googlecode.iterm2.plist 2>/dev/null || true
 
 echo "✅ System defaults configured successfully"
 {{ end -}}
