@@ -14,7 +14,7 @@ This repository contains my personal dotfiles and configuration for various tool
 Bootstrap a new macOS machine with a single command:
 
 ```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/chezmoi/remote_install.sh)"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/remote_install.sh)"
 ```
 
 This automatically installs all dependencies (Git, Homebrew, chezmoi, KeePassXC, etc.) and applies your dotfiles.

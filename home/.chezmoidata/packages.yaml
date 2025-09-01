@@ -14,7 +14,7 @@ packages:
     - 'git-gui'
     - 'go'
     - 'jq'
-    - 'localstack-cli'
+    - 'localstack'
     - 'mas'
     - 'neovim'
     - 'openssl@3'
