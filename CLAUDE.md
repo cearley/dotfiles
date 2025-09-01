@@ -144,7 +144,7 @@ The repository uses chezmoi's templating system extensively:
 
 ### Machine Detection
 - Uses `system_profiler` output to detect Mac model (MacBook Pro vs Mac Studio)
-- Templates conditionally apply configurations based on `.chezmoi.fqdnHostname`
+- Templates conditionally apply configurations based on `scutil --get ComputerName`
 
 ### Secret Management
 - Integrates with KeePassXC via `keepassxcAttribute` template function

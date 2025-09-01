@@ -1,5 +1,6 @@
-{{- if contains "mac.studio" .chezmoi.fqdnHostname -}}
+{{ $computerName := output "scutil" "--get" "ComputerName" | trim }}
+{{- if contains "Mac Studio" $computerName -}}
 {{- keepassxcAttribute "SSH (Mac Studio)" "id_ed25519" -}}
-{{ else if contains "macbook" .chezmoi.fqdnHostname -}}
+{{ else if contains "MacBook" $computerName -}}
 {{- keepassxcAttribute "SSH (MacBook Pro)" "id_ed25519" -}}
 {{- end }}
