@@ -1,0 +1,33 @@
+{{- if and (eq .chezmoi.os "darwin") (has "work" .tags) -}}
+#!/bin/bash
+
+echo "Installing nvm (Node Version Manager)..."
+
+# Check if nvm is already installed
+if [ -d "$HOME/.nvm" ] || command -v nvm >/dev/null 2>&1; then
+    echo "✅ nvm is already installed - skipping"
+    exit 0
+fi
+
+# Get the latest nvm version from GitHub API
+NVM_VERSION=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep '"tag_name"' | cut -d '"' -f 4)
+
+if [ -z "$NVM_VERSION" ]; then
+    echo "❌ Failed to fetch latest nvm version"
+    exit 1
+fi
+
+echo "📦 Installing nvm $NVM_VERSION..."
+
+# Install nvm using the official installation script
+curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/$NVM_VERSION/install.sh" | bash
+
+# Verify installation
+if [ -d "$HOME/.nvm" ]; then
+    echo "✅ nvm installed successfully"
+    echo "📝 Note: You may need to restart your terminal or run 'source ~/.zshrc' to use nvm"
+else
+    echo "❌ nvm installation failed"
+    exit 1
+fi
+{{ end -}}

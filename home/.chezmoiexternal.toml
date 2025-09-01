@@ -1,5 +1,4 @@
 {{- if eq .chezmoi.os "darwin" }}
-{{- $nvmLatestTag := output "curl" "-s" "https://api.github.com/repos/nvm-sh/nvm/releases/latest" | fromJson | .tag_name -}}
 [".oh-my-zsh"]
     type = "archive"
     url = "https://github.com/ohmyzsh/ohmyzsh/archive/master.tar.gz"
@@ -51,9 +50,4 @@
     url = "https://github.com/jenv/jenv.git"
     exact = true
     refreshPeriod = "168h"
-[".nvm"]
-    type = "archive"
-    url = "https://github.com/nvm-sh/nvm/archive/{{- $nvmLatestTag -}}.tar.gz"
-    exact = true
-    stripComponents = 1
 {{- end }}
