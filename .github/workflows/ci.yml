@@ -54,9 +54,23 @@ jobs:
           # Test the remote install script as a user would on a new macOS machine
           # This simulates running: sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/remote_install.sh)"
           
+          # Create minimal chezmoi data file to prevent prompting
+          mkdir -p "$HOME/.config/chezmoi"
+          cat > "$HOME/.config/chezmoi/chezmoi.toml" << 'EOF'
+          [data]
+              fullname = "CI Test"
+              gh_email = "ci@example.com"
+              gh_username = "cearley"
+              keepassxc_db = "~/.local/share/chezmoi/keepassxc.kdbx"
+              tags = [
+                  "macos",
+                  "work"
+              ]
+          EOF
+          
           # Run the script with timeout to prevent hanging (using gtimeout from coreutils)
           brew install coreutils
-          gtimeout 300s ./remote_install.sh || {
+          gtimeout 300s ./remote_install.sh init || {
             exit_code=$?
             if [ $exit_code -eq 124 ]; then
               echo "❌ Remote install script timed out after 5 minutes"
