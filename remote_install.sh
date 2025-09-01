@@ -28,5 +28,10 @@ else
   chezmoi=chezmoi
 fi
 
-# exec: replace current process with chezmoi init
-exec "$chezmoi" init --apply cearley --keep-going
+# exec: replace current process with chezmoi with all provided arguments
+# If no arguments provided, default to init --apply cearley --keep-going
+if [ $# -eq 0 ]; then
+  exec "$chezmoi" init --apply cearley --keep-going
+else
+  exec "$chezmoi" "$@"
+fi

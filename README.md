@@ -17,6 +17,12 @@ Bootstrap a new macOS machine with a single command:
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/remote_install.sh)"
 ```
 
+You can also pass arguments to chezmoi by appending them:
+
+```sh
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/remote_install.sh)" -- init --apply $GITHUB_USERNAME --keep-going --verbose
+```
+
 This automatically installs all dependencies (Git, Homebrew, chezmoi, KeePassXC, etc.) and applies your dotfiles.
 
 **Requirement:** A KeePassXC database file is needed for password management.
