@@ -1,0 +1,94 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+echo "Setting up ChronoSync symbolic links...."
+
+# Check if ChronoSync app is installed
+if [ ! -d "/Applications/ChronoSync.app" ]; then
+    echo "⏭️  Skipping ChronoSync setup: ChronoSync app not found"
+    exit 0
+fi
+
+# Define required directories
+APP_SUPPORT_TASKS="$HOME/Library/Application Support/ChronoSync/Tasks"
+APP_SUPPORT_TEMPLATES="$HOME/Library/Application Support/ChronoSync/Templates"
+DOCUMENTS_TASKS="$HOME/Documents/ChronoSync/Tasks"
+DOCUMENTS_TEMPLATES="$HOME/Documents/ChronoSync/Templates"
+
+# Check if all required directories exist
+if [ ! -d "$APP_SUPPORT_TASKS" ]; then
+    echo "⏭️  Skipping ChronoSync setup: $APP_SUPPORT_TASKS not found"
+    exit 0
+fi
+
+if [ ! -d "$APP_SUPPORT_TEMPLATES" ]; then
+    echo "⏭️  Skipping ChronoSync setup: $APP_SUPPORT_TEMPLATES not found"
+    exit 0
+fi
+
+if [ ! -d "$DOCUMENTS_TASKS" ]; then
+    echo "⏭️  Skipping ChronoSync setup: $DOCUMENTS_TASKS not found"
+    exit 0
+fi
+
+if [ ! -d "$DOCUMENTS_TEMPLATES" ]; then
+    echo "⏭️  Skipping ChronoSync setup: $DOCUMENTS_TEMPLATES not found"
+    exit 0
+fi
+
+echo "📁 All required directories found, creating symbolic links..."
+
+# Define source and target files
+BACKUP_SOURCE="$DOCUMENTS_TASKS/Backup Home Folder to 'Seagate Backup'.sync"
+BACKUP_TARGET="$APP_SUPPORT_TASKS/Backup Home Folder to 'Seagate Backup'.sync"
+
+SYNC_SOURCE="$DOCUMENTS_TASKS/Synchronize work with Craig's Mac Studio.sync"
+SYNC_TARGET="$APP_SUPPORT_TASKS/Synchronize work with Craig's Mac Studio.sync"
+
+# Create symbolic link for Backup Home Folder task
+if [ -f "$BACKUP_SOURCE" ]; then
+    if [ -L "$BACKUP_TARGET" ] && [ "$(readlink "$BACKUP_TARGET")" = "$BACKUP_SOURCE" ]; then
+        echo "✅ Backup task symlink already exists and is correct"
+    else
+        # Remove existing file/link if it exists
+        [ -e "$BACKUP_TARGET" ] && rm "$BACKUP_TARGET"
+        ln -s "$BACKUP_SOURCE" "$BACKUP_TARGET"
+        echo "🔗 Created symlink: Backup Home Folder to 'Seagate Backup'.sync"
+    fi
+else
+    echo "⚠️  Source file not found: $BACKUP_SOURCE"
+fi
+
+# Create symbolic link for Synchronize work task
+if [ -f "$SYNC_SOURCE" ]; then
+    if [ -L "$SYNC_TARGET" ] && [ "$(readlink "$SYNC_TARGET")" = "$SYNC_SOURCE" ]; then
+        echo "✅ Sync task symlink already exists and is correct"
+    else
+        # Remove existing file/link if it exists
+        [ -e "$SYNC_TARGET" ] && rm "$SYNC_TARGET"
+        ln -s "$SYNC_SOURCE" "$SYNC_TARGET"
+        echo "🔗 Created symlink: Synchronize work with Craig's Mac Studio.sync"
+    fi
+else
+    echo "⚠️  Source file not found: $SYNC_SOURCE"
+fi
+
+# Create symbolic link for Exclude Dev Node.js Files Template
+EXCLUDE_TEMPLATE_SOURCE="$DOCUMENTS_TEMPLATES/Exclude Dev Node.js Files Template.cserule"
+EXCLUDE_TEMPLATE_TARGET="$APP_SUPPORT_TEMPLATES/Exclude Dev Node.js Files Template.cserule"
+
+if [ -f "$EXCLUDE_TEMPLATE_SOURCE" ]; then
+    if [ -L "$EXCLUDE_TEMPLATE_TARGET" ] && [ "$(readlink "$EXCLUDE_TEMPLATE_TARGET")" = "$EXCLUDE_TEMPLATE_SOURCE" ]; then
+        echo "✅ Exclude template symlink already exists and is correct"
+    else
+        # Remove existing file/link if it exists
+        [ -e "$EXCLUDE_TEMPLATE_TARGET" ] && rm "$EXCLUDE_TEMPLATE_TARGET"
+        ln -s "$EXCLUDE_TEMPLATE_SOURCE" "$EXCLUDE_TEMPLATE_TARGET"
+        echo "🔗 Created symlink: Exclude Dev Node.js Files Template.cserule"
+    fi
+else
+    echo "⚠️  Source file not found: $EXCLUDE_TEMPLATE_SOURCE"
+fi
+
+echo "✅ ChronoSync symbolic links setup completed"
+{{ end -}}

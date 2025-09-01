@@ -25,6 +25,7 @@ packages:
     - 'tree'
     casks:
     - 'chronoagent'
+    - 'chronosync'
     - 'docker-desktop'
     - 'dotnet-sdk3'
     - 'dotnet-sdk6'
