@@ -67,6 +67,8 @@ jobs:
             fi
             exit 1
           }
+        env:
+          REPO: ${{github.workspace}}
 
       - name: Verify remote install results
         shell: bash
