@@ -1,18 +1,19 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
-echo "Setting up ChronoSync symbolic links...."
-
 # Check if ChronoSync app is installed
 if [ ! -d "/Applications/ChronoSync.app" ]; then
     echo "⏭️  Skipping ChronoSync setup: ChronoSync app not found"
     exit 0
 fi
 
+echo "Setting up ChronoSync symbolic links...."
+
 # Define required directories
 APP_SUPPORT_TASKS="$HOME/Library/Application Support/ChronoSync/Tasks"
 APP_SUPPORT_TEMPLATES="$HOME/Library/Application Support/ChronoSync/Templates"
-DOCUMENTS_TASKS="$HOME/Documents/ChronoSync/Tasks"
+{{ $computerName := output "scutil" "--get" "ComputerName" | trim }}
+DOCUMENTS_TASKS="$HOME/Documents/ChronoSync/{{- $computerName -}}/Tasks"
 DOCUMENTS_TEMPLATES="$HOME/Documents/ChronoSync/Templates"
 
 # Check if all required directories exist
