@@ -27,17 +27,10 @@ if [ ! -d "$APP_SUPPORT_TEMPLATES" ]; then
     exit 0
 fi
 
-if [ ! -d "$DOCUMENTS_TASKS" ]; then
-    echo "⏭️  Skipping ChronoSync setup: $DOCUMENTS_TASKS not found"
-    exit 0
-fi
+echo "📁 All required directories found"
 
-if [ ! -d "$DOCUMENTS_TEMPLATES" ]; then
-    echo "⏭️  Skipping ChronoSync setup: $DOCUMENTS_TEMPLATES not found"
-    exit 0
-fi
-
-echo "📁 All required directories found, creating symbolic links..."
+mkdir -p "$DOCUMENTS_TASKS"
+mkdir -p "$DOCUMENTS_TEMPLATES"
 
 # Define source and target files
 BACKUP_SOURCE="$DOCUMENTS_TASKS/Backup Home Folder to 'Seagate Backup'.sync"
