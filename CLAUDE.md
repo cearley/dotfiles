@@ -56,6 +56,7 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
   - `25` - Install additional packages (custom packages)
 
 - **Environment Setup (30-59):**
+  - `30` - Install Basic Memory MCP server (AI tools)
   - `35` - Install nvm (Node Version Manager)
   - `50` - Initialize conda (Python environment setup)
 
@@ -80,9 +81,11 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 - `run_once_before_darwin-15-install-uv.sh.tmpl`: Python package manager uv
 - `run_onchange_before_darwin-20-brew-bundle-install.sh.tmpl`: Homebrew package definitions
 - `run_onchange_before_darwin-25-install-additional-packages.sh.tmpl`: Custom package installation
+- `run_once_before_darwin-30-install-basic-memory.sh.tmpl`: Basic Memory MCP server (ai tag only)
 - `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager (work tag only)
 - `run_once_after_darwin-50-initialize-conda.sh.tmpl`: Conda environment setup
 - `run_once_after_darwin-85-configure-system-defaults.sh.tmpl`: macOS system preferences and iTerm2 settings
+- `run_once_after_darwin-88-setup-chronosync-symlinks.sh.tmpl`: ChronoSync symbolic links setup
 - `run_onchange_after_darwin-90-update-hosts.sh.tmpl`: Dynamic `/etc/hosts` management
 - `run_onchange_after_darwin-95-restart-syncthing.sh.tmpl`: Syncthing service management
 
