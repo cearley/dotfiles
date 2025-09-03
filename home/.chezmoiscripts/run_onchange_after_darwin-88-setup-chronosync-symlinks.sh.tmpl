@@ -1,0 +1,89 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+{{ $computerName := output "scutil" "--get" "ComputerName" | trim -}}
+{{ $documentsTasksDir := joinPath .chezmoi.homeDir "Documents/ChronoSync" $computerName "Tasks" -}}
+{{ $documentsTemplatesDir := joinPath .chezmoi.homeDir "Documents/ChronoSync/Templates" -}}
+
+# Tasks directory contents hash: {{ if stat $documentsTasksDir }}{{ output "sh" "-c" (printf "find '%s' -type f -exec basename '{}' \\; | sort | sha256sum" $documentsTasksDir) }}{{ else }}empty{{ end }}
+# Templates directory contents hash: {{ if stat $documentsTemplatesDir }}{{ output "sh" "-c" (printf "find '%s' -type f -exec basename '{}' \\; | sort | sha256sum" $documentsTemplatesDir) }}{{ else }}empty{{ end }}
+
+# Check if ChronoSync app is installed
+if [ ! -d "/Applications/ChronoSync.app" ]; then
+    echo "⏭️  Skipping ChronoSync setup: ChronoSync app not found"
+    exit 0
+fi
+
+echo "Setting up ChronoSync symbolic links...."
+
+# Define required directories
+APP_SUPPORT_TASKS="$HOME/Library/Application Support/ChronoSync/Tasks"
+APP_SUPPORT_TEMPLATES="$HOME/Library/Application Support/ChronoSync/Templates"
+{{ $computerName := output "scutil" "--get" "ComputerName" | trim }}
+DOCUMENTS_TASKS="$HOME/Documents/ChronoSync/{{- $computerName -}}/Tasks"
+DOCUMENTS_TEMPLATES="$HOME/Documents/ChronoSync/Templates"
+
+# Check if all required directories exist
+if [ ! -d "$APP_SUPPORT_TASKS" ]; then
+    echo "⏭️  Skipping ChronoSync setup: $APP_SUPPORT_TASKS not found"
+    exit 0
+fi
+
+if [ ! -d "$APP_SUPPORT_TEMPLATES" ]; then
+    echo "⏭️  Skipping ChronoSync setup: $APP_SUPPORT_TEMPLATES not found"
+    exit 0
+fi
+
+mkdir -p "$DOCUMENTS_TASKS"
+mkdir -p "$DOCUMENTS_TEMPLATES"
+
+echo "📁 All required directories found"
+
+# Function to create symbolic link with checks
+create_symlink() {
+    local source="$1"
+    local target="$2"
+    local filename="$3"
+    
+    if [ -f "$source" ]; then
+        if [ -L "$target" ] && [ "$(readlink "$target")" = "$source" ]; then
+            echo "✅ Symlink already exists and is correct: $filename"
+        else
+            # Remove existing file/link if it exists
+            [ -e "$target" ] && rm "$target"
+            ln -s "$source" "$target"
+            echo "🔗 Created symlink: $filename"
+        fi
+    else
+        echo "⚠️  Source file not found: $source"
+    fi
+}
+
+# Create symbolic links for all files in Tasks directory
+echo "📁 Processing ChronoSync Tasks..."
+for source_file in "$DOCUMENTS_TASKS"/*; do
+    # Skip if no files match the pattern
+    [ -e "$source_file" ] || continue
+    
+    # Get just the filename
+    filename=$(basename "$source_file")
+    target_file="$APP_SUPPORT_TASKS/$filename"
+    
+    create_symlink "$source_file" "$target_file" "$filename"
+done
+
+# Create symbolic links for all files in Templates directory
+echo "📁 Processing ChronoSync Templates..."
+for source_file in "$DOCUMENTS_TEMPLATES"/*; do
+    # Skip if no files match the pattern
+    [ -e "$source_file" ] || continue
+    
+    # Get just the filename
+    filename=$(basename "$source_file")
+    target_file="$APP_SUPPORT_TEMPLATES/$filename"
+    
+    create_symlink "$source_file" "$target_file" "$filename"
+done
+
+echo "✅ ChronoSync symbolic links setup completed"
+{{ end -}}
