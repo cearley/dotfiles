@@ -203,6 +203,9 @@ This is my personal dotfiles repository, reflecting my specific preferences, wor
 Consider this repository as a learning resource and starting point rather than something to use directly.
 
 ### What You'll Need to Customize
+
+If you decide to fork or use this repository, you'll need to customize several key areas:
+
 - **KeePassXC database** - Set up your own password manager with the entries this config expects
 - **Package lists** - Review `home/.chezmoidata/packages.yaml` and customize for your needs
 - **Personal services** - Remove ChronoSync, Syncthing, or other personal workflow tools
