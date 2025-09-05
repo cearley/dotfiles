@@ -23,6 +23,7 @@ This repository uses several chezmoi patterns that you might find helpful:
 - **Automated dependency installation** with proper error handling and logging
 - **Tag-based execution** to customize setups for different use cases (work, personal, AI/ML)
 - **Comprehensive validation** with pre/post-installation hooks
+- **System-wide configuration management** - Shows how to manage `/etc/hosts` and other system files outside the home directory using chezmoi scripts
 
 ## Quick Start
 
