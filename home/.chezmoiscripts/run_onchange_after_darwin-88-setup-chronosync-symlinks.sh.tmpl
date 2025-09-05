@@ -1,4 +1,4 @@
-{{- if eq .chezmoi.os "darwin" -}}
+{{- if and (eq .chezmoi.os "darwin") (has "chronosync" .packages.darwin.casks) -}}
 #!/bin/bash
 
 {{ $computerName := output "scutil" "--get" "ComputerName" | trim -}}
@@ -7,12 +7,6 @@
 
 # Tasks directory contents hash: {{ if stat $documentsTasksDir }}{{ output "sh" "-c" (printf "find '%s' -type f -exec basename '{}' \\; | sort | sha256sum" $documentsTasksDir) }}{{ else }}empty{{ end }}
 # Templates directory contents hash: {{ if stat $documentsTemplatesDir }}{{ output "sh" "-c" (printf "find '%s' -type f -exec basename '{}' \\; | sort | sha256sum" $documentsTemplatesDir) }}{{ else }}empty{{ end }}
-
-# Check if ChronoSync app is installed
-if [ ! -d "/Applications/ChronoSync.app" ]; then
-    echo "⚠️  Skipping ChronoSync setup: ChronoSync app not found"
-    exit 0
-fi
 
 echo "🕰️  Setting up ChronoSync symbolic links..."
 

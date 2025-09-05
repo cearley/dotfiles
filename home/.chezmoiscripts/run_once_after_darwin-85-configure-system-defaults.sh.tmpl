@@ -3,6 +3,7 @@
 
 echo "🛠️  Configuring macOS system defaults..."
 
+{{- if has "iterm2" .packages.darwin.casks }}
 # iTerm2: Enable 'Close windows when quitting an application'
 defaults write com.googlecode.iterm2 NSQuitAlwaysKeepsWindows -bool true
 
@@ -19,6 +20,7 @@ defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile_se
 
 # iTerm2: Set default profile font to MesloLGSNF size 13
 /usr/libexec/PlistBuddy -c "Set 'New Bookmarks':0:'Normal Font' 'MesloLGSNF-Regular 13'" ~/Library/Preferences/com.googlecode.iterm2.plist 2>/dev/null || true
+{{- end }}
 
 echo "✅ System defaults configured successfully"
 {{ end -}}

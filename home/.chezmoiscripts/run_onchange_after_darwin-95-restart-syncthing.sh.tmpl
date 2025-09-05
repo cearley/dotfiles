@@ -1,13 +1,7 @@
-{{- if eq .chezmoi.os "darwin" -}}
+{{- if and (eq .chezmoi.os "darwin") (has "syncthing" .packages.darwin.brews) -}}
 #!/bin/bash
 
 # syncthing version: {{ output "syncthing" "--version" }}
-
-# Check if syncthing is installed
-if ! command -v syncthing >/dev/null 2>&1; then
-    echo "⚠️  syncthing is not installed - skipping restart"
-    exit 0
-fi
 
 echo "🔄 Restarting syncthing service after syncthing update..."
 
