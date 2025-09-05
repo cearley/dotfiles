@@ -1,10 +1,12 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+echo "🧰 Installing uv - Python package manager..."
+
 # Using standalone installer https://docs.astral.sh/uv/getting-started/installation/#standalone-installer
 
 # Exit immediately if uv is already in $PATH
-type uv >/dev/null 2>&1 && { echo "Skipping uv installation: uv is already installed"; exit 0; }
+type uv >/dev/null 2>&1 && { echo "✅ Skipping uv installation: uv is already installed"; exit 0; }
 
 # Install uv - Python package manager
 curl -LsSf https://astral.sh/uv/install.sh | sh

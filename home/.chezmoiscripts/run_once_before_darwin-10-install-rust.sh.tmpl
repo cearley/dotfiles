@@ -1,6 +1,8 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+echo "🦀 Installing Rust programming language..."
+
 if command -v rustup >/dev/null 2>&1; then
     echo "Rust is already installed. Updating..."
     rustup update

@@ -3,13 +3,13 @@
 
 set -eufo pipefail
 
+echo "🛡️  Setting up Microsoft Defender for Individuals..."
+
 # Check if Microsoft Defender is already installed
 if [ -d "/Applications/Microsoft Defender.app" ]; then
     echo "✅ Microsoft Defender is already installed"
     exit 0
 fi
-
-echo "🛡️  Setting up Microsoft Defender for Individuals..."
 
 # Open the Microsoft Defender download page
 echo "Opening Microsoft Defender download page in your default browser..."

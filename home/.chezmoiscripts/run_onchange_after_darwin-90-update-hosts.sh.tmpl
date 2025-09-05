@@ -4,6 +4,8 @@
 # Chezmoi script to update /etc/hosts with entries from ~/.hosts-data.json
 # This script runs whenever the hosts data changes, after chezmoi applies other changes on macOS
 
+echo "🌐 Updating /etc/hosts from chezmoi template data..."
+
 set -e
 
 HOSTS_FILE="/etc/hosts"

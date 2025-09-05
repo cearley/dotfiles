@@ -2,9 +2,10 @@
 #!/bin/bash
 
 if command -v conda >/dev/null 2>&1; then
+    echo "🐍 Initializing conda for zsh shell..."
     conda init zsh
 else
-    echo "Skipping conda initialization: conda command not found"
+    echo "⚠️  conda command not found - skipping initialization"
 fi
 
 {{ end -}}

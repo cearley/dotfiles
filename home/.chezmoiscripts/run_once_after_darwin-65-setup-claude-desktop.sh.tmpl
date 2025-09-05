@@ -3,13 +3,13 @@
 
 set -eufo pipefail
 
+echo "🤖 Setting up Claude Desktop App..."
+
 # Check if Claude Desktop is already installed
 if [ -d "/Applications/Claude.app" ]; then
     echo "✅ Claude Desktop is already installed"
     exit 0
 fi
-
-echo "🤖 Setting up Claude Desktop App..."
 
 # Open the Claude Desktop download page
 echo "Opening Claude Desktop download page in your default browser..."

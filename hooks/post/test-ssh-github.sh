@@ -16,13 +16,25 @@ readonly SSH_CONNECT_TIMEOUT=5
 print_message() {
     local level="$1"
     local message="$2"
-    case "$level" in
-        "info") echo "[INFO] $message" ;;
-        "success") echo "[SUCCESS] $message" ;;
-        "warning") echo "[WARNING] $message" ;;
-        "error") echo "[ERROR] $message" ;;
-        "skip") echo "[SKIP] $message" ;;
-    esac
+    
+    # Check if UTF-8 is supported for emoji rendering
+    if [ "${LANG}" != "${LANG%UTF-8*}" ]; then
+        case "$level" in
+            "info") echo "ℹ️  $message" ;;
+            "success") echo "✅ $message" ;;
+            "warning") echo "⚠️  $message" ;;
+            "error") echo "❌ $message" ;;
+            "skip") echo "⏭️  $message" ;;
+        esac
+    else
+        case "$level" in
+            "info") echo "[INFO] $message" ;;
+            "success") echo "[SUCCESS] $message" ;;
+            "warning") echo "[WARNING] $message" ;;
+            "error") echo "[ERROR] $message" ;;
+            "skip") echo "[SKIP] $message" ;;
+        esac
+    fi
 }
 
 # Check if common SSH key files exist

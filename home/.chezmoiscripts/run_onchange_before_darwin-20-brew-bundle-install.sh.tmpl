@@ -4,6 +4,8 @@
 # MacOS-specific script to install packages using Homebrew
 # This script is intended to be run after the initial setup of the system.
 
+echo "🍺 Installing packages using Homebrew..."
+
 {{- $model := output "sh" "-c" "system_profiler SPHardwareDataType | awk '/Model Name/ {print substr($0, index($0, $3))}'" | trim -}}
 {{- if contains "MacBook Pro" $model -}}
 brewfile="{{ .chezmoi.sourceDir }}/mbp-brewfile"

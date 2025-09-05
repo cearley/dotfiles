@@ -10,11 +10,11 @@
 
 # Check if ChronoSync app is installed
 if [ ! -d "/Applications/ChronoSync.app" ]; then
-    echo "⏭️  Skipping ChronoSync setup: ChronoSync app not found"
+    echo "⚠️  Skipping ChronoSync setup: ChronoSync app not found"
     exit 0
 fi
 
-echo "Setting up ChronoSync symbolic links...."
+echo "🕰️  Setting up ChronoSync symbolic links..."
 
 # Define required directories
 APP_SUPPORT_TASKS="$HOME/Library/Application Support/ChronoSync/Tasks"

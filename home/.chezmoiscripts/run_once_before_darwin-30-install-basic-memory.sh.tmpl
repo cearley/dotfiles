@@ -4,9 +4,11 @@
 # Install Basic Memory MCP server for Claude Desktop
 # Prerequisite: uv (installed by run_once_before_darwin-15-install-uv.sh.tmpl)
 
+echo "🤖 Installing Basic Memory MCP server for Claude Desktop..."
+
 # Exit immediately if basic-memory is already installed.
 if uvx --help >/dev/null 2>&1 && uvx run --help basic-memory >/dev/null 2>&1; then
-    echo "Skipping basic-memory installation: basic-memory is already installed"
+    echo "✅ Skipping basic-memory installation: basic-memory is already installed"
     exit 0
 fi
 

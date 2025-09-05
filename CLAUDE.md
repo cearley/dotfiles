@@ -193,3 +193,54 @@ Use the WebFetch tool to access these docs when encountering unfamiliar chezmoi 
 - Platform-specific scripts must be wrapped in conditional templates (e.g., `{{- if eq .chezmoi.os "darwin" -}}`)
 - Templates (files with .tmpl suffix) can be tested and debugged with `chezmoi execute-template`
 - Machine-specific SSH keys use reusable template pattern with hardware serial numbers
+
+## Portability Considerations
+
+### Emoji Usage in Scripts
+Current scripts use emoji icons in output messages (e.g., `🍺 Installing packages using Homebrew...`). This enhances user experience on modern macOS but has portability implications:
+
+**Current Status (Good for macOS-focused repository):**
+- ✅ Modern macOS terminals (Terminal.app, iTerm2) have excellent emoji support
+- ✅ UTF-8 environments render emojis correctly
+- ✅ Improves script output readability and user engagement
+
+**Potential Issues for Diverse Environments:**
+- ⚠️ Older systems may not render emojis correctly
+- ⚠️ Non-UTF-8 locales could display as question marks or boxes
+- ⚠️ Minimal terminals might not support emojis
+- ⚠️ CI/CD environments may not render emojis in build logs
+- ⚠️ SSH sessions depend on client terminal capabilities
+
+**Recommendations for Broader Compatibility:**
+If targeting diverse environments, consider these alternatives:
+
+```bash
+# Option 1: ASCII-safe prefixes
+echo "[INFO] Installing packages using Homebrew..."
+echo "[SUCCESS] Installation completed"
+
+# Option 2: Simple symbols  
+echo "* Installing packages using Homebrew..."
+echo "+ Installation completed"
+
+# Option 3: Conditional emojis
+if [ "${LANG}" != "${LANG%UTF-8*}" ]; then
+    echo "🍺 Installing packages using Homebrew..."
+else
+    echo "Installing packages using Homebrew..."
+fi
+```
+
+### Architecture Detection
+Scripts use chezmoi's built-in architecture detection for conditional execution:
+
+```bash
+# Apple Silicon specific (current approach)
+{{- if and (eq .chezmoi.os "darwin") (eq .chezmoi.arch "arm64") -}}
+
+# Alternative methods:
+{{- if eq .chezmoi.kernel.machine "arm64" -}}
+{{- if eq (output "uname" "-m") "arm64" -}}
+```
+
+**Best Practice:** Use `.chezmoi.arch` for consistent, cross-platform architecture detection.

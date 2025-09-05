@@ -3,13 +3,13 @@
 
 # syncthing version: {{ output "syncthing" "--version" }}
 
-echo "Restarting syncthing service..."
-
 # Check if syncthing is installed
 if ! command -v syncthing >/dev/null 2>&1; then
     echo "⚠️  syncthing is not installed - skipping restart"
     exit 0
 fi
+
+echo "🔄 Restarting syncthing service after syncthing update..."
 
 # Check if syncthing service is loaded in brew services
 if brew services list | grep -q "syncthing"; then
