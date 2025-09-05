@@ -3,11 +3,10 @@
 [![CI](https://github.com/cearley/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/cearley/dotfiles/actions)
 [![macOS](https://img.shields.io/badge/macOS-supported-success)](https://www.apple.com/macos/)
 [![chezmoi](https://img.shields.io/badge/managed%20with-chezmoi-blue)](https://www.chezmoi.io/)
-[![Shell](https://img.shields.io/badge/shell-zsh-green)](https://www.zsh.org/)
 [![Homebrew](https://img.shields.io/badge/package%20manager-Homebrew-orange)](https://brew.sh/)
 [![GitHub last commit](https://img.shields.io/github/last-commit/cearley/dotfiles)](https://github.com/cearley/dotfiles/commits)
 
-My personal dotfiles and macOS development environment setup, managed with [chezmoi](https://chezmoi.io). This repository demonstrates secure secret management, multi-machine configuration, and automated development tool installation.
+My personal dotfiles and macOS development environment setup, managed with [chezmoi](https://chezmoi.io).
 
 ## Why You Might Find This Useful
 
