@@ -6,8 +6,14 @@
 
 echo "🤖 Installing Basic Memory MCP server for Claude Desktop..."
 
-# Exit immediately if basic-memory is already installed.
-if uvx --help >/dev/null 2>&1 && uvx run --help basic-memory >/dev/null 2>&1; then
+# Check that uv is installed, if not, exit with error.
+if ! command -v uvx >/dev/null 2>&1; then
+    echo "❌ Error: uv is not installed."
+    exit 1
+fi
+
+# Skip if basic-memory is already installed.
+if uvx basic-memory --version >/dev/null 2>&1; then
     echo "✅ Skipping basic-memory installation: basic-memory is already installed"
     exit 0
 fi
