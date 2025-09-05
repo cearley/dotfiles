@@ -1,5 +1,6 @@
 {{- $fullname := promptStringOnce . "fullname" "Your full name" -}}
-{{- $gh_email := promptStringOnce . "gh_email" "GitHub email address" -}}
+{{- $gh_commit_email := promptStringOnce . "gh_commit_email" "GitHub commit email address (personal)" -}}
+{{- $gh_commit_email_willdan := promptStringOnce . "gh_commit_email_willdan" "GitHub commit email address (Willdan)" -}}
 {{- $gh_username := promptStringOnce . "gh_username" "GitHub user name" -}}
 {{- $keepassxc_db := promptStringOnce . "keepassxc_db" "keepassxc database (e.g., ~/Sync/data2.kdbx)" -}}
 {{- $microsoft_email := promptStringOnce . "microsoft_email" "Microsoft email address (optional, press enter to skip)" "" -}}
@@ -10,7 +11,8 @@
 
 [data]
 fullname = {{ $fullname | quote }}
-gh_email = {{ $gh_email | quote }}
+gh_commit_email = {{ $gh_commit_email | quote }}
+gh_commit_email_willdan = {{ $gh_commit_email_willdan | quote }}
 gh_username = {{ $gh_username | quote }}
 keepassxc_db = {{ $keepassxc_db | quote }}
 microsoft_email = {{ $microsoft_email | quote }}

@@ -20,7 +20,7 @@ jobs:
           cat > "$HOME/.config/chezmoi/chezmoi.toml" << 'EOF'
           [data]
               fullname = "CI Test"
-              gh_email = "ci@example.com"
+              gh_commit_email = "ci@example.com"
               gh_username = "cearley"
               keepassxc_db = "~/.local/share/chezmoi/keepassxc.kdbx"
               tags = [

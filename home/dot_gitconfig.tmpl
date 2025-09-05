@@ -1,6 +1,6 @@
 [user]
 	name = {{ .fullname }}
-	email = {{ .gh_email }}
+	email = {{ .gh_commit_email }}
 	signingkey = {{ .chezmoi.homeDir }}/.ssh/id_ed25519.pub
 [credential]
 	helper = osxkeychain
@@ -8,3 +8,6 @@
 	format = ssh
 [core]
 	autocrlf = input
+
+[includeIf "gitdir:~/work/"]
+    path = ~/.gitconfig-lime-energy
