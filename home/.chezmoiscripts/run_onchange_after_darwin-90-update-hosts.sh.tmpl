@@ -2,7 +2,7 @@
 #!/bin/bash
 
 # Chezmoi script to update /etc/hosts with entries from ~/.hosts-data.json
-# This script runs once before chezmoi applies other changes on macOS
+# This script runs whenever the hosts data changes, after chezmoi applies other changes on macOS
 
 set -e
 
