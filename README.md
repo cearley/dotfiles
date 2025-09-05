@@ -7,7 +7,36 @@
 [![Homebrew](https://img.shields.io/badge/package%20manager-Homebrew-orange)](https://brew.sh/)
 [![GitHub last commit](https://img.shields.io/github/last-commit/cearley/dotfiles)](https://github.com/cearley/dotfiles/commits)
 
-This repository contains my personal dotfiles and configuration for various tools and applications.
+My personal dotfiles and macOS development environment setup, managed with [chezmoi](https://chezmoi.io). This repository demonstrates secure secret management, multi-machine configuration, and automated development tool installation.
+
+## Why You Might Find This Useful
+
+This repository showcases several chezmoi patterns that you might find helpful:
+- **Secure secret management** using KeePassXC integration (no hardcoded credentials)
+- **Multi-machine support** with conditional configurations for different Macs
+- **Automated dependency installation** with proper error handling and logging
+- **Tag-based execution** to customize setups for different use cases (work, personal, AI/ML)
+- **Comprehensive validation** with pre/post-installation hooks
+
+## Before Forking or Using
+
+### What You'll Need to Customize
+- **KeePassXC database** - Set up your own password manager with the entries this config expects
+- **Package lists** - Review `home/.chezmoidata/packages.yaml` and customize for your needs
+- **Personal services** - Remove ChronoSync, Syncthing, or other personal workflow tools
+- **SSH/Git configuration** - Update for your own accounts and preferences
+- **Network configurations** - Remove personal hosts file management
+
+### Initial Setup Variables
+When you first run chezmoi, you'll be prompted for:
+- **Full name** - Used in Git configuration and system setup
+- **GitHub username** - For Git configuration and script environment
+- **GitHub emails** - Separate emails for default and work repositories
+- **KeePassXC database path** - Location of your password database file
+- **Microsoft email** (optional) - Enables Microsoft Defender installation
+- **Machine tags** - Choose from: ai, ml, mobile, personal, school, work
+
+Tags control which scripts run and which tools get installed. For example, "work" enables NVM and SSH validation, while "ai" installs additional ML tools.
 
 ## Quick Start
 

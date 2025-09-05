@@ -84,6 +84,8 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 - `run_once_before_darwin-30-install-basic-memory.sh.tmpl`: Basic Memory MCP server (ai tag only)
 - `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager (work tag only)
 - `run_once_after_darwin-50-initialize-conda.sh.tmpl`: Conda environment setup
+- `run_once_after_darwin-60-setup-microsoft-defender.sh.tmpl`: Microsoft Defender installation (conditional on microsoft_email)
+- `run_once_after_darwin-65-setup-claude-desktop.sh.tmpl`: Claude Desktop application installation
 - `run_once_after_darwin-85-configure-system-defaults.sh.tmpl`: macOS system preferences and iTerm2 settings
 - `run_once_after_darwin-88-setup-chronosync-symlinks.sh.tmpl`: ChronoSync symbolic links setup
 - `run_onchange_after_darwin-90-update-hosts.sh.tmpl`: Dynamic `/etc/hosts` management
