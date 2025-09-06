@@ -3,48 +3,66 @@ packages:
     taps:
     - 'isen-ng/dotnet-sdk-versions'
     - 'localstack/tap'
-    brews:
-    - 'aws-sam-cli'
-    - 'awscli'
-    - 'azure-cli'
-    - 'bat'
-    - 'cfn-lint'
-    - 'gh'
-    - 'git'
-    - 'git-gui'
-    - 'go'
-    - 'jq'
-    - 'localstack'
-    - 'mas'
-    - 'neovim'
-    - 'openssl@3'
-    - 'rclone'
-    - 'speedtest-cli'
-    - 'sqlite'
-    - 'syncthing'
-    - 'tree'
-    casks:
-    - 'chronoagent'
-    - 'chronosync'
-    - 'docker-desktop'
-    - 'dotnet-sdk3'
-    - 'dotnet-sdk6'
-    - 'font-hack-nerd-font'
-    - 'font-meslo-lg-nerd-font'
-    - 'fuse-t'
-    - 'google-drive'
-    - 'grammarly-desktop'
-    - 'grandperspective'
-    - 'iterm2'
-    - 'jetbrains-toolbox'
-    - 'logi-options+'
-    - 'lulu'
-    - 'microsoft-auto-update'
-    - 'microsoft-teams'
-    - 'miniforge'
-    - 'ollama'
-    - 'onyx'
-    - 'postman'
-    - 'visual-studio-code'
-    - 'whimsical'
-    - 'zoom'
+    
+    # Core packages (always installed)
+    core:
+      brews:
+      - 'bat'
+      - 'gh'
+      - 'git'
+      - 'git-gui'
+      - 'jq'
+      - 'mas'
+      - 'neovim'
+      - 'openssl@3'
+      - 'rclone'
+      - 'speedtest-cli'
+      - 'sqlite'
+      - 'syncthing'
+      - 'tree'
+      casks:
+      - 'chronoagent'
+      - 'chronosync'
+      - 'font-hack-nerd-font'
+      - 'font-meslo-lg-nerd-font'
+      - 'fuse-t'
+      - 'google-drive'
+      - 'grammarly-desktop'
+      - 'grandperspective'
+      - 'iterm2'
+      - 'logi-options+'
+      - 'lulu'
+      - 'microsoft-auto-update'
+      - 'onyx'
+      - 'whimsical'
+    
+    # Development packages (dev tag)
+    dev:
+      brews:
+      - 'go'
+      casks:
+      - 'docker-desktop'
+      - 'jetbrains-toolbox'
+      - 'postman'
+      - 'visual-studio-code'
+    
+    # AI/ML packages (ai tag)
+    ai:
+      brews:
+      - 'aws-sam-cli'
+      - 'awscli'
+      - 'azure-cli'
+      - 'localstack'
+      casks:
+      - 'miniforge'
+      - 'ollama'
+    
+    # Work packages (work tag)
+    work:
+      brews:
+      - 'cfn-lint'
+      casks:
+      - 'dotnet-sdk3'
+      - 'dotnet-sdk6'
+      - 'microsoft-teams'
+      - 'zoom'

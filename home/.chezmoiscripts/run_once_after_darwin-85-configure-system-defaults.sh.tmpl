@@ -3,7 +3,7 @@
 
 echo "🛠️  Configuring macOS system defaults..."
 
-{{- if has "iterm2" .packages.darwin.casks }}
+{{- if has "iterm2" .packages.darwin.core.casks }}
 # iTerm2: Enable 'Close windows when quitting an application'
 defaults write com.googlecode.iterm2 NSQuitAlwaysKeepsWindows -bool true
 

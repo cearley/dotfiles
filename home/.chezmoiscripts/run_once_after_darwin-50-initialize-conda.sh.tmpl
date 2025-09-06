@@ -1,4 +1,4 @@
-{{- if eq .chezmoi.os "darwin" -}}
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) (has "miniforge" .packages.darwin.ai.casks) -}}
 #!/bin/bash
 
 if command -v conda >/dev/null 2>&1; then

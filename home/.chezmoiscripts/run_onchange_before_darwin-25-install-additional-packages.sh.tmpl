@@ -7,11 +7,43 @@ brew bundle --file=/dev/stdin <<EOF
 {{ range .packages.darwin.taps -}}
 tap {{ . | quote }}
 {{ end -}}
-{{ range .packages.darwin.brews -}}
+
+# Always install core packages
+{{ range .packages.darwin.core.brews -}}
 brew {{ . | quote }}
 {{ end -}}
-{{ range .packages.darwin.casks -}}
+{{ range .packages.darwin.core.casks -}}
 cask {{ . | quote }}
 {{ end -}}
+
+{{- if has "dev" .tags }}
+# Install dev packages
+{{ range .packages.darwin.dev.brews -}}
+brew {{ . | quote }}
+{{ end -}}
+{{ range .packages.darwin.dev.casks -}}
+cask {{ . | quote }}
+{{ end -}}
+{{- end }}
+
+{{- if has "ai" .tags }}
+# Install AI packages
+{{ range .packages.darwin.ai.brews -}}
+brew {{ . | quote }}
+{{ end -}}
+{{ range .packages.darwin.ai.casks -}}
+cask {{ . | quote }}
+{{ end -}}
+{{- end }}
+
+{{- if has "work" .tags }}
+# Install work packages
+{{ range .packages.darwin.work.brews -}}
+brew {{ . | quote }}
+{{ end -}}
+{{ range .packages.darwin.work.casks -}}
+cask {{ . | quote }}
+{{ end -}}
+{{- end }}
 EOF
 {{ end -}}
