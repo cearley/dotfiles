@@ -1,11 +1,7 @@
-{{- if eq .chezmoi.os "darwin" -}}
+{{- if and (eq .chezmoi.os "darwin") (output "command" "-v" "conda") -}}
 #!/bin/bash
 
-if command -v conda >/dev/null 2>&1; then
-    echo "🐍 Initializing conda for zsh shell..."
-    conda init zsh
-else
-    echo "⚠️  conda command not found - skipping initialization"
-fi
+echo "🐍 Initializing conda for zsh shell..."
+conda init zsh
 
 {{ end -}}
