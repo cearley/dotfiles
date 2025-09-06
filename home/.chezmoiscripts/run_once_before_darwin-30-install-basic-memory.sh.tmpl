@@ -1,16 +1,10 @@
-{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) (output "command" "-v" "uvx") -}}
 #!/bin/bash
 
 # Install Basic Memory MCP server for Claude Desktop
 # Prerequisite: uv (installed by run_once_before_darwin-15-install-uv.sh.tmpl)
 
 echo "🤖 Installing Basic Memory MCP server for Claude Desktop..."
-
-# Check that uv is installed, if not, exit with error.
-if ! command -v uvx >/dev/null 2>&1; then
-    echo "❌ Error: uv is not installed."
-    exit 1
-fi
 
 # Skip if basic-memory is already installed.
 if uvx basic-memory --version >/dev/null 2>&1; then
