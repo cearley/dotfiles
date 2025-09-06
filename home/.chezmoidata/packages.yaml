@@ -7,6 +7,9 @@ packages:
     # Core packages (always installed)
     core:
       brews:
+      - 'ack'
+      - 'awscli'
+      - 'azure-cli'
       - 'bat'
       - 'gh'
       - 'git'
@@ -21,6 +24,7 @@ packages:
       - 'syncthing'
       - 'tree'
       casks:
+      - 'appcleaner'
       - 'chronoagent'
       - 'chronosync'
       - 'font-hack-nerd-font'
@@ -32,37 +36,55 @@ packages:
       - 'iterm2'
       - 'logi-options+'
       - 'lulu'
-      - 'microsoft-auto-update'
       - 'onyx'
-      - 'whimsical'
+      - 'zoom'
     
-    # Development packages (dev tag)
+    # Optional development packages (dev tag)
     dev:
       brews:
+      - 'act'
+      - 'aws-sam-cli'
+      - 'bats-core'
+      - 'cfn-lint'
+      - 'frum'
+      - 'github-markdown-toc'
       - 'go'
+      - 'graphviz'
+      - 'hugo'
+      - 'liquibase'
+      #- 'localstack'
+      - 'localstack/tap/localstack-cli'
+      - 'pkgconf'
+      - 'snyk-cli'
       casks:
+      - 'db-browser-for-sqlite'
       - 'docker-desktop'
+      - 'dotnet-sdk8'
+      - 'dotnet-sdk8-0-400'
+      - 'google-chrome'
       - 'jetbrains-toolbox'
+      - 'miniforge'
       - 'postman'
+      - 'smlnj'
       - 'visual-studio-code'
     
-    # AI/ML packages (ai tag)
+    # Optional AI/ML packages (ai tag)
     ai:
       brews:
-      - 'aws-sam-cli'
-      - 'awscli'
-      - 'azure-cli'
-      - 'localstack'
       casks:
-      - 'miniforge'
-      - 'ollama'
+      - 'lm-studio'
+      - 'ollama-app'
     
-    # Work packages (work tag)
+    # Optional work packages (work tag)
     work:
       brews:
-      - 'cfn-lint'
+      - 'csvkit'
       casks:
-      - 'dotnet-sdk3'
+      - 'amazon-workspaces'
+      - 'box-drive'
+      - 'dotnet-sdk3-1-400'
       - 'dotnet-sdk6'
+      - 'dotnet-sdk6-0-400'
+      - 'microsoft-auto-update'
       - 'microsoft-teams'
-      - 'zoom'
+      - 'whimsical'

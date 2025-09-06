@@ -30,9 +30,10 @@ command = ".local/share/chezmoi/hooks/pre/bootstrap"
 [hooks.apply.post]
 command = {{ if contains "work" ($tags | toString) -}} ".local/share/chezmoi/hooks/post/test-ssh-github.sh" {{- else -}} "echo" {{- end }}
 
+{{- if output "command" "-v" "code" }}
 [edit]
- command = "code"
- args = ["--wait"]
+command = "code"
+args = ["--wait"]
 
 [diff]
 exclude = ["scripts"]
@@ -45,3 +46,4 @@ args = [
     "-c",
     "cp {{ "{{" }} .Target {{ "}}" }} {{ "{{" }} .Target {{ "}}" }}.base && code --new-window --wait --merge {{ "{{" }} .Destination {{ "}}" }} {{ "{{" }} .Target {{ "}}" }} {{ "{{" }} .Target {{ "}}" }}.base {{ "{{" }} .Source {{ "}}" }}"
 ]
+{{- end }}

@@ -208,7 +208,7 @@ Consider this repository as a learning resource and starting point rather than s
 If you decide to fork or use this repository, you'll need to customize several key areas:
 
 - **KeePassXC database** - Set up your own password manager with the entries this config expects
-- **Package lists** - Review `home/.chezmoidata/packages.yaml` and customize for your needs
+- **Package lists** - Review `home/.chezmoidata/packages.yaml` for essential packages and review machine-specific brewfiles for supplemental packages
 - **Personal services** - Remove ChronoSync, Syncthing, or other personal workflow tools
 - **SSH/Git configuration** - Update for your own accounts and preferences
 - **Network configurations** - Remove personal hosts file management

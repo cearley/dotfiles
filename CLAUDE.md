@@ -52,8 +52,8 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
   - `15` - Install uv (Python package manager)
 
 - **Package Management (20-29):**
-  - `20` - Brew bundle install (package definitions)
-  - `25` - Install additional packages (custom packages)
+  - `20` - Brew bundle install essential packages from packages.yaml
+  - `25` - Brew bundle install supplemental packages from machine-specific brewfiles
 
 - **Environment Setup (30-59):**
   - `30` - Install Basic Memory MCP server (AI tools)
@@ -79,8 +79,8 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 - `run_once_before_darwin-05-install-rosetta.sh.tmpl`: Rosetta 2 for Apple Silicon
 - `run_once_before_darwin-10-install-rust.sh.tmpl`: Rust toolchain
 - `run_once_before_darwin-15-install-uv.sh.tmpl`: Python package manager uv
-- `run_onchange_before_darwin-20-brew-bundle-install.sh.tmpl`: Homebrew package definitions
-- `run_onchange_before_darwin-25-install-additional-packages.sh.tmpl`: Custom package installation
+- `run_onchange_before_darwin-20-install-packages.sh.tmpl`: Essential packages from packages.yaml
+- `run_onchange_before_darwin-25-brew-bundle-install.sh.tmpl`: Supplemental packages from machine-specific brewfiles
 - `run_once_before_darwin-30-install-basic-memory.sh.tmpl`: Basic Memory MCP server (ai tag only)
 - `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager (work tag only)
 - `run_once_after_darwin-50-initialize-conda.sh.tmpl`: Conda environment setup
@@ -100,7 +100,7 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 
 - **Shell**: zsh with p10k theme, custom functions in `dot_zfunc/`
 - **Security**: SSH config, AWS credentials (templated), git config (templated)
-- **Package Management**: Uses `packages.yaml` data file with brew bundle
+- **Package Management**: Dual approach using both `packages.yaml` data file and machine-specific brewfiles
 - **Development Tools**: VS Code extensions, various CLI tools, cloud SDKs
 - **System Defaults**: macOS preferences and application settings via `defaults` commands
 - **External Dependencies**: Managed via `home/.chezmoiexternal.toml` (Oh My Zsh, plugins, jenv, nvm)
@@ -162,6 +162,28 @@ The repository uses chezmoi's templating system extensively:
 - Data stored in `.chezmoi.data.json` for template reuse
 
 **Important**: Files in `.chezmoidata` directories cannot be templates because they must be present prior to the start of the template engine. Data files must be static JSON/YAML/TOML files.
+
+### Package Management Strategy
+
+The repository uses a dual approach for package management:
+
+1. **Essential Packages** (`packages.yaml`): Static, categorized packages that are fundamental to the development environment
+   - `core`: Always-installed packages (git, iTerm2, syncthing, etc.)
+   - `dev`: Development tools (Go, Docker, VS Code, etc.) - requires "dev" tag
+   - `ai`: AI/ML packages (ollama, miniforge, etc.) - requires "ai" tag
+   - `work`: Work-specific packages (Teams, Zoom, .NET SDKs, etc.) - requires "work" tag
+
+2. **Supplemental Packages** (machine-specific brewfiles): Additional packages that extend beyond the essentials
+   - `mbp-brewfile`: Packages specific to MacBook Pro machines
+   - `studio-brewfile`: Packages specific to Mac Studio machines
+   - Updated via: `brew bundle dump --file=$HOME/.brewfiles/{machine-specific-brewfile} --force`
+   - Installed via prompted script that asks user permission
+
+This separation allows for:
+- **Consistent essentials**: Core packages are version-controlled and predictable
+- **Machine flexibility**: Different machines can have different supplemental packages
+- **User control**: Supplemental packages require user confirmation before installation
+- **Easy maintenance**: Brewfiles can be regenerated from current system state
 
 ## File Naming Conventions
 
