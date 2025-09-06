@@ -1,4 +1,4 @@
-{{- if and (eq .chezmoi.os "darwin") (has "syncthing" .packages.darwin.core.brews) -}}
+{{- if and (eq .chezmoi.os "darwin") (output "command" "-v" "syncthing") -}}
 #!/bin/bash
 
 # syncthing version: {{ output "syncthing" "--version" }}

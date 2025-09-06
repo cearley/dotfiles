@@ -1,4 +1,4 @@
-{{- if and (eq .chezmoi.os "darwin") (has "chronosync" .packages.darwin.core.casks) -}}
+{{- if and (eq .chezmoi.os "darwin") (stat "/Applications/ChronoSync.app") -}}
 #!/bin/bash
 
 {{ $computerName := output "scutil" "--get" "ComputerName" | trim -}}
