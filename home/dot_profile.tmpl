@@ -1,8 +1,12 @@
+{{- if (has "dev" .tags) -}}
 . "$HOME/.cargo/env"
+{{ end }}
 
+{{- if (has "ai" .tags) }}
 # Added by LM Studio CLI (lms)
 export PATH="$PATH:$HOME/.cache/lm-studio/bin"
 # End of LM Studio CLI section
+{{- end }}
 
 # >>> Experimental - See ~/.zshrc >>>
 #. "$HOME/.local/bin/env"

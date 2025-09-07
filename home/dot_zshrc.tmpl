@@ -137,6 +137,7 @@ source "$HOME"/.cargo/env
 export PATH="$HOME/.jenv/bin:$PATH"
 eval "$(jenv init -)"
 
+{{ if (has "dev" .tags) -}}
 export LIQUIBASE_HOME=/opt/homebrew/opt/liquibase/libexec
 
 export PATH="$LIQUIBASE_HOME:$PATH"
@@ -146,12 +147,13 @@ alias dotnet64=/usr/local/share/dotnet/x64/dotnet
 #alias laws='aws --endpoint-url=http://localhost:4566'
 # AWS cli for use with LocalStack. (See https://github.com/localstack/awscli-local#alternative.)
 alias awslocal="AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=${DEFAULT_REGION:-$AWS_DEFAULT_REGION} aws --endpoint-url=http://${LOCALSTACK_HOST:-localhost}:4566"
-{{ if (has "dev" .tags) }}
+
 export NVM_DIR="$HOME/.nvm"
   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
   [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-{{ end }}
+
 export PATH=/usr/local/smlnj/bin:"$PATH"
+{{- end }}
 
 # LLM-based command suggestions for zsh
 source ~/.local/share/zsh-llm-suggestions/zsh-llm-suggestions.zsh
@@ -167,7 +169,7 @@ bindkey '^[^o' zsh_llm_suggestions_openai_explain # Ctrl + alt + O to have OpenA
 #source $(dirname $(gem which colorls))/tab_complete.sh
 
 # colorls
-alias lc='colorls -lA --sd'
+#alias lc='colorls -lA --sd'
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
@@ -178,9 +180,11 @@ if [[ -d "$HOME/.local/share/zsh-functions" ]]; then
   autoload -Uz "$HOME"/.local/share/zsh-functions/autoload/*
 fi
 
+{{ if (has "ai" .tags) -}}
 # Added by LM Studio CLI (lms)
 export PATH="$PATH:$HOME/.cache/lm-studio/bin"
 # End of LM Studio CLI section
+{{- end }}
 
 # >>> Experimental: Automatically load .env files in directories >>>
 # Auto-load .env files when entering directories
@@ -220,7 +224,8 @@ auto_load_env() {
 export PATH="$HOME/.local/bin:$PATH"
 eval "$(uv generate-shell-completion zsh)"
 eval "$(uvx --generate-shell-completion zsh)"
-{{ if (has "ai" .tags) }}
+
+{{ if (has "dev" .tags) -}}
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 __conda_setup="$('/opt/homebrew/Caskroom/miniforge/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
@@ -235,4 +240,5 @@ else
 fi
 unset __conda_setup
 # <<< conda initialize <<<
-{{ end }}
+{{- end }}
+
