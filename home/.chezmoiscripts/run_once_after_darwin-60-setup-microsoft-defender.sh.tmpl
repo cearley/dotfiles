@@ -3,20 +3,23 @@
 
 set -eufo pipefail
 
-echo "🛡️  Setting up Microsoft Defender for Individuals..."
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+print_message "info" "Setting up Microsoft Defender for Individuals..."
 
 # Check if Microsoft Defender is already installed
-if [ -d "/Applications/Microsoft Defender.app" ]; then
-    echo "✅ Microsoft Defender is already installed"
+if is_app_installed "/Applications/Microsoft Defender.app"; then
+    print_message "success" "Microsoft Defender is already installed"
     exit 0
 fi
 
 # Open the Microsoft Defender download page
-echo "Opening Microsoft Defender download page in your default browser..."
+print_message "info" "Opening Microsoft Defender download page in your default browser..."
 open "https://www.microsoft.com/en-us/microsoft-365/microsoft-defender-for-individuals#Download-the-app"
 
 echo ""
-echo "📋 Manual Installation Instructions:"
+print_message "info" "Manual Installation Instructions:"
 echo "1. Click 'Download for MacOS' on the page that just opened"
 echo "2. Once downloaded, open the installer package"
 echo "3. Follow the installation wizard to install Microsoft Defender"
@@ -27,11 +30,11 @@ echo ""
 # Wait a moment for the page to load, then provide additional guidance
 sleep 3
 
-echo "💡 Additional Setup Tips:"
+print_message "info" "Additional Setup Tips:"
 echo "- Microsoft Defender may require Full Disk Access permissions"
 echo "- You can grant permissions in System Preferences > Security & Privacy > Privacy > Full Disk Access"
 echo "- Add Microsoft Defender to the list of allowed applications"
 echo ""
-echo "✅ Once installation is complete, Microsoft Defender will provide real-time protection for your Mac"
+print_message "success" "Once installation is complete, Microsoft Defender will provide real-time protection for your Mac"
 
 {{ end -}}

@@ -45,9 +45,11 @@
     url = "https://github.com/cearley/zsh-functions.git"
     exact = true
     refreshPeriod = "24h"
+{{- if has "dev" .tags }}
 [".jenv"]
     type = "git-repo"
     url = "https://github.com/jenv/jenv.git"
     exact = true
     refreshPeriod = "168h"
+{{- end }}
 {{- end }}

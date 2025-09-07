@@ -5,6 +5,9 @@
 mbp-brewfile
 studio-brewfile
 
+## scripts
+scripts/
+
 # Files compiled with the zcompile builtin
 .oh-my-zsh/**/*.zwc
 

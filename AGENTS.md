@@ -21,6 +21,7 @@ This is a personal dotfiles repository managed by chezmoi, designed to bootstrap
 - `home/.chezmoiscripts/`: Automated setup scripts with execution ordering
 - `home/.chezmoidata/packages.yaml`: Static package definitions for Homebrew
 - `home/.chezmoitemplates/`: Reusable template snippets
+- `scripts/`: Shared utility scripts and functions
 - Template files (`.tmpl`): Dynamic configuration using chezmoi templating
 
 ### Script Execution System
@@ -58,6 +59,7 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
 - **Environment Setup (30-59):**
   - `30` - Install Basic Memory MCP server (AI tools)
   - `35` - Install nvm (Node Version Manager)
+  - `45` - Install Azul Zulu JDK (development toolchain)
   - `50` - Initialize conda (Python environment setup)
 
 - **System Configuration (80-99):**
@@ -83,6 +85,7 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 - `run_onchange_before_darwin-25-brew-bundle-install.sh.tmpl`: Supplemental packages from machine-specific brewfiles
 - `run_once_before_darwin-30-install-basic-memory.sh.tmpl`: Basic Memory MCP server (ai tag only)
 - `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager (work tag only)
+- `run_once_after_darwin-45-install-azul-zulu-jdk.sh.tmpl`: Azul Zulu JDK installation (dev tag only)
 - `run_once_after_darwin-50-initialize-conda.sh.tmpl`: Conda environment setup
 - `run_once_after_darwin-60-setup-microsoft-defender.sh.tmpl`: Microsoft Defender installation (conditional on microsoft_email)
 - `run_once_after_darwin-65-setup-claude-desktop.sh.tmpl`: Claude Desktop application installation
@@ -95,6 +98,30 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 ### Hooks System
 
 - `hooks/pre/bootstrap`: Ensures Homebrew and KeePassXC are installed before chezmoi operations
+
+### Shared Script Utilities
+
+Scripts in `home/.chezmoiscripts/` can leverage shared utility functions to avoid code duplication and ensure consistency:
+
+- **Script Utils File**: `scripts/script-utils.sh` provides common functions
+- **Usage**: Source with `source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"`
+- **Available Functions**:
+  - `print_message()`: Consistent messaging with emoji support
+  - `command_exists()`: Check if command is available
+  - `require_tools()`: Validate required tools are installed
+  - `download_file()`: Download with progress indication
+  - `ensure_directory()`: Create directories with optional sudo
+  - `cleanup_temp_dir()`: Clean up temporary directories
+  - `is_app_installed()`: Check if macOS app is installed
+  - `get_macos_arch()`: Get consistent architecture string
+
+**Advantages of this approach**:
+- **Simple**: Standard bash sourcing, no template complexity
+- **Debuggable**: Direct file access for inspection and editing
+- **IDE-friendly**: Full syntax highlighting and tooling support
+- **Performance**: No template processing overhead
+- **Standard**: Uses conventional shell script patterns
+- **Clean output**: Utility functions output to stderr to avoid interfering with return values
 
 ### Configuration Structure
 

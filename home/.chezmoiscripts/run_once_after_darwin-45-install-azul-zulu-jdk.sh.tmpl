@@ -1,0 +1,252 @@
+{{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
+#!/bin/bash
+
+# Azul Zulu JDK installation script for macOS development environments
+# Only runs when 'dev' tag is present
+set -euo pipefail
+
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+# Constants
+readonly SCRIPT_NAME="install-azul-zulu-jdk.sh"
+readonly JAVA_INSTALL_DIR="/Library/Java/JavaVirtualMachines"
+readonly TEMP_DIR="/tmp/azul-jdk-install"
+readonly API_BASE_URL="https://api.azul.com/metadata/v1/zulu/packages"
+
+# Architecture mapping for Azul downloads
+{{- if eq .chezmoi.arch "amd64" }}
+readonly ARCH="x64"
+{{- else if eq .chezmoi.arch "arm64" }}
+readonly ARCH="aarch64"
+{{- else }}
+readonly ARCH="x64"  # fallback to x64
+{{- end }}
+
+# Script-specific functions
+
+# Check if JDK is already installed
+check_existing_jdk() {
+    if [ -d "$JAVA_INSTALL_DIR" ] && [ "$(ls -1 "$JAVA_INSTALL_DIR" 2>/dev/null | grep -c "zulu")" -gt 0 ]; then
+        local existing_jdk
+        existing_jdk=$(ls -1 "$JAVA_INSTALL_DIR" | grep "zulu" | head -1)
+        print_message "info" "Found existing Azul Zulu JDK: $existing_jdk"
+        
+        # Check if it's a recent version (Java 17+ LTS)
+        if echo "$existing_jdk" | grep -qE "(zulu1[789]|zulu2[0-9])"; then
+            print_message "skip" "Recent Azul Zulu JDK already installed, skipping installation"
+            return 0
+        else
+            print_message "info" "Older JDK version found, will install latest LTS version"
+            return 1
+        fi
+    fi
+    return 1
+}
+
+# Get latest LTS JDK download URL
+get_latest_lts_url() {
+    local api_url="${API_BASE_URL}?os=macosx&arch=${ARCH}&java_package_type=jdk&archive_type=tar.gz&support_term=lts&latest=true"
+    
+    print_message "info" "Fetching latest LTS JDK information for architecture: $ARCH"
+    
+    # Use curl to fetch the API response
+    local response
+    if ! response=$(curl -s "$api_url"); then
+        print_message "error" "Failed to fetch JDK information from Azul API"
+        return 1
+    fi
+    
+    # Check if we got a valid response
+    if [ -z "$response" ]; then
+        print_message "error" "Empty response from Azul API"
+        return 1
+    fi
+    
+    # Extract download URL for standard JDK (ca variant, not ca-fx or ca-crac)
+    # Filter for entries that contain "-ca-jdk" but not "-ca-fx" or "-ca-crac"
+    local download_url
+    if ! download_url=$(echo "$response" | grep -o '"download_url":"[^"]*-ca-jdk[^"]*' | grep -v -- '-ca-fx\|-ca-crac' | head -1 | sed 's/"download_url":"//'); then
+        print_message "error" "Failed to parse download URL from API response"
+        return 1
+    fi
+    
+    if [ -z "$download_url" ]; then
+        print_message "error" "No download URL found for architecture: $ARCH"
+        return 1
+    fi
+    
+    
+    echo "$download_url"
+}
+
+# Download and verify JDK
+download_jdk() {
+    local download_url="$1"
+    local filename
+    filename=$(basename "$download_url")
+    local download_path="${TEMP_DIR}/${filename}"
+    
+    print_message "info" "Downloading: $filename"
+    print_message "info" "URL: $download_url"
+    
+    # Create temp directory
+    ensure_directory "$TEMP_DIR"
+    
+    # Download JDK
+    if ! download_file "$download_url" "$download_path" "$filename"; then
+        return 1
+    fi
+    
+    echo "$download_path"
+}
+
+# Install JDK
+install_jdk() {
+    local download_path="$1"
+    
+    print_message "info" "Installing JDK to $JAVA_INSTALL_DIR"
+    
+    # Ensure install directory exists
+    ensure_directory "$JAVA_INSTALL_DIR" true
+    
+    # Extract to temp location first
+    local extract_temp="${TEMP_DIR}/extract"
+    mkdir -p "$extract_temp"
+    
+    print_message "info" "Extracting JDK archive..."
+    if ! tar -xzf "$download_path" -C "$extract_temp"; then
+        print_message "error" "Failed to extract JDK archive"
+        return 1
+    fi
+    
+    # Find the extracted JDK directory (.jdk file inside the extracted folder)
+    local jdk_dir
+    jdk_dir=$(find "$extract_temp" -name "*.jdk" -type d | head -1)
+    
+    if [ -z "$jdk_dir" ] || [ ! -d "$jdk_dir" ]; then
+        print_message "error" "Could not find extracted .jdk directory"
+        return 1
+    fi
+    
+    local jdk_name
+    jdk_name=$(basename "$jdk_dir")
+    local final_path="${JAVA_INSTALL_DIR}/${jdk_name}"
+    
+    # Move to final location
+    print_message "info" "Moving JDK to final location: $final_path"
+    if ! sudo mv "$jdk_dir" "$final_path"; then
+        print_message "error" "Failed to move JDK to installation directory"
+        return 1
+    fi
+    
+    # Set proper permissions
+    sudo chown -R root:wheel "$final_path"
+    sudo chmod -R 755 "$final_path"
+    
+    print_message "success" "JDK installed successfully to: $final_path"
+    
+    # Verify installation
+    if [ -x "$final_path/Contents/Home/bin/java" ]; then
+        local java_version
+        java_version=$("$final_path/Contents/Home/bin/java" -version 2>&1 | head -1)
+        print_message "success" "Java version: $java_version"
+        
+        # Add to jenv if available
+        add_to_jenv "$final_path/Contents/Home"
+    else
+        print_message "warning" "Java binary not found or not executable"
+    fi
+}
+
+# Add JDK to jenv if available
+add_to_jenv() {
+    local java_home="$1"
+    
+    # Check if jenv is available
+    if ! command -v jenv >/dev/null 2>&1; then
+        print_message "info" "jenv not found, skipping jenv configuration"
+        return 0
+    fi
+    
+    print_message "info" "Adding JDK to jenv: $java_home"
+    
+    # Check if this Java version is already in jenv
+    if jenv versions | grep -q "$(basename "$(dirname "$java_home")")"; then
+        print_message "info" "JDK already configured in jenv"
+        return 0
+    fi
+    
+    # Add to jenv
+    if jenv add "$java_home"; then
+        print_message "success" "JDK added to jenv successfully"
+        
+        # Get the version that was added
+        local jenv_version
+        jenv_version=$(jenv versions | grep "$(basename "$(dirname "$java_home")")" | awk '{print $1}' | head -1)
+        
+        if [ -n "$jenv_version" ]; then
+            print_message "info" "Available jenv version: $jenv_version"
+            print_message "info" "To use this version globally: jenv global $jenv_version"
+            print_message "info" "To use this version locally: jenv local $jenv_version"
+        fi
+    else
+        print_message "warning" "Failed to add JDK to jenv"
+    fi
+}
+
+# Cleanup temp files
+cleanup() {
+    cleanup_temp_dir "$TEMP_DIR"
+}
+
+# Main function
+main() {
+    print_message "info" "Running Azul Zulu JDK installation (dev tag detected)"
+    print_message "info" "Target architecture: $ARCH"
+    
+    # Set trap to cleanup on exit
+    trap cleanup EXIT
+    
+    # Check if JDK is already installed
+    if check_existing_jdk; then
+        exit 0
+    fi
+    
+    # Check prerequisites
+    if ! require_tools curl tar; then
+        exit 1
+    fi
+    
+    # Get download URL
+    local download_url
+    if ! download_url=$(get_latest_lts_url); then
+        exit 1
+    fi
+    
+    # Download JDK
+    local download_path
+    if ! download_path=$(download_jdk "$download_url"); then
+        exit 1
+    fi
+    
+    # Install JDK
+    if ! install_jdk "$download_path"; then
+        exit 1
+    fi
+    
+    print_message "success" "Azul Zulu JDK installation completed successfully!"
+    print_message "info" "You may need to restart your terminal or source your shell profile"
+    
+    if command -v jenv >/dev/null 2>&1; then
+        print_message "info" "JDK has been added to jenv. Use 'jenv versions' to see available versions"
+        print_message "info" "Use 'jenv global <version>' or 'jenv local <version>' to set Java version"
+    else
+        print_message "info" "To set JAVA_HOME manually, add this to your shell profile:"
+        echo "export JAVA_HOME=\$(ls -1 $JAVA_INSTALL_DIR | grep zulu | head -1 | xargs -I {} echo \"$JAVA_INSTALL_DIR/{}/Contents/Home\")"
+    fi
+}
+
+# Run main function with all arguments
+main "$@"
+{{ end -}}
