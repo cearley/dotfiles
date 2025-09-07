@@ -52,8 +52,8 @@ packages:
       - 'graphviz'
       - 'hugo'
       - 'liquibase'
-      #- 'localstack'
       - 'localstack/tap/localstack-cli'
+      #- 'nuget'
       - 'pkgconf'
       - 'snyk-cli'
       casks:

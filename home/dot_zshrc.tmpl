@@ -146,11 +146,11 @@ alias dotnet64=/usr/local/share/dotnet/x64/dotnet
 #alias laws='aws --endpoint-url=http://localhost:4566'
 # AWS cli for use with LocalStack. (See https://github.com/localstack/awscli-local#alternative.)
 alias awslocal="AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=${DEFAULT_REGION:-$AWS_DEFAULT_REGION} aws --endpoint-url=http://${LOCALSTACK_HOST:-localhost}:4566"
-
+{{ if (has "dev" .tags) }}
 export NVM_DIR="$HOME/.nvm"
   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
   [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
+{{ end }}
 export PATH=/usr/local/smlnj/bin:"$PATH"
 
 # LLM-based command suggestions for zsh
@@ -220,7 +220,7 @@ auto_load_env() {
 export PATH="$HOME/.local/bin:$PATH"
 eval "$(uv generate-shell-completion zsh)"
 eval "$(uvx --generate-shell-completion zsh)"
-
+{{ if (has "ai" .tags) }}
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 __conda_setup="$('/opt/homebrew/Caskroom/miniforge/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
@@ -235,4 +235,4 @@ else
 fi
 unset __conda_setup
 # <<< conda initialize <<<
-
+{{ end }}

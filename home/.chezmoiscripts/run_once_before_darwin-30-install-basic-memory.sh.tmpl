@@ -1,4 +1,4 @@
-{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) (output "command" "-v" "uvx") -}}
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
 #!/bin/bash
 
 # Install Basic Memory MCP server for Claude Desktop
