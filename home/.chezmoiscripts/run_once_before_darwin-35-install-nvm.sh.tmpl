@@ -1,33 +1,40 @@
 {{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
 #!/bin/bash
 
-echo "📦 Installing nvm (Node Version Manager)..."
+set -euo pipefail
+
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+print_message "info" "Installing nvm (Node Version Manager)..."
 
 # Check if nvm is already installed
-if [ -d "$HOME/.nvm" ] || command -v nvm >/dev/null 2>&1; then
-    echo "✅ nvm is already installed - skipping"
+if [ -d "$HOME/.nvm" ] || command_exists nvm; then
+    print_message "skip" "nvm is already installed"
     exit 0
 fi
 
 # Get the latest nvm version from GitHub API
+print_message "info" "Fetching latest nvm version from GitHub..."
 NVM_VERSION=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep '"tag_name"' | cut -d '"' -f 4)
 
 if [ -z "$NVM_VERSION" ]; then
-    echo "❌ Failed to fetch latest nvm version"
+    print_message "error" "Failed to fetch latest nvm version"
     exit 1
 fi
 
-echo "📦 Installing nvm $NVM_VERSION..."
+print_message "info" "Installing nvm $NVM_VERSION..."
 
 # Install nvm using the official installation script
+print_message "info" "Downloading and running nvm installation script..."
 curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/$NVM_VERSION/install.sh" | bash
 
 # Verify installation
 if [ -d "$HOME/.nvm" ]; then
-    echo "✅ nvm installed successfully"
-    echo "📝 Note: You may need to restart your terminal or run 'source ~/.zshrc' to use nvm"
+    print_message "success" "nvm installed successfully!"
+    print_message "info" "You may need to restart your terminal or run 'source ~/.zshrc' to use nvm"
 else
-    echo "❌ nvm installation failed"
+    print_message "error" "nvm installation failed"
     exit 1
 fi
 {{ end -}}

@@ -1,18 +1,29 @@
 {{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
 #!/bin/bash
 
-echo "🦀 Installing Rust programming language..."
+set -euo pipefail
 
-if command -v rustup >/dev/null 2>&1; then
-    echo "Rust is already installed. Updating..."
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+print_message "info" "Installing Rust programming language..."
+
+if command_exists rustup; then
+    print_message "info" "Rust is already installed. Updating..."
     rustup update
     exit 0
 fi
 
+print_message "info" "Downloading and installing Rust via rustup..."
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+print_message "info" "Adding Rust to shell profile..."
 (
     echo
     echo 'source "$HOME/.cargo/env"'
 ) >>"$HOME"/.zprofile
+
+print_message "success" "Rust installed successfully!"
+print_message "info" "You may need to restart your terminal or run 'source ~/.cargo/env'"
 
 {{ end -}}
