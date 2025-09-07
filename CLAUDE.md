@@ -215,6 +215,13 @@ Use the WebFetch tool to access these docs when encountering unfamiliar chezmoi 
 - Platform-specific scripts must be wrapped in conditional templates (e.g., `{{- if eq .chezmoi.os "darwin" -}}`)
 - Templates (files with .tmpl suffix) can be tested and debugged with `chezmoi execute-template`
 - Machine-specific SSH keys use reusable template pattern with hardware serial numbers
+- **Command validation in templates**: Use `lookPath` function to check command availability without template failure:
+  ```go-template
+  {{- if and (has "dev" .tags) (lookPath "rustup") }}
+  source "$HOME/.cargo/env"
+  {{- end }}
+  ```
+  **Note**: Avoid using `output "command" "-v" "commandname"` as it will cause template execution to fail if the command doesn't exist. Use `lookPath "commandname"` instead, which returns empty string for missing commands.
 
 ## Portability Considerations
 
