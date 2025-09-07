@@ -201,7 +201,7 @@ This is my personal dotfiles repository, reflecting my specific preferences, wor
 - **Package choices** - Includes my preferred development stack which may be overkill or missing tools you need
 - **System modifications** - Makes opinionated changes to macOS defaults and system configurations
 
-Consider this repository as a learning resource and starting point rather than something to use directly.
+Consider this repository as a reference implementation and starting point rather than something to use directly.
 
 ### What You'll Need to Customize
 
