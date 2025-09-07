@@ -20,10 +20,10 @@ fi
 
 echo "🍺 Installing supplemental packages using Homebrew..."
 
-{{ $model := output "sh" "-c" "system_profiler SPHardwareDataType | awk '/Model Name/ {print substr($0, index($0, $3))}'" | trim }}
-{{ if contains "MacBook Pro" $model -}}
+{{ $computerName := output "scutil" "--get" "ComputerName" | trim }}
+{{ if contains "MacBook Pro" $computerName -}}
 brewfile="{{ .chezmoi.sourceDir }}/mbp-brewfile"
-{{- else if contains "Mac Studio" $model -}}
+{{- else if contains "Mac Studio" $computerName -}}
 brewfile="{{ .chezmoi.sourceDir }}/studio-brewfile"
 {{- else -}}
 brewfile=""

@@ -53,7 +53,7 @@ packages:
       - 'hugo'
       - 'liquibase'
       - 'localstack/tap/localstack-cli'
-      #- 'nuget'
+      - 'nuget'
       - 'pkgconf'
       - 'snyk-cli'
       casks:
