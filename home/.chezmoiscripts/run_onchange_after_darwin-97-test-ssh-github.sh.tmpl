@@ -1,7 +1,23 @@
+{{- if eq .chezmoi.os "darwin" -}}
 #!/bin/sh
 
+{{/* Hash all SSH private keys to trigger re-execution when they change */}}
+{{- $sshDir := joinPath .chezmoi.homeDir ".ssh" }}
+{{- $sshKeys := glob (joinPath $sshDir "id_*") }}
+{{- $privateKeys := list }}
+{{- range $sshKeys }}
+  {{- if not (hasSuffix ".pub" .) }}
+    {{- $privateKeys = append $privateKeys . }}
+  {{- end }}
+{{- end }}
+{{- if $privateKeys }}
+# SSH keys hash: {{ range $privateKeys }}{{ . | sha256sum }}{{ end }}
+{{- else }}
+# SSH keys hash: no-ssh-keys-found
+{{- end }}
+
 # SSH GitHub connectivity test for chezmoi post-apply hook
-# Only runs when "work" tag is present
+# Only runs when SSH keys change
 set -e
 set -u
 
@@ -222,7 +238,7 @@ test_ssh_connection() {
 
 # Main function
 main() {
-    print_message "info" "Running post-apply hook: $SCRIPT_NAME"
+    print_message "info" "Running SSH GitHub connectivity test (triggered by SSH key changes)"
     
     # Check for SSH keys first
     if ! check_ssh_keys; then
@@ -250,3 +266,4 @@ main() {
 
 # Run main function with all arguments
 main "$@"
+{{ end -}}

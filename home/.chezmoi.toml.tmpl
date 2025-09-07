@@ -27,9 +27,6 @@ database = {{ $keepassxc_db | quote }}
 [hooks.read-source-state.pre]
 command = ".local/share/chezmoi/hooks/pre/bootstrap"
 
-[hooks.apply.post]
-command = {{ if contains "work" ($tags | toString) -}} ".local/share/chezmoi/hooks/post/test-ssh-github.sh" {{- else -}} "echo" {{- end }}
-
 {{- if (has "dev" $tags) }}
 [edit]
 command = "code"

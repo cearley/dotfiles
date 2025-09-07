@@ -90,11 +90,11 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 - `run_once_after_darwin-88-setup-chronosync-symlinks.sh.tmpl`: ChronoSync symbolic links setup
 - `run_onchange_after_darwin-90-update-hosts.sh.tmpl`: Dynamic `/etc/hosts` management
 - `run_onchange_after_darwin-95-restart-syncthing.sh.tmpl`: Syncthing service management
+- `run_onchange_after_darwin-97-test-ssh-github.sh.tmpl`: SSH GitHub connectivity test (triggered by SSH key changes)
 
 ### Hooks System
 
 - `hooks/pre/bootstrap`: Ensures Homebrew and KeePassXC are installed before chezmoi operations
-- `hooks/post/test-ssh-github.sh`: Verifies SSH GitHub connection (runs only with "work" tag)
 
 ### Configuration Structure
 
