@@ -76,24 +76,12 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 {{ end -}}
 ```
 
-**Current Script Inventory:**
-- `run_once_before_darwin-00-install-homebrew.sh.tmpl`: Homebrew installation
-- `run_once_before_darwin-05-install-rosetta.sh.tmpl`: Rosetta 2 for Apple Silicon
-- `run_once_before_darwin-10-install-rust.sh.tmpl`: Rust toolchain
-- `run_once_before_darwin-15-install-uv.sh.tmpl`: Python package manager uv
-- `run_onchange_before_darwin-20-install-packages.sh.tmpl`: Essential packages from packages.yaml
-- `run_onchange_before_darwin-25-brew-bundle-install.sh.tmpl`: Supplemental packages from machine-specific brewfiles
-- `run_once_before_darwin-30-install-basic-memory.sh.tmpl`: Basic Memory MCP server (ai tag only)
-- `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager (work tag only)
-- `run_once_after_darwin-45-install-azul-zulu-jdk.sh.tmpl`: Azul Zulu JDK installation (dev tag only)
-- `run_once_after_darwin-50-initialize-conda.sh.tmpl`: Conda environment setup
-- `run_once_after_darwin-60-setup-microsoft-defender.sh.tmpl`: Microsoft Defender installation (conditional on microsoft_email)
-- `run_once_after_darwin-65-setup-claude-desktop.sh.tmpl`: Claude Desktop application installation
-- `run_once_after_darwin-85-configure-system-defaults.sh.tmpl`: macOS system preferences and iTerm2 settings
-- `run_once_after_darwin-88-setup-chronosync-symlinks.sh.tmpl`: ChronoSync symbolic links setup
-- `run_onchange_after_darwin-90-update-hosts.sh.tmpl`: Dynamic `/etc/hosts` management
-- `run_onchange_after_darwin-95-restart-syncthing.sh.tmpl`: Syncthing service management
-- `run_onchange_after_darwin-97-test-ssh-github.sh.tmpl`: SSH GitHub connectivity test (triggered by SSH key changes)
+**Script Examples:**
+- `run_once_before_darwin-00-install-homebrew.sh.tmpl`: System foundation
+- `run_once_before_darwin-10-install-rust.sh.tmpl`: Development toolchain (dev tag)
+- `run_onchange_before_darwin-20-install-packages.sh.tmpl`: Package management
+- `run_once_after_darwin-45-install-azul-zulu-jdk.sh.tmpl`: Environment setup (dev tag)
+- `run_onchange_after_darwin-97-test-ssh-github.sh.tmpl`: System validation (triggered by changes)
 
 ### Hooks System
 
@@ -103,10 +91,10 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 
 Scripts in `home/.chezmoiscripts/` can leverage shared utility functions to avoid code duplication and ensure consistency:
 
-- **Script Utils File**: `scripts/script-utils.sh` provides common functions
+- **Script Utils File**: `home/scripts/script-utils.sh` provides common functions
 - **Usage**: Source with `source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"`
 - **Available Functions**:
-  - `print_message()`: Consistent messaging with emoji support
+  - `print_message()`: Consistent messaging with intuitive emoji support (💡 info, ✅ success, ⚠️ warning, ❌ error, ⏩ skip)
   - `command_exists()`: Check if command is available
   - `require_tools()`: Validate required tools are installed
   - `download_file()`: Download with progress indication
@@ -122,6 +110,17 @@ Scripts in `home/.chezmoiscripts/` can leverage shared utility functions to avoi
 - **Performance**: No template processing overhead
 - **Standard**: Uses conventional shell script patterns
 - **Clean output**: Utility functions output to stderr to avoid interfering with return values
+- **Consistent**: All scripts now use identical messaging formats and utility patterns
+
+**Scripts Using Shared Utilities**:
+Scripts have been systematically refactored to use shared utilities for consistency:
+- `run_once_after_darwin-45-install-azul-zulu-jdk.sh.tmpl`: JDK installation with jenv integration
+- `run_once_after_darwin-60-setup-microsoft-defender.sh.tmpl`: Microsoft Defender setup
+- `run_once_before_darwin-10-install-rust.sh.tmpl`: Rust toolchain installation
+- `run_once_before_darwin-15-install-uv.sh.tmpl`: Python package manager uv
+- `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager
+- `run_once_after_darwin-65-setup-claude-desktop.sh.tmpl`: Claude Desktop app setup
+- `run_onchange_after_darwin-97-test-ssh-github.sh.tmpl`: SSH connectivity testing
 
 ### Configuration Structure
 
@@ -132,34 +131,7 @@ Scripts in `home/.chezmoiscripts/` can leverage shared utility functions to avoi
 - **System Defaults**: macOS preferences and application settings via `defaults` commands
 - **External Dependencies**: Managed via `home/.chezmoiexternal.toml` (Oh My Zsh, plugins, jenv, nvm)
 
-## Common Commands
-
-### Chezmoi Operations
-```bash
-# Edit a dotfile
-chezmoi edit $FILENAME
-
-# Edit and auto-apply changes
-chezmoi edit --apply $FILENAME
-
-# Edit with auto-apply on save
-chezmoi edit --watch $FILENAME
-
-# Update from remote and apply
-chezmoi update
-
-# Preview changes without applying
-chezmoi git pull -- --autostash --rebase && chezmoi diff
-
-# Apply previewed changes
-chezmoi apply
-```
-
-### Remote Installation
-```bash
-# One-command setup on new machine
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/chezmoi/remote_install.sh)"
-```
+## Key Commands
 
 ### Template Testing and Debugging
 ```bash
@@ -192,25 +164,9 @@ The repository uses chezmoi's templating system extensively:
 
 ### Package Management Strategy
 
-The repository uses a dual approach for package management:
-
-1. **Essential Packages** (`packages.yaml`): Static, categorized packages that are fundamental to the development environment
-   - `core`: Always-installed packages (git, iTerm2, syncthing, etc.)
-   - `dev`: Development tools (Go, Docker, VS Code, etc.) - requires "dev" tag
-   - `ai`: AI/ML packages (ollama, miniforge, etc.) - requires "ai" tag
-   - `work`: Work-specific packages (Teams, Zoom, .NET SDKs, etc.) - requires "work" tag
-
-2. **Supplemental Packages** (machine-specific brewfiles): Additional packages that extend beyond the essentials
-   - `mbp-brewfile`: Packages specific to MacBook Pro machines
-   - `studio-brewfile`: Packages specific to Mac Studio machines
-   - Updated via: `brew bundle dump --file=$HOME/.brewfiles/{machine-specific-brewfile} --force`
-   - Installed via prompted script that asks user permission
-
-This separation allows for:
-- **Consistent essentials**: Core packages are version-controlled and predictable
-- **Machine flexibility**: Different machines can have different supplemental packages
-- **User control**: Supplemental packages require user confirmation before installation
-- **Easy maintenance**: Brewfiles can be regenerated from current system state
+Dual approach for package management:
+1. **Essential Packages** (`home/.chezmoidata/packages.yaml`): Tag-based categorization (core, dev, ai, work)
+2. **Supplemental Packages** (machine-specific brewfiles): Additional packages requiring user confirmation
 
 ## File Naming Conventions
 
@@ -223,14 +179,7 @@ This separation allows for:
 
 ## Documentation References
 
-When working with chezmoi-specific functionality, templating, or advanced features not covered in this file, refer to the official chezmoi documentation at https://www.chezmoi.io/. Key reference sections include:
-
-- **User Guide**: https://www.chezmoi.io/user-guide/ - Core concepts and workflows
-- **Reference Manual**: https://www.chezmoi.io/reference/ - Complete command and template reference
-- **How-To Guides**: https://www.chezmoi.io/how-to/ - Specific use cases and examples
-- **Templates**: https://www.chezmoi.io/user-guide/templating/ - Template syntax and functions
-
-Use the WebFetch tool to access these docs when encountering unfamiliar chezmoi features or when the user asks about advanced chezmoi functionality.
+Use the WebFetch tool to access chezmoi documentation at https://www.chezmoi.io/ when encountering unfamiliar features.
 
 ## Security Considerations
 
@@ -250,53 +199,50 @@ Use the WebFetch tool to access these docs when encountering unfamiliar chezmoi 
   ```
   **Note**: Avoid using `output "command" "-v" "commandname"` as it will cause template execution to fail if the command doesn't exist. Use `lookPath "commandname"` instead, which returns empty string for missing commands.
 
-## Portability Considerations
-
-### Emoji Usage in Scripts
-Current scripts use emoji icons in output messages (e.g., `🍺 Installing packages using Homebrew...`). This enhances user experience on modern macOS but has portability implications:
-
-**Current Status (Good for macOS-focused repository):**
-- ✅ Modern macOS terminals (Terminal.app, iTerm2) have excellent emoji support
-- ✅ UTF-8 environments render emojis correctly
-- ✅ Improves script output readability and user engagement
-
-**Potential Issues for Diverse Environments:**
-- ⚠️ Older systems may not render emojis correctly
-- ⚠️ Non-UTF-8 locales could display as question marks or boxes
-- ⚠️ Minimal terminals might not support emojis
-- ⚠️ CI/CD environments may not render emojis in build logs
-- ⚠️ SSH sessions depend on client terminal capabilities
-
-**Recommendations for Broader Compatibility:**
-If targeting diverse environments, consider these alternatives:
-
-```bash
-# Option 1: ASCII-safe prefixes
-echo "[INFO] Installing packages using Homebrew..."
-echo "[SUCCESS] Installation completed"
-
-# Option 2: Simple symbols  
-echo "* Installing packages using Homebrew..."
-echo "+ Installation completed"
-
-# Option 3: Conditional emojis
-if [ "${LANG}" != "${LANG%UTF-8*}" ]; then
-    echo "🍺 Installing packages using Homebrew..."
-else
-    echo "Installing packages using Homebrew..."
-fi
-```
+## Best Practices
 
 ### Architecture Detection
-Scripts use chezmoi's built-in architecture detection for conditional execution:
-
+**Use `.chezmoi.arch` for consistent, cross-platform architecture detection:**
 ```bash
-# Apple Silicon specific (current approach)
+# Preferred approach
 {{- if and (eq .chezmoi.os "darwin") (eq .chezmoi.arch "arm64") -}}
-
-# Alternative methods:
-{{- if eq .chezmoi.kernel.machine "arm64" -}}
-{{- if eq (output "uname" "-m") "arm64" -}}
 ```
 
-**Best Practice:** Use `.chezmoi.arch` for consistent, cross-platform architecture detection.
+### Emoji Usage
+This macOS-focused repository uses intuitive emojis (💡 info, ✅ success, ⚠️ warning, ❌ error, ⏩ skip) with ASCII fallbacks for non-UTF-8 environments via the shared `print_message()` function.
+
+## Recent Improvements
+
+### Script Refactoring and Shared Utilities (2025)
+
+**Major refactoring initiative** to improve code consistency and maintainability:
+
+#### Shared Utility Functions
+- **Created**: `home/scripts/script-utils.sh` with common functions for all installation scripts
+- **Improved messaging**: Unified emoji set with intuitive icons:
+  - 💡 **Info**: Light bulb suggests helpful information
+  - ✅ **Success**: Check mark for completed actions  
+  - ⚠️ **Warning**: Triangle for caution messages
+  - ❌ **Error**: X mark for failures
+  - ⏩ **Skip**: Fast forward for skipped operations
+- **Stderr output**: All utility functions output to stderr to avoid interfering with function return values
+
+#### SSH Connectivity Testing
+- **Converted**: Post-hook SSH test to `run_onchange_after` script
+- **Smart triggering**: Re-runs automatically when SSH keys change (uses file hashing)
+- **Better diagnostics**: Enhanced error messages and troubleshooting guidance
+
+#### Azul Zulu JDK Installation
+- **New script**: `run_once_after_darwin-45-install-azul-zulu-jdk.sh.tmpl`
+- **Features**:
+  - Dynamic latest LTS version detection via Azul API
+  - Architecture-aware downloads (arm64/x64)
+  - Automatic jenv integration
+  - Proper macOS .jdk directory structure handling
+  - Smart existing installation detection
+
+#### Benefits Achieved
+- **Consistency**: All scripts use identical messaging and utility patterns
+- **Maintainability**: Centralized utility functions reduce duplication
+- **Reliability**: Tested shared functions with better error handling
+- **User Experience**: More intuitive emoji icons and consistent output formatting
