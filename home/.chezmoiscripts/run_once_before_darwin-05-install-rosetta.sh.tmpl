@@ -1,12 +1,15 @@
 {{- if and (eq .chezmoi.os "darwin") (eq .chezmoi.arch "arm64") -}}
 #!/bin/bash
 
-echo "🦾 Ensuring Rosetta is installed on Apple Silicon Mac..."
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+print_message "info" "Ensuring Rosetta is installed on Apple Silicon Mac..."
 
 if ! /usr/bin/pgrep oahd >/dev/null 2>&1; then
     sudo softwareupdate --install-rosetta --agree-to-license
 else
-    echo "✅ Rosetta is already installed"
+    print_message "success" "Rosetta is already installed"
 fi
 
 {{ end -}}

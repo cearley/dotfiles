@@ -1,7 +1,15 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
-echo "🛠️  Configuring macOS system defaults..."
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+# Check required tools
+if ! require_tools defaults /usr/libexec/PlistBuddy; then
+    exit 1
+fi
+
+print_message "info" "Configuring macOS system defaults..."
 
 {{- if has "iterm2" .packages.darwin.core.casks }}
 # iTerm2: Enable 'Close windows when quitting an application'
@@ -22,5 +30,5 @@ defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile_se
 /usr/libexec/PlistBuddy -c "Set 'New Bookmarks':0:'Normal Font' 'MesloLGSNF-Regular 13'" ~/Library/Preferences/com.googlecode.iterm2.plist 2>/dev/null || true
 {{- end }}
 
-echo "✅ System defaults configured successfully"
+print_message "success" "System defaults configured successfully"
 {{ end -}}

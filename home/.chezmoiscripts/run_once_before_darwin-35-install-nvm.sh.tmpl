@@ -6,10 +6,18 @@ set -euo pipefail
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
+# Check required tools
+if ! require_tools curl grep cut; then
+    exit 1
+fi
+
 print_message "info" "Installing nvm (Node Version Manager)..."
 
-# Check if nvm is already installed
-if [ -d "$HOME/.nvm" ] || command_exists nvm; then
+# nvm installs to $HOME/.nvm by default.
+# If this directory exists, we assume nvm is installed.
+# Note that `command -v nvm` doesn't find it in a fresh
+# shell context because it's a shell function, not a binary.
+if [ -d "$HOME/.nvm" ]; then
     print_message "skip" "nvm is already installed"
     exit 0
 fi

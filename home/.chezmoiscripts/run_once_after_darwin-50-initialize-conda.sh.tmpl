@@ -1,7 +1,15 @@
 {{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
 #!/bin/bash
 
-echo "🐍 Initializing conda for zsh shell..."
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+# Check required tools
+if ! require_tools conda; then
+    exit 1
+fi
+
+print_message "info" "Initializing conda for zsh shell..."
 conda init zsh
 
 {{ end -}}

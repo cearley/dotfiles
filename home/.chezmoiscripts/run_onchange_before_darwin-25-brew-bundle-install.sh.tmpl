@@ -1,6 +1,14 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+# Check required tools
+if ! require_tools brew scutil; then
+    exit 1
+fi
+
 # MacOS-specific script to install supplemental packages using Homebrew
 # This script uses separate brewfiles (mbp-brewfile, studio-brewfile) for machine-specific packages
 # that extend beyond the core/essential packages defined in packages.yaml.
@@ -14,11 +22,11 @@
 read -p "🍺 Install additional packages from your brewfile? (y/N): " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "⏭️  Skipping supplemental package installation"
+    print_message "skip" "Skipping supplemental package installation"
     exit 0
 fi
 
-echo "🍺 Installing supplemental packages using Homebrew..."
+print_message "info" "Installing supplemental packages using Homebrew..."
 
 {{ $computerName := output "scutil" "--get" "ComputerName" | trim }}
 {{ if contains "MacBook Pro" $computerName -}}

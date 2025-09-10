@@ -6,6 +6,11 @@ set -eufo pipefail
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
+# Check required tools
+if ! require_tools open; then
+    exit 1
+fi
+
 print_message "info" "Setting up Claude Desktop App..."
 
 # Check if Claude Desktop is already installed

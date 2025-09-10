@@ -33,7 +33,7 @@ check_existing_jdk() {
         print_message "info" "Found existing Azul Zulu JDK: $existing_jdk"
         
         # Check if it's a recent version (Java 17+ LTS)
-        if echo "$existing_jdk" | grep -qE "(zulu1[789]|zulu2[0-9])"; then
+        if echo "$existing_jdk" | grep -qE "(zulu-?1[789]|zulu-?2[0-9])"; then
             print_message "skip" "Recent Azul Zulu JDK already installed, skipping installation"
             return 0
         else
@@ -112,7 +112,7 @@ install_jdk() {
     
     # Extract to temp location first
     local extract_temp="${TEMP_DIR}/extract"
-    mkdir -p "$extract_temp"
+    ensure_directory "$extract_temp"
     
     print_message "info" "Extracting JDK archive..."
     if ! tar -xzf "$download_path" -C "$extract_temp"; then
@@ -164,7 +164,7 @@ add_to_jenv() {
     local java_home="$1"
     
     # Check if jenv is available
-    if ! command -v jenv >/dev/null 2>&1; then
+    if ! command_exists jenv; then
         print_message "info" "jenv not found, skipping jenv configuration"
         return 0
     fi
@@ -238,7 +238,7 @@ main() {
     print_message "success" "Azul Zulu JDK installation completed successfully!"
     print_message "info" "You may need to restart your terminal or source your shell profile"
     
-    if command -v jenv >/dev/null 2>&1; then
+    if command_exists jenv; then
         print_message "info" "JDK has been added to jenv. Use 'jenv versions' to see available versions"
         print_message "info" "Use 'jenv global <version>' or 'jenv local <version>' to set Java version"
     else

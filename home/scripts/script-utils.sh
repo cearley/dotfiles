@@ -11,11 +11,11 @@ print_message() {
     # Check if UTF-8 is supported for emoji rendering
     if [ "${LANG}" != "${LANG%UTF-8*}" ]; then
         case "$level" in
-            "info") echo "💡 $message" >&2 ;;
+            "info") echo "🔵 $message" >&2 ;;
             "success") echo "✅ $message" >&2 ;;
             "warning") echo "⚠️  $message" >&2 ;;
             "error") echo "❌ $message" >&2 ;;
-            "skip") echo "⏩ $message" >&2 ;;
+            "skip") echo "⏭️ $message" >&2 ;;
         esac
     else
         case "$level" in

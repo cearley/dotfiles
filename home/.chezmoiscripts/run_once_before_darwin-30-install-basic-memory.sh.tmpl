@@ -4,11 +4,14 @@
 # Install Basic Memory MCP server for Claude Desktop
 # Prerequisite: uv (installed by run_once_before_darwin-15-install-uv.sh.tmpl)
 
-echo "🤖 Installing Basic Memory MCP server for Claude Desktop..."
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+print_message "info" "Installing Basic Memory MCP server for Claude Desktop..."
 
 # Skip if basic-memory is already installed.
 if uvx basic-memory --version >/dev/null 2>&1; then
-    echo "✅ Skipping basic-memory installation: basic-memory is already installed"
+    print_message "skip" "Skipping basic-memory installation: basic-memory is already installed"
     exit 0
 fi
 
@@ -17,5 +20,5 @@ fi
 # and configure Claude Desktop automatically with user permission.
 curl -LsSf https://basicmemory.com/install/latest.sh | sh
 
-echo "Basic Memory MCP server installation completed"
+print_message "success" "Basic Memory MCP server installation completed"
 {{ end -}}

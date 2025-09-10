@@ -1,6 +1,9 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/sh
 
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
 {{/* Hash all SSH private keys to trigger re-execution when they change */}}
 {{- $sshDir := joinPath .chezmoi.homeDir ".ssh" }}
 {{- $sshKeys := glob (joinPath $sshDir "id_*") }}
@@ -27,31 +30,6 @@ readonly GITHUB_SSH_HOST="git@github.com"
 readonly SSH_SUCCESS_EXIT_CODE=1  # GitHub returns 1 on successful auth without shell access
 readonly SSH_TIMEOUT=10
 readonly SSH_CONNECT_TIMEOUT=5
-
-# Utility functions
-print_message() {
-    local level="$1"
-    local message="$2"
-    
-    # Check if UTF-8 is supported for emoji rendering
-    if [ "${LANG}" != "${LANG%UTF-8*}" ]; then
-        case "$level" in
-            "info") echo "ℹ️  $message" ;;
-            "success") echo "✅ $message" ;;
-            "warning") echo "⚠️  $message" ;;
-            "error") echo "❌ $message" ;;
-            "skip") echo "⏭️  $message" ;;
-        esac
-    else
-        case "$level" in
-            "info") echo "[INFO] $message" ;;
-            "success") echo "[SUCCESS] $message" ;;
-            "warning") echo "[WARNING] $message" ;;
-            "error") echo "[ERROR] $message" ;;
-            "skip") echo "[SKIP] $message" ;;
-        esac
-    fi
-}
 
 # Check if common SSH key files exist
 check_ssh_keys() {
@@ -83,7 +61,7 @@ check_ssh_key_permissions() {
         fi
         
         # Check permissions (works on both macOS and Linux)
-        if command -v stat >/dev/null 2>&1; then
+        if command_exists stat; then
             # Try macOS format first, fall back to Linux
             perms=$(stat -f "%Lp" "$key" 2>/dev/null || stat -c "%a" "$key" 2>/dev/null || echo "unknown")
             if [ "$perms" != "600" ] && [ "$perms" != "unknown" ]; then
@@ -214,9 +192,9 @@ test_ssh_connection() {
     local ssh_cmd="ssh -T -o ConnectTimeout=$SSH_CONNECT_TIMEOUT -o BatchMode=yes $GITHUB_SSH_HOST"
     
     # Check if timeout command is available
-    if command -v timeout >/dev/null 2>&1; then
+    if command_exists timeout; then
         ssh_output=$(timeout "$SSH_TIMEOUT" $ssh_cmd 2>&1)
-    elif command -v gtimeout >/dev/null 2>&1; then  # macOS with coreutils
+    elif command_exists gtimeout; then  # macOS with coreutils
         ssh_output=$(gtimeout "$SSH_TIMEOUT" $ssh_cmd 2>&1)
     else
         # Fallback without timeout
