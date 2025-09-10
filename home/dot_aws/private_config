@@ -6,7 +6,18 @@ output = json
 region = us-east-1
 output = json
 
-[profile localstack]
+[profile di-dev]
 region = us-east-1
 output = json
 
+[profile di-prod]
+region = us-east-1
+output = json
+
+[profile personal]
+region = us-east-1
+output = json
+
+[profile localstack]
+region = us-east-1
+output = json
