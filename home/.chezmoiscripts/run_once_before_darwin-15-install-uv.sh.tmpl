@@ -6,6 +6,11 @@ set -euo pipefail
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
+# Check required tools
+if ! require_tools curl; then
+    exit 1
+fi
+
 print_message "info" "Installing uv - Python package manager..."
 print_message "info" "Using standalone installer from astral.sh"
 

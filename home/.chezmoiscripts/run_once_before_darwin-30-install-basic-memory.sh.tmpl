@@ -7,6 +7,11 @@
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
+# Check required tools
+if ! require_tools curl uvx; then
+    exit 1
+fi
+
 print_message "info" "Installing Basic Memory MCP server for Claude Desktop..."
 
 # Skip if basic-memory is already installed.
