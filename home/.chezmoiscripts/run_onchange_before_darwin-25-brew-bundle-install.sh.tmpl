@@ -15,6 +15,20 @@ fi
 # Maintenance: Update brewfiles by periodically running:
 # brew bundle dump --file=$HOME/.brewfiles/{machine-specific-brewfile} --force
 
+{{ $computerName := includeTemplate "computer-name" . }}
+{{- $brewfilePath := includeTemplate "machine-brewfile-path" (dict "computerName" $computerName "chezmoi" .chezmoi) -}}
+{{- if $brewfilePath -}}
+brewfile={{ $brewfilePath }}
+# brewfile hash: {{ include $brewfilePath | sha256sum }}
+{{- else -}}
+brewfile=""
+{{- end }}
+
+if [[ ! -f $brewfile ]]; then
+    print_message "skip" "Skipping supplemental package installation - brewfile not found for this machine ({{- $computerName -}})"
+    exit 0
+fi
+
 read -p "🍺 Install additional packages from your brewfile? (y/N): " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -23,18 +37,6 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 print_message "info" "Installing supplemental packages using Homebrew..."
-
-{{ $computerName := output "scutil" "--get" "ComputerName" | trim }}
-{{ if contains "MacBook Pro" $computerName -}}
-brewfile="{{ .chezmoi.sourceDir }}/mbp-brewfile"
-# mbp-brewfile hash: {{ include (joinPath .chezmoi.sourceDir "mbp-brewfile") | sha256sum }}
-{{- else if contains "Mac Studio" $computerName -}}
-brewfile="{{ .chezmoi.sourceDir }}/studio-brewfile"
-# studio-brewfile hash: {{ include (joinPath .chezmoi.sourceDir "studio-brewfile") | sha256sum }}
-{{- else -}}
-brewfile=""
-# No matching brewfile for this computer
-{{- end }}
 
 brew bundle -v --no-lock --file=$brewfile
 {{ end -}}
