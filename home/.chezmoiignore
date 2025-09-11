@@ -2,8 +2,7 @@
 **/cache
 
 ## Brewfiles
-mbp-brewfile
-studio-brewfile
+brewfiles/
 
 ## scripts
 scripts/
