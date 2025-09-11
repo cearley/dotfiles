@@ -1,6 +1,10 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/sh
 
+# SSH GitHub connectivity test
+
+set -euo pipefail
+
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
@@ -19,13 +23,6 @@ source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 # SSH keys hash: no-ssh-keys-found
 {{- end }}
 
-# SSH GitHub connectivity test for chezmoi post-apply hook
-# Only runs when SSH keys change
-set -e
-set -u
-
-# Constants
-readonly SCRIPT_NAME="test-ssh-github.sh"
 readonly GITHUB_SSH_HOST="git@github.com"
 readonly SSH_SUCCESS_EXIT_CODE=1  # GitHub returns 1 on successful auth without shell access
 readonly SSH_TIMEOUT=10

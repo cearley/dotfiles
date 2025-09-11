@@ -1,4 +1,0 @@
-{{ $computerName := output "scutil" "--get" "ComputerName" | trim }}
-{{- if contains "MacBook Pro" $computerName -}}
-{{ .chezmoi.sourceDir }}/mbp-brewfile
-{{- end -}}

@@ -1,0 +1,7 @@
+{{- /* Determine the appropriate KeepassXC SSH entry based on the machine's name. */ -}}
+{{- $computerName := . -}}
+{{- if contains "Mac Studio" $computerName -}}
+SSH (Mac Studio)
+{{- else if contains "MacBook Pro" $computerName -}}
+SSH (MacBook Pro)
+{{- end -}}
