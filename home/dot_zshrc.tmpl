@@ -217,11 +217,10 @@ auto_load_env() {
 
 # Load env on shell startup if in a directory with .env
 #auto_load_env
-
-#. "$HOME/.local/bin/env"
 # <<< Experimental: Automatically load .env files in directories <<<
 
-export PATH="$HOME/.local/bin:$PATH"
+# Astral.sh uv - Python package manager
+. "$HOME/.local/bin/env"
 eval "$(uv generate-shell-completion zsh)"
 eval "$(uvx --generate-shell-completion zsh)"
 
