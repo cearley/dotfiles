@@ -9,16 +9,12 @@ if ! require_tools brew scutil; then
     exit 1
 fi
 
-# MacOS-specific script to install supplemental packages using Homebrew
-# This script uses separate brewfiles (mbp-brewfile, studio-brewfile) for machine-specific packages
-# that extend beyond the core/essential packages defined in packages.yaml.
-# packages.yaml contains static, essential packages categorized by tags (core, dev, ai, work)
-# while this script handles supplemental, machine-specific, or experimental package installations.
+# This script installs supplemental packages using Homebrew based on the 
+# specific Mac computer name.
 # 
 # Maintenance: Update brewfiles by periodically running:
 # brew bundle dump --file=$HOME/.brewfiles/{machine-specific-brewfile} --force
 
-# Prompt user whether to install supplemental packages
 read -p "🍺 Install additional packages from your brewfile? (y/N): " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -31,13 +27,14 @@ print_message "info" "Installing supplemental packages using Homebrew..."
 {{ $computerName := output "scutil" "--get" "ComputerName" | trim }}
 {{ if contains "MacBook Pro" $computerName -}}
 brewfile="{{ .chezmoi.sourceDir }}/mbp-brewfile"
+# mbp-brewfile hash: {{ include (joinPath .chezmoi.sourceDir "mbp-brewfile") | sha256sum }}
 {{- else if contains "Mac Studio" $computerName -}}
 brewfile="{{ .chezmoi.sourceDir }}/studio-brewfile"
+# studio-brewfile hash: {{ include (joinPath .chezmoi.sourceDir "studio-brewfile") | sha256sum }}
 {{- else -}}
 brewfile=""
+# No matching brewfile for this computer
 {{- end }}
 
-# mbp-brewfile hash: {{ include (joinPath .chezmoi.sourceDir "mbp-brewfile") | sha256sum }}
-# studio-brewfile hash: {{ include (joinPath .chezmoi.sourceDir "studio-brewfile") | sha256sum }}
 brew bundle -v --no-lock --file=$brewfile
 {{ end -}}
