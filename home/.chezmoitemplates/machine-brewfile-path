@@ -1,7 +1,7 @@
 {{- /* Determine the path to the appropriate Homebrew Brewfile based on the machine's name. */ -}}
 {{- $computerName := .computerName -}}
 {{- if contains "MacBook Pro" $computerName -}}
-{{ .chezmoi.sourceDir }}/mbp-brewfile
+{{ .chezmoi.sourceDir }}/brewfiles/mbp-brewfile
 {{- else if contains "Mac Studio" $computerName -}}
-{{ .chezmoi.sourceDir }}/studio-brewfile
+{{ .chezmoi.sourceDir }}/brewfiles/studio-brewfile
 {{- end -}}
