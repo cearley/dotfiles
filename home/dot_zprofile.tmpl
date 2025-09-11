@@ -1,6 +1,6 @@
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
-{{ if (has "dev" .tags) }}
+{{ if has "dev" .tags -}}
 # Added by Toolbox App
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/Library/Application Support/JetBrains/Toolbox/scripts"
 # Add .NET Core SDK tools
@@ -8,4 +8,4 @@ export PATH="$PATH:$HOME/.dotnet/tools"
 
 
 source "$HOME/.cargo/env"
-{{ end }}
+{{- end }}

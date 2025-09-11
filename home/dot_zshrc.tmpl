@@ -137,7 +137,7 @@ source "$HOME"/.cargo/env
 export PATH="$HOME/.jenv/bin:$PATH"
 eval "$(jenv init -)"
 
-{{ if (has "dev" .tags) -}}
+{{ if has "dev" .tags -}}
 export LIQUIBASE_HOME=/opt/homebrew/opt/liquibase/libexec
 
 export PATH="$LIQUIBASE_HOME:$PATH"
@@ -180,9 +180,9 @@ if [[ -d "$HOME/.local/share/zsh-functions" ]]; then
   autoload -Uz "$HOME"/.local/share/zsh-functions/autoload/*
 fi
 
-{{ if (has "ai" .tags) -}}
+{{ if has "ai" .tags -}}
 # Added by LM Studio CLI (lms)
-export PATH="$PATH:$HOME/.cache/lm-studio/bin"
+export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"
 # End of LM Studio CLI section
 {{- end }}
 
@@ -225,7 +225,7 @@ export PATH="$HOME/.local/bin:$PATH"
 eval "$(uv generate-shell-completion zsh)"
 eval "$(uvx --generate-shell-completion zsh)"
 
-{{ if (has "dev" .tags) -}}
+{{ if has "dev" .tags -}}
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 __conda_setup="$('/opt/homebrew/Caskroom/miniforge/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
