@@ -9,7 +9,6 @@ set -euo pipefail
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
 # Constants
-readonly SCRIPT_NAME="install-azul-zulu-jdk.sh"
 readonly JAVA_INSTALL_DIR="/Library/Java/JavaVirtualMachines"
 readonly TEMP_DIR="/tmp/azul-jdk-install"
 readonly API_BASE_URL="https://api.azul.com/metadata/v1/zulu/packages"
