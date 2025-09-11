@@ -54,7 +54,7 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
 
 - **Package Management (20-29):**
   - `20` - Brew bundle install essential packages from packages.yaml
-  - `25` - Brew bundle install supplemental packages from machine-specific brewfiles
+  - `25` - Brew bundle install additional packages from machine-specific brewfiles
 
 - **Environment Setup (30-59):**
   - `30` - Install Basic Memory MCP server (AI tools)
@@ -144,16 +144,22 @@ cat {name-of-template-script}.tmpl | chezmoi execute-template
 
 ## Templates and Variables
 
-The repository uses chezmoi's templating system extensively:
+The repository uses chezmoi's templating system extensively with reusable template components:
+
+### Reusable Templates (`home/.chezmoitemplates/`)
+- `computer-name`: Standardized machine name detection using `scutil --get ComputerName`
+- `machine-brewfile-path`: Maps machine names to appropriate brewfile paths
+- `ssh-keepassxc-entry`: Determines KeePassXC entry names for SSH credentials based on machine name
 
 ### Machine Detection
-- Uses `system_profiler` output to detect Mac model (MacBook Pro vs Mac Studio)
-- Templates conditionally apply configurations based on `scutil --get ComputerName`
+- Uses `scutil --get ComputerName` for consistent machine identification across all templates
+- Templates conditionally apply configurations for different Mac models (MacBook Pro vs Mac Studio)
+- Centralized machine detection logic through reusable templates eliminates code duplication
 
 ### Secret Management
 - Integrates with KeePassXC via `keepassxcAttribute` template function
 - No secrets stored in repository - all fetched at apply time
-- Reusable template `ssh_secret` constructs machine-specific KeePassXC entries
+- Reusable template `ssh-keepassxc-entry` determines appropriate SSH credential entry names based on machine name
 
 ### User Configuration
 - `home/.chezmoi.toml.tmpl` prompts for user data on first run
@@ -166,7 +172,7 @@ The repository uses chezmoi's templating system extensively:
 
 Dual approach for package management:
 1. **Essential Packages** (`home/.chezmoidata/packages.yaml`): Tag-based categorization (core, dev, ai, work)
-2. **Supplemental Packages** (machine-specific brewfiles): Additional packages requiring user confirmation
+2. **Additional Packages** (machine-specific brewfiles): Additional packages requiring user confirmation
 
 ## File Naming Conventions
 
@@ -241,8 +247,15 @@ This macOS-focused repository uses intuitive emojis (💡 info, ✅ success, ⚠
   - Proper macOS .jdk directory structure handling
   - Smart existing installation detection
 
+#### Reusable Template System (2025)
+- **Created centralized templates**: `home/.chezmoitemplates/` directory with reusable components
+- **Machine detection**: `computer-name` template provides consistent machine identification
+- **Brewfile management**: `machine-brewfile-path` template maps machines to appropriate brewfiles
+- **SSH credential management**: `ssh-keepassxc-entry` template standardizes KeePassXC entry naming
+
 #### Benefits Achieved
 - **Consistency**: All scripts use identical messaging and utility patterns
-- **Maintainability**: Centralized utility functions reduce duplication
+- **Maintainability**: Centralized utility functions and templates reduce duplication
 - **Reliability**: Tested shared functions with better error handling
 - **User Experience**: More intuitive emoji icons and consistent output formatting
+- **Template Reusability**: Machine-specific logic centralized in reusable template components

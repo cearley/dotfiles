@@ -9,11 +9,10 @@ if ! require_tools brew scutil; then
     exit 1
 fi
 
-# This script installs supplemental packages using Homebrew based on the 
-# specific Mac computer name.
+# This script installs additional packages using Homebrew based on the specific computer name.
 # 
 # Maintenance: Update brewfiles by periodically running:
-# brew bundle dump --file=$HOME/.brewfiles/{machine-specific-brewfile} --force
+# brew bundle dump --file=$HOME/.brewfiles/current --force --force
 
 {{ $computerName := includeTemplate "computer-name" . }}
 {{- $brewfilePath := includeTemplate "machine-brewfile-path" (dict "computerName" $computerName "chezmoi" .chezmoi) -}}
@@ -25,18 +24,18 @@ brewfile=""
 {{- end }}
 
 if [[ ! -f $brewfile ]]; then
-    print_message "skip" "Skipping supplemental package installation - brewfile not found for this machine ({{- $computerName -}})"
+    print_message "skip" "Skipping additional package installation - brewfile not found for this machine ({{- $computerName -}})"
     exit 0
 fi
 
 read -p "🍺 Install additional packages from your brewfile? (y/N): " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_message "skip" "Skipping supplemental package installation"
+    print_message "skip" "Skipping additional package installation"
     exit 0
 fi
 
-print_message "info" "Installing supplemental packages using Homebrew..."
+print_message "info" "Installing additional packages using Homebrew..."
 
 brew bundle -v --no-lock --file=$brewfile
 {{ end -}}

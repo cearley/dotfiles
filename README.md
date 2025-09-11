@@ -19,11 +19,12 @@ My personal dotfiles and macOS development environment setup, managed with [chez
 
 This repository uses several chezmoi patterns that you might find helpful:
 - **Secure secret management** using KeePassXC integration (no hardcoded credentials)
-- **Multi-machine support** with conditional configurations for different Macs
+- **Multi-machine support** with conditional configurations for different Macs using reusable templates
 - **Automated dependency installation** with proper error handling and logging
 - **Tag-based execution** to customize setups for different use cases (work, personal, AI/ML)
 - **Comprehensive validation** - Validates SSH keys, GitHub access, Homebrew installation, etc.
 - **System-wide configuration management** - Shows how to manage `/etc/hosts` and other system files outside the home directory using chezmoi scripts
+- **Reusable template components** - Centralized machine detection and configuration logic in `home/.chezmoitemplates/`
 
 ## Quick Start
 
@@ -41,7 +42,11 @@ sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/main/remo
 
 This automatically installs all dependencies (Git, Homebrew, chezmoi, KeePassXC, etc.) and applies your dotfiles.
 
-**Requirement:** A KeePassXC database file is needed for password management.
+**Requirements:** 
+- A KeePassXC database file is needed for password management
+
+**Optional:**
+- Machine-specific brewfiles for additional package management (will be symlinked to `$HOME/.brewfiles/current` if present)
 
 ## Daily operations
 
@@ -208,7 +213,7 @@ Consider this repository as a reference implementation and starting point rather
 If you decide to fork or use this repository, you'll need to customize several key areas:
 
 - **KeePassXC database** - Set up your own password manager with the entries this config expects
-- **Package lists** - Review `home/.chezmoidata/packages.yaml` for essential packages and review machine-specific brewfiles for supplemental packages
+- **Package lists** - Review `home/.chezmoidata/packages.yaml` for essential packages and machine-specific brewfiles for additional packages
 - **Personal services** - Remove ChronoSync, Syncthing, or other personal workflow tools
 - **SSH/Git configuration** - Update for your own accounts and preferences
 - **Network configurations** - Remove personal hosts file management
