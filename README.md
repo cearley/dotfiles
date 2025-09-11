@@ -22,7 +22,7 @@ This repository uses several chezmoi patterns that you might find helpful:
 - **Multi-machine support** with conditional configurations for different Macs
 - **Automated dependency installation** with proper error handling and logging
 - **Tag-based execution** to customize setups for different use cases (work, personal, AI/ML)
-- **Comprehensive validation** with pre/post-installation hooks
+- **Comprehensive validation** - Validates SSH keys, GitHub access, Homebrew installation, etc.
 - **System-wide configuration management** - Shows how to manage `/etc/hosts` and other system files outside the home directory using chezmoi scripts
 
 ## Quick Start
@@ -219,7 +219,7 @@ When you first run chezmoi, you'll be prompted for:
 - **GitHub username** - For Git configuration and script environment
 - **GitHub emails** - Separate emails for default and work repositories
 - **KeePassXC database path** - Location of your password database file
-- **Microsoft email** (optional) - Enables Microsoft Defender installation
-- **Machine tags** - Choose from: ai, ml, mobile, personal, school, work
+- **Microsoft email** (optional) - Enables subscription-based Microsoft app installations
+- **Machine tags** - Choose from: ai, dev, personal, work, etc.
 
-Tags control which scripts run and which tools get installed. For example, "work" enables NVM and SSH validation, while "ai" installs additional ML tools.
+Tags control which scripts run and which tools get installed. For example, "dev" installs NVM, conda, rust, and others, while "ai" installs additional ML tools.
