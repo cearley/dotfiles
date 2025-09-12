@@ -27,6 +27,7 @@ packages:
       - 'appcleaner'
       - 'chronoagent'
       - 'chronosync'
+      - 'cryptomator'
       - 'font-hack-nerd-font'
       - 'font-meslo-lg-nerd-font'
       - 'fuse-t'
