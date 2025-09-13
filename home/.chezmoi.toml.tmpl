@@ -9,6 +9,9 @@
     $tag_choices (list "work")
 -}}
 
+{{- $aws_secrets_manager_profile := promptStringOnce . "aws_secrets_manager_profile" "AWS Secrets Manager profile name" "default" -}}
+{{- $aws_secrets_manager_region := promptStringOnce . "aws_secrets_manager_region" "AWS Secrets Manager region" "us-east-1" -}}
+
 [data]
 fullname = {{ $fullname | quote }}
 gh_commit_email = {{ $gh_commit_email | quote }}
@@ -17,9 +20,14 @@ gh_username = {{ $gh_username | quote }}
 keepassxc_db = {{ $keepassxc_db | quote }}
 microsoft_email = {{ $microsoft_email | quote }}
 tags = {{ $tags | toToml }}
+has_keepassxc = {{ if and (ne $keepassxc_db "") (stat $keepassxc_db) }}true{{ else }}false{{ end }}
 
 [scriptEnv]
 GITHUB_USERNAME = {{ $gh_username | quote }}
+
+[awsSecretsManager]
+profile = {{ if ne $aws_secrets_manager_profile "" }}{{ $aws_secrets_manager_profile | quote }}{{ else }}"default"{{ end }}
+region = {{ if ne $aws_secrets_manager_region "" }}{{ $aws_secrets_manager_region | quote }}{{ else }}"us-east-1"{{ end }}
 
 [keepassxc]
 database = {{ $keepassxc_db | quote }}
