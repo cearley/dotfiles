@@ -12,12 +12,12 @@ if ! require_tools mktemp grep sed cp mv; then
     exit 1
 fi
 
-print_message "info" "Updating /etc/hosts from chezmoi template data..."
-
 set -e
 
 HOSTS_FILE="/etc/hosts"
 BACKUP_FILE="/etc/hosts.backup.$(date +%Y%m%d_%H%M%S)"
+
+print_message "info" "Updating $HOSTS_FILE..."
 
 {{- if stat (joinPath .chezmoi.homeDir ".hosts-data.json") }}
 # HOSTS_FILE hash: {{ include (joinPath .chezmoi.homeDir ".hosts-data.json") | sha256sum }}
@@ -25,12 +25,10 @@ BACKUP_FILE="/etc/hosts.backup.$(date +%Y%m%d_%H%M%S)"
 
 
 create_host_entries() {
-    print_message "info" "Creating host entries from chezmoi template data"
-    
     # Create a temporary file to store the parsed entries
     TEMP_ENTRIES=$(mktemp)
     
-    # Use chezmoi template data to generate host entries
+    # Use .hosts-data.json data to generate host entries
 {{- if stat (joinPath .chezmoi.homeDir ".hosts-data.json") }}
   {{- $hostsData := include (joinPath .chezmoi.homeDir ".hosts-data.json") | fromJson }}
   {{- range $hostsData.hosts }}
@@ -40,7 +38,7 @@ create_host_entries() {
 
     # Check if we got any entries
     if [ ! -s "$TEMP_ENTRIES" ]; then
-        print_message "warning" "No host entries found in chezmoi template data"
+        print_message "warning" "No host entries found in {{ joinPath .chezmoi.homeDir ".hosts-data.json" }}"
         rm -f "$TEMP_ENTRIES"
         exit 0
     fi
@@ -56,7 +54,7 @@ backup_hosts() {
 update_hosts() {
     local temp_entries_file="$1"
     
-    print_message "info" "Updating $HOSTS_FILE with entries from chezmoi data"
+    print_message "info" "Updating $HOSTS_FILE with entries from {{ joinPath .chezmoi.homeDir ".hosts-data.json" }}"
     
     TEMP_HOSTS=$(mktemp)
     
@@ -77,8 +75,6 @@ update_hosts() {
     
     # Clean up
     rm -f "$temp_entries_file"
-    
-    print_message "success" "Successfully updated $HOSTS_FILE"
 }
 
 show_changes() {
@@ -87,8 +83,6 @@ show_changes() {
 }
 
 main() {
-    print_message "info" "Starting hosts file update from chezmoi template data"
-    
     # Create host entries from template data
     temp_entries_file=$(create_host_entries)
     
@@ -107,7 +101,7 @@ main() {
     # Show the changes
     show_changes
     
-    print_message "success" "Hosts file update completed successfully"
+    print_message "success" "$HOSTS_FILE update completed successfully"
 }
 
 main "$@"
