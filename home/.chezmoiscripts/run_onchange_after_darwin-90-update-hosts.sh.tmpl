@@ -1,4 +1,4 @@
-{{- if eq .chezmoi.os "darwin" -}}
+{{- if and ( eq .chezmoi.os "darwin") .has_keepassxc_db -}}
 #!/bin/bash
 
 # Chezmoi script to update /etc/hosts with entries from ~/.hosts-data.json
@@ -19,7 +19,9 @@ set -e
 HOSTS_FILE="/etc/hosts"
 BACKUP_FILE="/etc/hosts.backup.$(date +%Y%m%d_%H%M%S)"
 
+{{- if stat (joinPath .chezmoi.homeDir ".hosts-data.json") }}
 # HOSTS_FILE hash: {{ include (joinPath .chezmoi.homeDir ".hosts-data.json") | sha256sum }}
+{{- end }}
 
 
 create_host_entries() {
@@ -29,11 +31,13 @@ create_host_entries() {
     TEMP_ENTRIES=$(mktemp)
     
     # Use chezmoi template data to generate host entries
-{{- $hostsData := include (joinPath .chezmoi.homeDir ".hosts-data.json") | fromJson }}
-{{- range $hostsData.hosts }}
+{{- if stat (joinPath .chezmoi.homeDir ".hosts-data.json") }}
+  {{- $hostsData := include (joinPath .chezmoi.homeDir ".hosts-data.json") | fromJson }}
+  {{- range $hostsData.hosts }}
     echo "{{ .address }} {{ .name }}" >> "$TEMP_ENTRIES"
+  {{- end }}
 {{- end }}
-    
+
     # Check if we got any entries
     if [ ! -s "$TEMP_ENTRIES" ]; then
         print_message "warning" "No host entries found in chezmoi template data"

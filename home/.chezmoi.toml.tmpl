@@ -20,7 +20,7 @@ gh_username = {{ $gh_username | quote }}
 keepassxc_db = {{ $keepassxc_db | quote }}
 microsoft_email = {{ $microsoft_email | quote }}
 tags = {{ $tags | toToml }}
-has_keepassxc = {{ if and (ne $keepassxc_db "") (stat $keepassxc_db) }}true{{ else }}false{{ end }}
+has_keepassxc_db = {{ if and (ne $keepassxc_db "") (stat $keepassxc_db) }}true{{ else }}false{{ end }}
 
 [scriptEnv]
 GITHUB_USERNAME = {{ $gh_username | quote }}
