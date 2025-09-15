@@ -15,7 +15,8 @@ fi
 set -e
 
 HOSTS_FILE="/etc/hosts"
-BACKUP_FILE="/etc/hosts.backup.$(date +%Y%m%d_%H%M%S)"
+BACKUP_FILE="/etc/hosts.chezmoi.orig"
+SEPARATOR_COMMENT="# chezmoi-managed entries - do not edit manually"
 
 print_message "info" "Updating $HOSTS_FILE..."
 
@@ -42,8 +43,10 @@ create_host_entries() {
 }
 
 backup_hosts() {
-    print_message "info" "Creating backup of $HOSTS_FILE to $BACKUP_FILE"
-    sudo cp "$HOSTS_FILE" "$BACKUP_FILE"
+    if [ ! -f "$BACKUP_FILE" ]; then
+        print_message "info" "Creating backup of $HOSTS_FILE to $BACKUP_FILE"
+        sudo cp "$HOSTS_FILE" "$BACKUP_FILE"
+    fi
 }
 
 update_hosts() {
@@ -58,7 +61,7 @@ update_hosts() {
     
     # Add a separator comment
     echo "" >> "$TEMP_HOSTS"
-    echo "# chezmoi-managed entries - do not edit manually" >> "$TEMP_HOSTS"
+    echo "$SEPARATOR_COMMENT" >> "$TEMP_HOSTS"
     
     # Add the new entries
     while IFS= read -r line; do
@@ -74,7 +77,7 @@ update_hosts() {
 
 show_changes() {
     print_message "info" "Current chezmoi-managed entries in $HOSTS_FILE:"
-    sudo grep "# chezmoi-managed" "$HOSTS_FILE" | sed 's/# chezmoi-managed//' || print_message "info" "No chezmoi-managed entries found"
+    sudo grep "# chezmoi-managed" "$HOSTS_FILE" | grep -v "$SEPARATOR_COMMENT" | sed 's/# chezmoi-managed//' || print_message "info" "No chezmoi-managed entries found"
 }
 
 main() {
