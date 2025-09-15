@@ -1,0 +1,5 @@
+{{ if .has_keepassxc_db -}}
+@OWNER:registry=https://npm.pkg.github.com/
+//npm.pkg.github.com/:_authToken={{ keepassxcAttribute "GitHub" "Access Token" }}
+@lime-energy:registry=https://npm.pkg.github.com/
+{{ end -}}
