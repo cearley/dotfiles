@@ -1,8 +1,16 @@
-{{- if and (eq .chezmoi.os "darwin") (stat (joinPath .chezmoi.homeDir ".hosts-data.json")) -}}
+{{- if eq .chezmoi.os "darwin" -}}
+{{- $hostsDataFile := joinPath .chezmoi.homeDir ".hosts-data.json" -}}
 #!/bin/bash
 
-# Chezmoi script to update /etc/hosts with entries from ~/.hosts-data.json
-# This script runs whenever the hosts data changes, after chezmoi applies other changes on macOS
+# Chezmoi script to update /etc/hosts with entries from ~/.hosts-data.json.
+# The JSON structure is expected to be:
+# {
+#   "hosts": [
+#     {"address": "127.0.0.1", "name": "example.local"},
+#     {"address": "10.0.0.1", "name": "router.local"}
+#   ]
+# }
+# This script runs whenever the hosts data changes, after chezmoi applies other changes on macOS.
 
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
@@ -17,26 +25,37 @@ set -e
 HOSTS_FILE="/etc/hosts"
 BACKUP_FILE="/etc/hosts.chezmoi.orig"
 SEPARATOR_COMMENT="# chezmoi-managed entries - do not edit manually"
+HOSTS_DATA_FILE={{ $hostsDataFile | quote }}
+
+{{- $hostsData := dict }}
+{{- if stat $hostsDataFile }}
+{{- $hostsData = include $hostsDataFile | fromJson }}
+# HOSTS_FILE hash: {{ include $hostsDataFile | sha256sum }}
+{{- else }}
+# No hosts data file present
+{{- end }}
 
 print_message "info" "Updating $HOSTS_FILE..."
-
-# HOSTS_FILE hash: {{ include (joinPath .chezmoi.homeDir ".hosts-data.json") | sha256sum }}
 
 create_host_entries() {
     # Create a temporary file to store the parsed entries
     TEMP_ENTRIES=$(mktemp)
     
     # Use .hosts-data.json data to generate host entries
-{{- $hostsData := include (joinPath .chezmoi.homeDir ".hosts-data.json") | fromJson }}
-{{- range $hostsData.hosts }}
+{{- if stat $hostsDataFile }}
+  {{- if hasKey $hostsData "hosts" }}
+    {{- range $hostsData.hosts }}
     echo "{{ .address }} {{ .name }}" >> "$TEMP_ENTRIES"
+    {{- end }}
+  {{- end }}
 {{- end }}
 
     # Check if we got any entries
     if [ ! -s "$TEMP_ENTRIES" ]; then
-        print_message "warning" "No host entries found in {{ joinPath .chezmoi.homeDir ".hosts-data.json" }}"
+        print_message "warning" "No host entries found in $HOSTS_DATA_FILE"
         rm -f "$TEMP_ENTRIES"
-        exit 0
+        echo ""
+        return 1
     fi
     
     echo "$TEMP_ENTRIES"
@@ -52,7 +71,7 @@ backup_hosts() {
 update_hosts() {
     local temp_entries_file="$1"
     
-    print_message "info" "Updating $HOSTS_FILE with entries from {{ joinPath .chezmoi.homeDir ".hosts-data.json" }}"
+    print_message "info" "Updating $HOSTS_FILE with entries from $HOSTS_DATA_FILE"
     
     TEMP_HOSTS=$(mktemp)
     
@@ -80,9 +99,34 @@ show_changes() {
     sudo grep "# chezmoi-managed" "$HOSTS_FILE" | grep -v "$SEPARATOR_COMMENT" | sed 's/# chezmoi-managed//' || print_message "info" "No chezmoi-managed entries found"
 }
 
+remove_chezmoi_entries() {
+    if sudo grep -q "# chezmoi-managed" "$HOSTS_FILE"; then
+        backup_hosts
+        TEMP_HOSTS=$(mktemp)
+        sudo grep -v "# chezmoi-managed" "$HOSTS_FILE" > "$TEMP_HOSTS"
+        sudo mv "$TEMP_HOSTS" "$HOSTS_FILE"
+        print_message "success" "Removed all chezmoi-managed entries from $HOSTS_FILE"
+    else
+        print_message "info" "No chezmoi-managed entries found to remove"
+    fi
+}
+
 main() {
+    # Check if hosts data file exists and if we have entries to clean up
+    if [ ! -f "$HOSTS_DATA_FILE" ] && sudo grep -q "# chezmoi-managed" "$HOSTS_FILE"; then
+        print_message "info" "No hosts data file found at $HOSTS_DATA_FILE, removing chezmoi-managed entries"
+        remove_chezmoi_entries
+        exit 0
+    elif [ ! -f "$HOSTS_DATA_FILE" ]; then
+        print_message "skip" "No hosts data file found at $HOSTS_DATA_FILE"
+        exit 0
+    fi
+    
     # Create host entries from template data
-    temp_entries_file=$(create_host_entries)
+    if ! temp_entries_file=$(create_host_entries); then
+        print_message "skip" "No host entries to process, exiting"
+        exit 0
+    fi
     
     # Ensure temp file exists
     if [ ! -f "$temp_entries_file" ]; then
