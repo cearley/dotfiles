@@ -3,7 +3,7 @@
 	email = {{ .gh_commit_email }}
 	signingkey = {{ .chezmoi.homeDir }}/.ssh/id_ed25519.pub
 [credential]
-	helper = osxkeychain
+	helper = cache
 [gpg]
 	format = ssh
 [core]
@@ -11,3 +11,5 @@
 
 [includeIf "gitdir:~/work/"]
     path = ~/.gitconfig-primary-work
+[credential "https://github.com"]
+	username = cearley

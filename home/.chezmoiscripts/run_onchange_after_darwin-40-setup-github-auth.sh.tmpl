@@ -1,0 +1,67 @@
+{{- if and (eq .chezmoi.os "darwin") .has_keepassxc_db -}}
+#!/bin/bash
+
+# Chezmoi script to configure GitHub authentication.
+# This script runs whenever the GitHub token changes, after chezmoi applies other changes on macOS.
+
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+# Check required tools
+if ! require_tools git docker gh; then
+    exit 1
+fi
+
+set -e
+
+GITHUB_USERNAME={{ .gh_username | quote }}
+GITHUB_TOKEN={{ keepassxcAttribute "GitHub" "Access Token" | quote }}
+
+print_message "info" "Setting up GitHub authentication..."
+
+setup_git_credentials() {
+    print_message "info" "Configuring git credential helper"
+    
+    # Set up git credential helper to cache credentials
+    git config --global credential.helper cache
+    
+    # Configure git to use the token for GitHub
+    git config --global credential.https://github.com.username "$GITHUB_USERNAME"
+    
+    print_message "success" "Git credential helper configured"
+}
+
+setup_ghcr_login() {
+    print_message "info" "Logging into GitHub Container Registry (GHCR)"
+    
+    # Login to GHCR using the token
+    echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_USERNAME" --password-stdin
+    
+    print_message "success" "Successfully logged into GHCR"
+}
+
+setup_gh_cli() {
+    print_message "info" "Configuring GitHub CLI authentication"
+    
+    # Set up gh CLI authentication using the token
+    echo "$GITHUB_TOKEN" | gh auth login --with-token
+    
+    print_message "success" "GitHub CLI authentication configured"
+}
+
+main() {
+    # Set up git credentials
+    setup_git_credentials
+    
+    # Set up GHCR login
+    setup_ghcr_login
+    
+    # Set up GitHub CLI
+    setup_gh_cli
+    
+    print_message "success" "GitHub authentication setup completed successfully"
+}
+
+main "$@"
+
+{{ end -}}
