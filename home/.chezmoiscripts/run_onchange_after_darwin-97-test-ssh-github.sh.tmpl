@@ -23,7 +23,7 @@ source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 # SSH keys hash: no-ssh-keys-found
 {{- end }}
 
-readonly GITHUB_SSH_HOST="git@github.com"
+readonly GITHUB_SSH_HOST="ssh://git@github.com"
 readonly SSH_SUCCESS_EXIT_CODE=1  # GitHub returns 1 on successful auth without shell access
 readonly SSH_TIMEOUT=10
 readonly SSH_CONNECT_TIMEOUT=5
@@ -149,7 +149,7 @@ print_unknown_error_help() {
     echo "This might be a temporary issue. Try:"
     echo "• Waiting a few minutes and running again"
     echo "• Checking GitHub status: https://www.githubstatus.com/"
-    echo "• Running the test manually: ssh -T git@github.com"
+    echo "• Running the test manually: ssh -T $GITHUB_SSH_HOST"
     echo
     echo "Full SSH output:"
     echo "$output"
@@ -220,8 +220,8 @@ main() {
         print_message "skip" "No SSH keys found in ~/.ssh folder"
         echo
         echo "Generate SSH keys first:"
-        echo "  ssh-keygen -t ed25519 -C \"your_email@example.com\""
-        echo "  ssh-keygen -t rsa -b 4096 -C \"your_email@example.com\"  # if ed25519 not supported"
+        echo "  ssh-keygen -t ed25519 -C \"your machine name\""
+        echo "  ssh-keygen -t rsa -b 4096 -C \"your machine name\"  # if ed25519 not supported"
         exit 0
     fi
     
