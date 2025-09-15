@@ -49,22 +49,22 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
   - `05` - Install Rosetta 2 (Apple Silicon compatibility)
 
 - **Development Toolchains (10-19):**
-  - `10` - Install Rust (development toolchain)
-  - `15` - Install uv (Python package manager)
+  - `10` - Install Rust (programming language runtime)
+  - `15` - Install Azul Zulu JDK (Java development kit)
 
 - **Package Management (20-29):**
   - `20` - Brew bundle install essential packages from packages.yaml
   - `25` - Brew bundle install additional packages from machine-specific brewfiles
 
-- **Environment Setup (30-59):**
-  - `30` - Install Basic Memory MCP server (AI tools)
+- **Environment Managers (30-39):**
+  - `30` - Install uv (Python package manager)
   - `35` - Install nvm (Node Version Manager)
-  - `45` - Install Azul Zulu JDK (development toolchain)
-  - `50` - Initialize conda (Python environment setup)
+  - `40` - Initialize conda (Python environment manager)
 
 - **System Configuration (80-99):**
   - `80` - Setup Microsoft Defender (security configuration)
   - `82` - Setup Claude Desktop (application setup)
+  - `83` - Install Basic Memory MCP server (AI tools, depends on Claude Desktop)
   - `85` - Configure system defaults (macOS preferences)
   - `90` - Update hosts (system-level modifications)
   - `95` - Restart services (service management)
@@ -116,12 +116,13 @@ Scripts in `home/.chezmoiscripts/` can leverage shared utility functions to avoi
 
 **Scripts Using Shared Utilities**:
 Scripts have been systematically refactored to use shared utilities for consistency:
-- `run_once_after_darwin-45-install-azul-zulu-jdk.sh.tmpl`: JDK installation with jenv integration
-- `run_once_after_darwin-80-setup-microsoft-defender.sh.tmpl`: Microsoft Defender setup
+- `run_once_after_darwin-15-install-azul-zulu-jdk.sh.tmpl`: JDK installation with jenv integration
 - `run_once_before_darwin-10-install-rust.sh.tmpl`: Rust toolchain installation
-- `run_once_before_darwin-15-install-uv.sh.tmpl`: Python package manager uv
+- `run_once_before_darwin-30-install-uv.sh.tmpl`: Python package manager uv
 - `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager
+- `run_once_after_darwin-80-setup-microsoft-defender.sh.tmpl`: Microsoft Defender setup
 - `run_once_after_darwin-82-setup-claude-desktop.sh.tmpl`: Claude Desktop app setup
+- `run_once_after_darwin-83-install-basic-memory.sh.tmpl`: Basic Memory MCP server installation
 - `run_onchange_after_darwin-97-test-ssh-github.sh.tmpl`: SSH connectivity testing
 
 ### Configuration Structure
