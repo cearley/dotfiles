@@ -45,7 +45,6 @@ Scripts in `home/.chezmoiscripts/` follow a structured naming convention that co
 Scripts use consistent 5-point numbering for logical grouping and future expandability:
 
 - **System Foundation (00-09):**
-  - `00` - Install Homebrew (foundation)
   - `05` - Install Rosetta 2 (Apple Silicon compatibility)
 
 - **Development Toolchains (10-19):**
@@ -59,15 +58,20 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
 - **Environment Managers (30-39):**
   - `30` - Install uv (Python package manager)
   - `35` - Install nvm (Node Version Manager)
+
+- **Environment Setup (40-49):**
   - `40` - Initialize conda (Python environment manager)
+  - `45` - Setup GitHub authentication (git, GHCR, GitHub CLI)
 
 - **System Configuration (80-99):**
   - `80` - Setup Microsoft Defender (security configuration)
   - `82` - Setup Claude Desktop (application setup)
   - `83` - Install Basic Memory MCP server (AI tools, depends on Claude Desktop)
   - `85` - Configure system defaults (macOS preferences)
+  - `88` - Setup ChronoSync symlinks (file management)
   - `90` - Update hosts (system-level modifications)
-  - `95` - Restart services (service management)
+  - `95` - Restart Syncthing (service management)
+  - `97` - Test SSH GitHub connectivity (system validation)
 
 **Platform-Specific Scripts:**
 All darwin-targeted scripts must be wrapped in conditional templates:
@@ -79,10 +83,11 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 ```
 
 **Script Examples:**
-- `run_once_before_darwin-00-install-homebrew.sh.tmpl`: System foundation
+- `run_once_before_darwin-05-install-rosetta.sh.tmpl`: System foundation (Apple Silicon compatibility)
 - `run_once_before_darwin-10-install-rust.sh.tmpl`: Development toolchain (dev tag)
-- `run_onchange_before_darwin-20-install-packages.sh.tmpl`: Package management
-- `run_once_after_darwin-45-install-azul-zulu-jdk.sh.tmpl`: Environment setup (dev tag)
+- `run_onchange_before_darwin-20-install-packages.sh.tmpl`: Package management (tag-based)
+- `run_once_after_darwin-15-install-azul-zulu-jdk.sh.tmpl`: Development toolchain (dev tag)
+- `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl`: Environment setup (authentication)
 - `run_onchange_after_darwin-97-test-ssh-github.sh.tmpl`: System validation (triggered by changes)
 
 ### Hooks System
@@ -116,10 +121,11 @@ Scripts in `home/.chezmoiscripts/` can leverage shared utility functions to avoi
 
 **Scripts Using Shared Utilities**:
 Scripts have been systematically refactored to use shared utilities for consistency:
-- `run_once_after_darwin-15-install-azul-zulu-jdk.sh.tmpl`: JDK installation with jenv integration
 - `run_once_before_darwin-10-install-rust.sh.tmpl`: Rust toolchain installation
+- `run_once_after_darwin-15-install-azul-zulu-jdk.sh.tmpl`: JDK installation with jenv integration
 - `run_once_before_darwin-30-install-uv.sh.tmpl`: Python package manager uv
 - `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager
+- `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl`: GitHub authentication setup
 - `run_once_after_darwin-80-setup-microsoft-defender.sh.tmpl`: Microsoft Defender setup
 - `run_once_after_darwin-82-setup-claude-desktop.sh.tmpl`: Claude Desktop app setup
 - `run_once_after_darwin-83-install-basic-memory.sh.tmpl`: Basic Memory MCP server installation
@@ -242,7 +248,7 @@ This macOS-focused repository uses intuitive emojis (💡 info, ✅ success, ⚠
 - **Better diagnostics**: Enhanced error messages and troubleshooting guidance
 
 #### Azul Zulu JDK Installation
-- **New script**: `run_once_after_darwin-45-install-azul-zulu-jdk.sh.tmpl`
+- **New script**: `run_once_after_darwin-15-install-azul-zulu-jdk.sh.tmpl`
 - **Features**:
   - Dynamic latest LTS version detection via Azul API
   - Architecture-aware downloads (arm64/x64)
