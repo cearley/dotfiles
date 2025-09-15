@@ -63,6 +63,8 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
   - `50` - Initialize conda (Python environment setup)
 
 - **System Configuration (80-99):**
+  - `80` - Setup Microsoft Defender (security configuration)
+  - `82` - Setup Claude Desktop (application setup)
   - `85` - Configure system defaults (macOS preferences)
   - `90` - Update hosts (system-level modifications)
   - `95` - Restart services (service management)
@@ -115,11 +117,11 @@ Scripts in `home/.chezmoiscripts/` can leverage shared utility functions to avoi
 **Scripts Using Shared Utilities**:
 Scripts have been systematically refactored to use shared utilities for consistency:
 - `run_once_after_darwin-45-install-azul-zulu-jdk.sh.tmpl`: JDK installation with jenv integration
-- `run_once_after_darwin-60-setup-microsoft-defender.sh.tmpl`: Microsoft Defender setup
+- `run_once_after_darwin-80-setup-microsoft-defender.sh.tmpl`: Microsoft Defender setup
 - `run_once_before_darwin-10-install-rust.sh.tmpl`: Rust toolchain installation
 - `run_once_before_darwin-15-install-uv.sh.tmpl`: Python package manager uv
 - `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager
-- `run_once_after_darwin-65-setup-claude-desktop.sh.tmpl`: Claude Desktop app setup
+- `run_once_after_darwin-82-setup-claude-desktop.sh.tmpl`: Claude Desktop app setup
 - `run_onchange_after_darwin-97-test-ssh-github.sh.tmpl`: SSH connectivity testing
 
 ### Configuration Structure
