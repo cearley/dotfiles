@@ -26,8 +26,8 @@ has_keepassxc_db = {{ if and (ne $keepassxc_db "") (stat $keepassxc_db) }}true{{
 GITHUB_USERNAME = {{ $gh_username | quote }}
 
 [awsSecretsManager]
-profile = {{ if ne $aws_secrets_manager_profile "" }}{{ $aws_secrets_manager_profile | quote }}{{ else }}"default"{{ end }}
-region = {{ if ne $aws_secrets_manager_region "" }}{{ $aws_secrets_manager_region | quote }}{{ else }}"us-east-1"{{ end }}
+profile = {{ $aws_secrets_manager_profile | quote }}
+region = {{ $aws_secrets_manager_region | quote }}
 
 [keepassxc]
 database = {{ $keepassxc_db | quote }}
@@ -35,7 +35,7 @@ database = {{ $keepassxc_db | quote }}
 [hooks.read-source-state.pre]
 command = ".local/share/chezmoi/hooks/pre/bootstrap"
 
-{{- if (has "dev" $tags) }}
+{{ if lookPath "code" -}}
 [edit]
 command = "code"
 args = ["--wait"]
@@ -51,4 +51,4 @@ args = [
     "-c",
     "cp {{ "{{" }} .Target {{ "}}" }} {{ "{{" }} .Target {{ "}}" }}.base && code --new-window --wait --merge {{ "{{" }} .Destination {{ "}}" }} {{ "{{" }} .Target {{ "}}" }} {{ "{{" }} .Target {{ "}}" }}.base {{ "{{" }} .Source {{ "}}" }}"
 ]
-{{ end -}}
+{{- end }}
