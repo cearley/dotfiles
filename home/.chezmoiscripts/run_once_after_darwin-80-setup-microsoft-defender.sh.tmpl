@@ -35,6 +35,14 @@ echo "- Microsoft Defender may require Full Disk Access permissions"
 echo "- You can grant permissions in System Preferences > Security & Privacy > Privacy > Full Disk Access"
 echo "- Add Microsoft Defender to the list of allowed applications"
 echo ""
-print_message "success" "Once installation is complete, Microsoft Defender will provide real-time protection for your Mac"
+
+# Wait for the user to complete the installation
+if wait_for_app_installation "/Applications/Microsoft Defender.app" "Microsoft Defender"; then
+    print_message "info" "Don't forget to sign in with your Microsoft account: {{ .microsoft_email }}"
+    print_message "info" "Grant Full Disk Access permissions if prompted for complete protection"
+else
+    print_message "info" "Microsoft Defender can be manually installed from: https://www.microsoft.com/en-us/microsoft-365/microsoft-defender-for-individuals"
+    exit 1
+fi
 
 {{ end -}}

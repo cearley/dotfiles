@@ -36,6 +36,14 @@ echo "- You can manage permissions in System Preferences > Security & Privacy"
 echo "- Claude Desktop works best when allowed to run in the background"
 echo "- You can pin Claude to your Dock for easy access"
 echo ""
-print_message "success" "Once installation is complete, you'll have Claude Desktop available for AI assistance"
+
+# Wait for the user to complete the installation
+if wait_for_app_installation "/Applications/Claude.app" "Claude Desktop"; then
+    print_message "info" "You can now launch Claude from your Applications folder"
+    print_message "info" "Sign in with your Anthropic account to start using Claude Desktop"
+else
+    print_message "info" "Claude Desktop can be manually installed from: https://claude.ai/download"
+    exit 1
+fi
 
 {{ end -}}
