@@ -11,8 +11,6 @@ if ! require_tools curl; then
     exit 1
 fi
 
-print_message "info" "Installing Rust programming language..."
-
 if command_exists rustup; then
     print_message "info" "Rust is already installed. Updating..."
     rustup update
@@ -21,12 +19,6 @@ fi
 
 print_message "info" "Downloading and installing Rust via rustup..."
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-print_message "info" "Adding Rust to shell profile..."
-(
-    echo
-    echo 'source "$HOME/.cargo/env"'
-) >>"$HOME"/.zprofile
 
 print_message "success" "Rust installed successfully!"
 print_message "info" "You may need to restart your terminal or run 'source ~/.cargo/env'"

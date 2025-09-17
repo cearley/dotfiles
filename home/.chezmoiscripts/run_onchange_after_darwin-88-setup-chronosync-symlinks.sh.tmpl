@@ -11,8 +11,6 @@ source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 # Tasks directory contents hash: {{ if stat $documentsTasksDir }}{{ output "sh" "-c" (printf "find '%s' -type f -exec basename '{}' \\; | sort | sha256sum" $documentsTasksDir) }}{{ else }}empty{{ end }}
 # Templates directory contents hash: {{ if stat $documentsTemplatesDir }}{{ output "sh" "-c" (printf "find '%s' -type f -exec basename '{}' \\; | sort | sha256sum" $documentsTemplatesDir) }}{{ else }}empty{{ end }}
 
-print_message "info" "Setting up ChronoSync symbolic links..."
-
 # Define required directories
 APP_SUPPORT_TASKS="$HOME/Library/Application Support/ChronoSync/Tasks"
 APP_SUPPORT_TEMPLATES="$HOME/Library/Application Support/ChronoSync/Templates"
@@ -34,7 +32,7 @@ fi
 ensure_directory "$DOCUMENTS_TASKS"
 ensure_directory "$DOCUMENTS_TEMPLATES"
 
-print_message "success" "All required directories found"
+print_message "info" "Setting up ChronoSync symbolic links..."
 
 # Function to create symbolic link with checks
 create_symlink() {

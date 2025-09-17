@@ -11,38 +11,16 @@ if ! require_tools curl; then
     exit 1
 fi
 
-print_message "info" "Installing uv - Python package manager..."
-print_message "info" "Using standalone installer from astral.sh"
-
 # Exit immediately if uv is already in $PATH
 if command_exists uv; then
-    print_message "skip" "uv is already installed"
+    print_message "skip" "Skipping uv installation: uv is already installed"
     exit 0
 fi
 
+print_message "info" "Installing uv (Python package manager) using standalone installer from astral.sh..."
+
 # Install uv - Python package manager
-print_message "info" "Downloading and installing uv..."
 curl -LsSf https://astral.sh/uv/install.sh | sh
-
-print_message "info" "Setting up shell completions..."
-
-# Enable shell autocompletion for bash
-if [ -f ~/.bashrc ] && ! grep -q "uv generate-shell-completion bash" ~/.bashrc; then
-    print_message "info" "Adding bash completion for uv"
-    echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc
-fi
-if [ -f ~/.bashrc ] && ! grep -q "uvx --generate-shell-completion bash" ~/.bashrc; then
-    echo 'eval "$(uvx --generate-shell-completion bash)"' >> ~/.bashrc
-fi
-
-# Enable shell autocompletion for zsh
-if [ -f ~/.zshrc ] && ! grep -q "uv generate-shell-completion zsh" ~/.zshrc; then
-    print_message "info" "Adding zsh completion for uv"
-    echo 'eval "$(uv generate-shell-completion zsh)"' >> ~/.zshrc
-fi
-if [ -f ~/.zshrc ] && ! grep -q "uvx --generate-shell-completion zsh" ~/.zshrc; then
-    echo 'eval "$(uvx --generate-shell-completion zsh)"' >> ~/.zshrc
-fi
 
 print_message "success" "uv installed successfully!"
 print_message "info" "You may need to restart your terminal or source your shell profile"

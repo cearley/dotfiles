@@ -6,13 +6,13 @@ set -eufo pipefail
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
-print_message "info" "Setting up Microsoft Defender for Individuals..."
-
 # Check if Microsoft Defender is already installed
 if is_app_installed "/Applications/Microsoft Defender.app"; then
-    print_message "success" "Microsoft Defender is already installed"
+    print_message "skip" "Skipping Microsoft Defender installation: Microsoft Defender is already installed"
     exit 0
 fi
+
+print_message "info" "Setting up Microsoft Defender for Individuals..."
 
 # Open the Microsoft Defender download page
 print_message "info" "Opening Microsoft Defender download page in your default browser..."

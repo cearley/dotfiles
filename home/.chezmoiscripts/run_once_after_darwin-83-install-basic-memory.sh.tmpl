@@ -12,13 +12,13 @@ if ! require_tools curl uvx; then
     exit 1
 fi
 
-print_message "info" "Installing Basic Memory MCP server for Claude Desktop..."
-
 # Skip if basic-memory is already installed.
 if uvx basic-memory --version >/dev/null 2>&1; then
     print_message "skip" "Skipping basic-memory installation: basic-memory is already installed"
     exit 0
 fi
+
+print_message "info" "Installing Basic Memory MCP server for Claude Desktop..."
 
 # Install Basic Memory via the recommended installer
 # This will install uv (if not already installed), install Basic Memory via uv,

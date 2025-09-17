@@ -4,12 +4,19 @@
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
-print_message "info" "Ensuring Rosetta is installed on Apple Silicon Mac..."
-
-if ! /usr/bin/pgrep oahd >/dev/null 2>&1; then
-    sudo softwareupdate --install-rosetta --agree-to-license
-else
-    print_message "success" "Rosetta is already installed"
+if /usr/bin/pgrep oahd >/dev/null 2>&1; then
+    print_message "skip" "Skipping Rosetta installation: Rosetta is already installed"
+    exit 0
 fi
+
+print_message "info" "Installing Rosetta on Apple Silicon Mac..."
+
+sudo softwareupdate --install-rosetta --agree-to-license
+if [ $? -ne 0 ]; then
+    print_message "error" "Rosetta installation failed"
+    exit 1
+fi
+
+print_message "success" "Rosetta installation completed successfully"
 
 {{ end -}}

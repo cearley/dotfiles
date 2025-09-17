@@ -7,24 +7,23 @@ set -euo pipefail
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
 # Check required tools
-if ! require_tools curl grep cut; then
+if ! require_tools curl jq; then
     exit 1
 fi
-
-print_message "info" "Installing nvm (Node Version Manager)..."
 
 # nvm installs to $HOME/.nvm by default.
 # If this directory exists, we assume nvm is installed.
 # Note that `command -v nvm` doesn't find it in a fresh
 # shell context because it's a shell function, not a binary.
 if [ -d "$HOME/.nvm" ]; then
-    print_message "skip" "nvm is already installed"
+    print_message "skip" "Skipping nvm installation: nvm is already installed"
     exit 0
 fi
 
+print_message "info" "Getting latest nvm version..."
+
 # Get the latest nvm version from GitHub API
-print_message "info" "Fetching latest nvm version from GitHub..."
-NVM_VERSION=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | grep '"tag_name"' | cut -d '"' -f 4)
+NVM_VERSION=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | jq -r '.tag_name')
 
 if [ -z "$NVM_VERSION" ]; then
     print_message "error" "Failed to fetch latest nvm version"
@@ -34,15 +33,14 @@ fi
 print_message "info" "Installing nvm $NVM_VERSION..."
 
 # Install nvm using the official installation script
-print_message "info" "Downloading and running nvm installation script..."
 curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/$NVM_VERSION/install.sh" | bash
 
-# Verify installation
-if [ -d "$HOME/.nvm" ]; then
-    print_message "success" "nvm installed successfully!"
-    print_message "info" "You may need to restart your terminal or run 'source ~/.zshrc' to use nvm"
-else
-    print_message "error" "nvm installation failed"
+if [ ! -d "$HOME/.nvm" ]; then
+    print_message "error" "nvm installation script did not create $HOME/.nvm"
     exit 1
 fi
+
+print_message "success" "nvm installed successfully!"
+print_message "info" "You may need to restart your terminal or run 'source ~/.zshrc' to use nvm"
+
 {{ end -}}

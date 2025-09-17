@@ -11,8 +11,6 @@ fi
 
 # syncthing version: {{ output "syncthing" "--version" }}
 
-print_message "info" "Restarting syncthing service after syncthing update..."
-
 # Check if syncthing service is loaded in brew services
 if brew services list | grep -q "syncthing"; then
     print_message "info" "Restarting syncthing service..."
