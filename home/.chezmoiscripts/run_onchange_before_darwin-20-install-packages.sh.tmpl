@@ -23,6 +23,9 @@ brew {{ . | quote }}
 {{ range .packages.darwin.core.casks -}}
 cask {{ . | quote }}
 {{ end -}}
+{{ range .packages.darwin.core.mas -}}
+mas {{ . }}
+{{ end -}}
 
 {{- if has "dev" .tags }}
 # Install dev packages
@@ -31,6 +34,9 @@ brew {{ . | quote }}
 {{ end -}}
 {{ range .packages.darwin.dev.casks -}}
 cask {{ . | quote }}
+{{ end -}}
+{{ range .packages.darwin.dev.mas -}}
+mas {{ . }}
 {{ end -}}
 {{- end }}
 
@@ -42,6 +48,9 @@ brew {{ . | quote }}
 {{ range .packages.darwin.ai.casks -}}
 cask {{ . | quote }}
 {{ end -}}
+{{ range .packages.darwin.ai.mas -}}
+mas {{ . }}
+{{ end -}}
 {{- end }}
 
 {{- if has "work" .tags }}
@@ -51,6 +60,22 @@ brew {{ . | quote }}
 {{ end -}}
 {{ range .packages.darwin.work.casks -}}
 cask {{ . | quote }}
+{{ end -}}
+{{ range .packages.darwin.work.mas -}}
+mas {{ . }}
+{{ end -}}
+{{- end }}
+
+{{- if has "mobile" .tags }}
+# Install mobile packages
+{{ range .packages.darwin.mobile.brews -}}
+brew {{ . | quote }}
+{{ end -}}
+{{ range .packages.darwin.mobile.casks -}}
+cask {{ . | quote }}
+{{ end -}}
+{{ range .packages.darwin.mobile.mas -}}
+mas {{ . }}
 {{ end -}}
 {{- end }}
 EOF
