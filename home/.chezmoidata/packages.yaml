@@ -23,6 +23,12 @@ packages:
       - 'sqlite'
       - 'syncthing'
       - 'tree'
+      - 'fzf'
+      - 'direnv'
+      - 'zoxide'
+      #- 'asdf'
+      - 'atuin'
+      - 'git-delta'
       casks:
       - 'appcleaner'
       - 'chronoagent'

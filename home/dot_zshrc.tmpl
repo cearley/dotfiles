@@ -86,7 +86,8 @@ plugins=(
     aws
     git 
     zsh-autosuggestions
-    zsh-syntax-highlighting
+    fast-syntax-highlighting
+    fzf
 )
 
 # Auto updates will cause the ~/.oh-my-zsh directory to drift out of sync with chezmoi's source state.
@@ -188,39 +189,6 @@ export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"
 # End of LM Studio CLI section
 {{- end }}
 
-# >>> Experimental: Automatically load .env files in directories >>>
-# Auto-load .env files when entering directories
-auto_load_env() {
-    if [[ -f .env && -r .env ]]; then
-        echo "Loading environment from .env..."
-        while IFS= read -r line || [[ -n "$line" ]]; do
-            # Skip comments and empty lines
-            [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
-            
-            # Export variables
-            if [[ "$line" =~ ^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
-                local var_name="${match[1]}"
-                local var_value="${match[2]}"
-                
-                # Remove surrounding quotes
-                var_value="${var_value#\"}"
-                var_value="${var_value%\"}"
-                var_value="${var_value#\'}"
-                var_value="${var_value%\'}"
-                
-                export "$var_name"="$var_value"
-            fi
-        done < .env
-    fi
-}
-
-# Hook into cd command
-#chpwd_functions+=(auto_load_env)
-
-# Load env on shell startup if in a directory with .env
-#auto_load_env
-# <<< Experimental: Automatically load .env files in directories <<<
-
 # Astral.sh uv - Python package manager
 . "$HOME/.local/bin/env"
 eval "$(uv generate-shell-completion zsh)"
@@ -243,3 +211,19 @@ unset __conda_setup
 # <<< conda initialize <<<
 {{- end }}
 
+
+# ------------------------------------------------------------------------------
+# Shell integrations for Homebrew-installed packages
+# ------------------------------------------------------------------------------
+
+# direnv - Load and unload environment variables depending on the current directory
+eval "$(direnv hook zsh)"
+
+# zoxide - A smarter cd command
+eval "$(zoxide init zsh)"
+
+# asdf - Manage multiple runtime versions with a single CLI tool
+#. /opt/homebrew/opt/asdf/libexec/asdf.sh
+
+# atuin - Magical shell history
+eval "$(atuin init zsh)"
