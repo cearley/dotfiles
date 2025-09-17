@@ -41,6 +41,7 @@ echo ""
 if wait_for_app_installation "/Applications/Claude.app" "Claude Desktop"; then
     print_message "info" "You can now launch Claude from your Applications folder"
     print_message "info" "Sign in with your Anthropic account to start using Claude Desktop"
+    prompt_ready "Setup complete! Press any key to continue..."
 else
     print_message "info" "Claude Desktop can be manually installed from: https://claude.ai/download"
     exit 1

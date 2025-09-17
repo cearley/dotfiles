@@ -151,7 +151,7 @@ wait_for_app_installation() {
     echo ""
     
     # Poll for the app installation with timeout
-    while [ $elapsed -lt $timeout ]; do
+    while [ "$elapsed" -lt "$timeout" ]; do
         if is_app_installed "$app_path"; then
             print_message "success" "$app_name has been successfully installed!"
             return 0
@@ -169,4 +169,14 @@ wait_for_app_installation() {
     # Timeout reached
     print_message "warning" "Installation timeout reached ($((timeout / 60)) minutes). You can run 'chezmoi apply' again later to retry."
     return 1
+}
+
+# Prompt user to press any key to continue, ensuring they see the message
+# Usage: prompt_ready [custom_message]
+prompt_ready() {
+    local message="${1:-Press any key to continue...}"
+    echo ""
+    print_message "info" "$message"
+    read -n 1 -s -r
+    echo ""
 }
