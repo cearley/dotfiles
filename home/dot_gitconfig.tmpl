@@ -8,8 +8,21 @@
 	format = ssh
 [core]
 	autocrlf = input
+	pager = delta
 
 [includeIf "gitdir:~/work/"]
     path = ~/.gitconfig-primary-work
+
 [credential "https://github.com"]
-	username = cearley
+	username = {{ .gh_username }}
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true
+    side-by-side = true
+    line-numbers = true
+
+[merge]
+    conflictstyle = diff3
