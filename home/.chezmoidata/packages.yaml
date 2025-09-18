@@ -22,7 +22,6 @@ packages:
       - 'tree'
       - 'fzf'
       - 'zoxide'
-      #- 'asdf'
       - 'atuin'
       casks:
       - 'appcleaner'
@@ -54,6 +53,7 @@ packages:
       brews:
       - 'ack'
       - 'act'
+      #- 'asdf'
       - 'aws-sam-cli'
       - 'awscli'
       - 'azure-cli'
