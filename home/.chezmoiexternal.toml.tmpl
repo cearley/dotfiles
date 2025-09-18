@@ -17,6 +17,10 @@
     {{- toToml $zshPlugin | nindent 4 }}
     url = "https://github.com/zsh-users/zsh-autosuggestions/archive/master.tar.gz"
 
+[".oh-my-zsh/custom/plugins/zsh-defer"]
+    {{- toToml $zshPlugin | nindent 4 }}
+    url = "https://github.com/romkatv/zsh-defer/archive/master.tar.gz"
+
 [".oh-my-zsh/custom/themes/powerlevel10k"]
     {{- toToml $zshPlugin | nindent 4 }}
     url = "https://github.com/romkatv/powerlevel10k/archive/master.tar.gz"

@@ -83,13 +83,14 @@ zstyle ':omz:update' mode disabled  # disable automatic updates
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
-{{ if has "dev" .tags -}}
+{{- if has "dev" .tags }}
     aws
 {{- end }}
-    git 
-    zsh-autosuggestions
     fast-syntax-highlighting
     fzf
+    git
+    zsh-autosuggestions
+    zsh-defer
 )
 
 # Auto updates will cause the ~/.oh-my-zsh directory to drift out of sync with chezmoi's source state.
@@ -139,8 +140,11 @@ bindkey "^[[B" history-search-forward
 
 source "$HOME"/.cargo/env
 
-export PATH="$HOME/.jenv/bin:$PATH"
-eval "$(jenv init -)"
+# Initialize jenv, but only if it's installed, and use --no-rehash for faster startup
+if command -v jenv >/dev/null 2>&1; then
+    export PATH="$HOME/.jenv/bin:$PATH"
+    eval "$(jenv init - --no-rehash)"
+fi
 
 {{ if has "dev" .tags -}}
 export LIQUIBASE_HOME=/opt/homebrew/opt/liquibase/libexec
@@ -153,9 +157,18 @@ alias dotnet64=/usr/local/share/dotnet/x64/dotnet
 # AWS cli for use with LocalStack. (See https://github.com/localstack/awscli-local#alternative.)
 alias awslocal="AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=${DEFAULT_REGION:-$AWS_DEFAULT_REGION} aws --endpoint-url=http://${LOCALSTACK_HOST:-localhost}:4566"
 
+# Load NVM, but instead of synchronously (which can add 200-500ms to startup),
+# define a lazy-loading function that only initializes NVM when first used
 export NVM_DIR="$HOME/.nvm"
-  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+nvm() {
+    # Remove the lazy-loading function definition
+    unset -f nvm
+    # Load NVM properly when first called
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+    # Execute the original nvm command with all arguments
+    nvm "$@"
+}
 
 export PATH=/usr/local/smlnj/bin:"$PATH"
 {{- end }}
@@ -194,10 +207,10 @@ export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 # End of LM Studio CLI section
 {{- end }}
 
+# ------------------------------------------------------------------------------
 # Astral.sh uv - Python package manager
+# ------------------------------------------------------------------------------
 . "$HOME/.local/bin/env"
-eval "$(uv generate-shell-completion zsh)"
-eval "$(uvx --generate-shell-completion zsh)"
 
 {{ if has "dev" .tags -}}
 # >>> conda initialize >>>
@@ -221,16 +234,36 @@ unset __conda_setup
 # Shell integrations for Homebrew-installed packages
 # ------------------------------------------------------------------------------
 
-{{ if has "dev" .tags -}}
-# direnv - Load and unload environment variables depending on the current directory
-eval "$(direnv hook zsh)"
-{{- end }}
-
-# zoxide - A smarter cd command
+# zoxide - A smarter cd command (lightweight, safe to load immediately)
 eval "$(zoxide init zsh)"
 
 # asdf - Manage multiple runtime versions with a single CLI tool
 #. /opt/homebrew/opt/asdf/libexec/asdf.sh
 
-# atuin - Magical shell history
-eval "$(atuin init zsh)"
+# ------------------------------------------------------------------------------
+# Performance-optimized deferred initialization
+# ------------------------------------------------------------------------------
+# Heavy shell integrations are deferred to improve startup time by 100-300ms
+# This function runs after the prompt is displayed using zsh-defer plugin
+_defer_shell_integrations() {
+{{ if has "dev" .tags -}}
+    # direnv - Load and unload environment variables depending on the current directory
+    eval "$(direnv hook zsh)" 2>/dev/null
+{{- end }}
+
+    # atuin - Magical shell history (can be slow to initialize)
+    eval "$(atuin init zsh)" 2>/dev/null
+
+    # uv shell completions (Python package manager)
+    eval "$(uv generate-shell-completion zsh)" 2>/dev/null
+    eval "$(uvx --generate-shell-completion zsh)" 2>/dev/null
+}
+
+# Schedule deferred initialization to run after prompt display
+# Requires zsh-defer plugin (added to Oh My Zsh plugins above)
+if command -v zsh-defer >/dev/null 2>&1; then
+    zsh-defer _defer_shell_integrations
+else
+    # Fallback: run immediately if zsh-defer is not available
+    _defer_shell_integrations
+fi
