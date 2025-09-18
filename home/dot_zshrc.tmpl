@@ -230,16 +230,16 @@ export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 # zoxide - A smarter cd command (lightweight, safe to load immediately)
 eval "$(zoxide init zsh)"
 
-# asdf - Manage multiple runtime versions with a single CLI tool
-#. /opt/homebrew/opt/asdf/libexec/asdf.sh
-
 # ------------------------------------------------------------------------------
 # Performance-optimized deferred initialization
 # ------------------------------------------------------------------------------
 # Heavy shell integrations are deferred to improve startup time by 100-300ms
 # This function runs after the prompt is displayed using zsh-defer plugin
 _defer_shell_integrations() {
-{{ if has "dev" .tags -}}
+{{- if has "dev" .tags }}
+    # asdf - Manage multiple runtime versions with a single CLI tool
+    #. /opt/homebrew/opt/asdf/libexec/asdf.sh
+
     # direnv - Load and unload environment variables depending on the current directory
     eval "$(direnv hook zsh)" 2>/dev/null
 {{- end }}
