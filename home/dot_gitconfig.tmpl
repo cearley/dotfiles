@@ -8,7 +8,9 @@
 	format = ssh
 [core]
 	autocrlf = input
+{{- if has "dev" .tags }}
 	pager = delta
+{{- end }}
 
 [includeIf "gitdir:~/work/"]
     path = ~/.gitconfig-primary-work
@@ -16,6 +18,7 @@
 [credential "https://github.com"]
 	username = {{ .gh_username }}
 
+{{ if has "dev" .tags -}}
 [interactive]
     diffFilter = delta --color-only
 
@@ -26,3 +29,4 @@
 
 [merge]
     conflictstyle = diff3
+{{- end }}

@@ -5,5 +5,6 @@
 {{ if has "ai" .tags -}}
 # Added by LM Studio CLI (lms)
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"
+export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 # End of LM Studio CLI section
 {{- end }}

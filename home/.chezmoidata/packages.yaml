@@ -3,21 +3,16 @@ packages:
     taps:
     - 'isen-ng/dotnet-sdk-versions'
     - 'localstack/tap'
-    - 'microsoft/mssql-release'
+    #- 'microsoft/mssql-release'
     
     # Core packages (always installed)
     core:
       brews:
-      - 'ack'
-      - 'awscli'
-      - 'azure-cli'
       - 'bat'
       - 'gh'
       - 'git'
-      - 'git-gui'
       - 'jq'
       - 'mas'
-      - 'neovim'
       - 'openssl@3'
       - 'pwgen'
       - 'rclone'
@@ -26,11 +21,9 @@ packages:
       - 'syncthing'
       - 'tree'
       - 'fzf'
-      - 'direnv'
       - 'zoxide'
       #- 'asdf'
       - 'atuin'
-      - 'git-delta'
       casks:
       - 'appcleaner'
       - 'chronoagent'
@@ -59,17 +52,24 @@ packages:
     # Optional development packages (dev tag)
     dev:
       brews:
+      - 'ack'
       - 'act'
       - 'aws-sam-cli'
+      - 'awscli'
+      - 'azure-cli'
       - 'bats-core'
       - 'cfn-lint'
+      - 'direnv'
       - 'frum'
+      - 'git-delta'
+      - 'git-gui'
       - 'github-markdown-toc'
       - 'go'
       - 'graphviz'
       - 'hugo'
       - 'liquibase'
       - 'localstack/tap/localstack-cli'
+      - 'neovim'
       - 'nuget'
       - 'pkgconf'
       - 'snyk-cli'
@@ -100,7 +100,7 @@ packages:
     work:
       brews:
       - 'csvkit'
-      - 'microsoft/mssql-release/mssql-tools'
+      #- 'microsoft/mssql-release/mssql-tools'
       casks:
       - 'amazon-workspaces'
       - 'box-drive'

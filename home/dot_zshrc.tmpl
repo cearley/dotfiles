@@ -83,7 +83,9 @@ zstyle ':omz:update' mode disabled  # disable automatic updates
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
+{{ if has "dev" .tags -}}
     aws
+{{- end }}
     git 
     zsh-autosuggestions
     fast-syntax-highlighting
@@ -165,8 +167,10 @@ bindkey '^[^o' zsh_llm_suggestions_openai_explain # Ctrl + alt + O to have OpenA
 #bindkey '^p' zsh_llm_suggestions_github_copilot # Ctrl + P to have GitHub Copilot suggest a command given a English description
 #bindkey '^[^p' zsh_llm_suggestions_github_copilot_explain # Ctrl + alt + P to have GitHub Copilot explain a command
 
+{{ if has "dev" .tags -}}
 # Enable frum - Ruby version manager written in Rust https://github.com/TaKO8Ki/frum
-#eval "$(frum init)"
+eval "$(frum init)"
+{{- end }}
 
 # Enable colorls tab completion for flags
 #source $(dirname $(gem which colorls))/tab_complete.sh
@@ -186,6 +190,7 @@ fi
 {{ if has "ai" .tags -}}
 # Added by LM Studio CLI (lms)
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"
+export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 # End of LM Studio CLI section
 {{- end }}
 
@@ -216,8 +221,10 @@ unset __conda_setup
 # Shell integrations for Homebrew-installed packages
 # ------------------------------------------------------------------------------
 
+{{ if has "dev" .tags -}}
 # direnv - Load and unload environment variables depending on the current directory
 eval "$(direnv hook zsh)"
+{{- end }}
 
 # zoxide - A smarter cd command
 eval "$(zoxide init zsh)"
