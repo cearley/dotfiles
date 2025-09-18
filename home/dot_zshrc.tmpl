@@ -138,7 +138,36 @@ export ARCHFLAGS="-arch $(uname -m)"
 bindkey "^[[A" history-search-backward
 bindkey "^[[B" history-search-forward
 
+# ------------------------------------------------------------------------------
+# Astral.sh uv - Python package manager
+# ------------------------------------------------------------------------------
+. "$HOME/.local/bin/env"
+
+{{ if has "dev" .tags -}}
+
+# AWS cli for use with LocalStack. (See https://github.com/localstack/awscli-local#alternative.)
+alias awslocal="AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=${DEFAULT_REGION:-$AWS_DEFAULT_REGION} aws --endpoint-url=http://${LOCALSTACK_HOST:-localhost}:4566"
+alias dotnet64=/usr/local/share/dotnet/x64/dotnet
+
 source "$HOME"/.cargo/env
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/opt/homebrew/Caskroom/miniforge/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/opt/homebrew/Caskroom/miniforge/base/etc/profile.d/conda.sh" ]; then
+        . "/opt/homebrew/Caskroom/miniforge/base/etc/profile.d/conda.sh"
+    else
+        export PATH="/opt/homebrew/Caskroom/miniforge/base/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
+
+# Enable frum - Ruby version manager written in Rust https://github.com/TaKO8Ki/frum
+eval "$(frum init)"
 
 # Initialize jenv, but only if it's installed, and use --no-rehash for faster startup
 if command -v jenv >/dev/null 2>&1; then
@@ -146,16 +175,8 @@ if command -v jenv >/dev/null 2>&1; then
     eval "$(jenv init - --no-rehash)"
 fi
 
-{{ if has "dev" .tags -}}
 export LIQUIBASE_HOME=/opt/homebrew/opt/liquibase/libexec
-
 export PATH="$LIQUIBASE_HOME:$PATH"
-
-alias dotnet64=/usr/local/share/dotnet/x64/dotnet
-# Previously deprecated - Removed 10/13/23.
-#alias laws='aws --endpoint-url=http://localhost:4566'
-# AWS cli for use with LocalStack. (See https://github.com/localstack/awscli-local#alternative.)
-alias awslocal="AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=${DEFAULT_REGION:-$AWS_DEFAULT_REGION} aws --endpoint-url=http://${LOCALSTACK_HOST:-localhost}:4566"
 
 # Load NVM, but instead of synchronously (which can add 200-500ms to startup),
 # define a lazy-loading function that only initializes NVM when first used
@@ -180,11 +201,6 @@ bindkey '^[^o' zsh_llm_suggestions_openai_explain # Ctrl + alt + O to have OpenA
 #bindkey '^p' zsh_llm_suggestions_github_copilot # Ctrl + P to have GitHub Copilot suggest a command given a English description
 #bindkey '^[^p' zsh_llm_suggestions_github_copilot_explain # Ctrl + alt + P to have GitHub Copilot explain a command
 
-{{ if has "dev" .tags -}}
-# Enable frum - Ruby version manager written in Rust https://github.com/TaKO8Ki/frum
-eval "$(frum init)"
-{{- end }}
-
 # Enable colorls tab completion for flags
 #source $(dirname $(gem which colorls))/tab_complete.sh
 
@@ -206,29 +222,6 @@ export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 # End of LM Studio CLI section
 {{- end }}
-
-# ------------------------------------------------------------------------------
-# Astral.sh uv - Python package manager
-# ------------------------------------------------------------------------------
-. "$HOME/.local/bin/env"
-
-{{ if has "dev" .tags -}}
-# >>> conda initialize >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/opt/homebrew/Caskroom/miniforge/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__conda_setup"
-else
-    if [ -f "/opt/homebrew/Caskroom/miniforge/base/etc/profile.d/conda.sh" ]; then
-        . "/opt/homebrew/Caskroom/miniforge/base/etc/profile.d/conda.sh"
-    else
-        export PATH="/opt/homebrew/Caskroom/miniforge/base/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< conda initialize <<<
-{{- end }}
-
 
 # ------------------------------------------------------------------------------
 # Shell integrations for Homebrew-installed packages
