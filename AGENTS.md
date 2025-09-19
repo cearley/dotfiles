@@ -268,3 +268,4 @@ This macOS-focused repository uses intuitive emojis (💡 info, ✅ success, ⚠
 - **Reliability**: Tested shared functions with better error handling
 - **User Experience**: More intuitive emoji icons and consistent output formatting
 - **Template Reusability**: Machine-specific logic centralized in reusable template components
+- The @home/bin/executable_claude-mcp-add.tmpl script is a template but it can be tested by first executing `chezmoi apply ~/bin/claude-mcp-add` and then running the script with `claude-mcp-add`

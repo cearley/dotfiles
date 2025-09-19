@@ -65,6 +65,7 @@ packages:
       - 'git-gui'
       - 'github-markdown-toc'
       - 'go'
+      - 'gopls'
       - 'graphviz'
       - 'hugo'
       - 'liquibase'

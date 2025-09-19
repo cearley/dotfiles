@@ -100,6 +100,8 @@ source "$ZSH"/oh-my-zsh.sh
 
 # User configuration
 
+export PATH="$PATH:{{- .chezmoi.homeDir -}}//bin"
+
 {{ if stat (joinPath .chezmoi.homeDir ".zsh_secrets") -}}
 # Source your secrets file.
 source "$HOME"/.zsh_secrets

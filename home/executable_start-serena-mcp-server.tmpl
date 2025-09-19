@@ -1,4 +1,0 @@
-{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
-#!/bin/bash
-uvx --from git+https://github.com/oraios/serena serena start-mcp-server
-{{ end -}}

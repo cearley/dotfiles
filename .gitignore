@@ -1,8 +1,10 @@
 # Mac OS
 .DS_Store
 
-# Claude
+# AI
 .claude/
+.continue/
+.serena/
 PROJECT_REVIEW.md
 
 # Syncthing
