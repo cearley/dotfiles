@@ -140,11 +140,6 @@ export ARCHFLAGS="-arch $(uname -m)"
 bindkey "^[[A" history-search-backward
 bindkey "^[[B" history-search-forward
 
-# ------------------------------------------------------------------------------
-# Astral.sh uv - Python package manager
-# ------------------------------------------------------------------------------
-. "$HOME/.local/bin/env"
-
 {{ if has "dev" .tags -}}
 
 # AWS cli for use with LocalStack. (See https://github.com/localstack/awscli-local#alternative.)
@@ -224,6 +219,11 @@ export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 # End of LM Studio CLI section
 {{- end }}
+
+# ------------------------------------------------------------------------------
+# Astral.sh uv - Python package manager
+# ------------------------------------------------------------------------------
+. "$HOME/.local/bin/env"
 
 # ------------------------------------------------------------------------------
 # Shell integrations for Homebrew-installed packages
