@@ -1,0 +1,32 @@
+{{- if has "ai" .tags -}}
+{
+  "tools": {
+    "serena": {
+      "name": "serena",
+      "description": "Serena - Semantic code analysis and intelligent IDE assistant",
+      "prerequisite": "uvx",
+      "error_message": "uvx not found. Please install uv first: curl -LsSf https://astral.sh/uv/install.sh | sh",
+      "install_command": [
+        "claude", "mcp", "add", "serena", "--",
+        "uvx", "--from", "git+https://github.com/oraios/serena",
+        "serena", "start-mcp-server",
+        "--context", "ide-assistant", "--project", "{project_dir}"
+      ]
+    },
+    "basic-memory": {
+      "name": "basic-memory",
+      "description": "Basic Memory - Enhanced memory capabilities for Claude",
+      "prerequisite": "basic-memory",
+      "error_message": "basic-memory not found. Please install it first. See: https://docs.basicmemory.com/getting-started/#installation",
+      "install_command": ["claude", "mcp", "add", "basic-memory", "basic-memory", "mcp"]
+    },
+    "gemini-cli": {
+      "name": "gemini-cli",
+      "description": "Gemini CLI - Google Gemini integration tool",
+      "prerequisite": "npm",
+      "error_message": "npm/npx not found. Please install Node.js first.",
+      "install_command": ["claude", "mcp", "add", "gemini-cli", "--", "npx", "-y", "gemini-mcp-tool"]
+    }
+  }
+}
+{{- end -}}

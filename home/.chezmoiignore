@@ -1,10 +1,6 @@
 # Common
 **/cache
 
-## Local bin folder
-bin/*
-!bin/claude-mcp-add # ignore bin folder, except for claude-mcp-add
-
 ## Brewfiles
 brewfiles/
 
