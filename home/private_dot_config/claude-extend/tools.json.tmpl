@@ -1,32 +1,41 @@
 {{- if has "ai" .tags -}}
 {
   "tools": {
+    "aws-knowledge-mcp-server": {
+      "description": "Access up-to-date information from the web",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://knowledge-mcp.global.api.aws"
+        ]
+      },
+    "basic-memory": {
+      "description": "Enhanced memory capabilities for Claude",
+      "command": "basic-memory",
+      "args": ["mcp"]
+    },
+    "gemini-cli": {
+      "description": "Google Gemini integration tool",
+      "command": "npx",
+      "args": ["-y", "gemini-mcp-tool"]
+    },
+    "sequential-thinking": {
+      "description": "Dynamic and reflective problem-solving through a structured thinking process",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
     "serena": {
-      "name": "serena",
-      "description": "Serena - Semantic code analysis and intelligent IDE assistant",
-      "prerequisite": "uvx",
-      "error_message": "uvx not found. Please install uv first: curl -LsSf https://astral.sh/uv/install.sh | sh",
-      "install_command": [
-        "claude", "mcp", "add", "serena", "--",
-        "uvx", "--from", "git+https://github.com/oraios/serena",
-        "serena", "start-mcp-server",
+      "description": "Semantic code analysis and intelligent IDE assistant",
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server",
         "--context", "ide-assistant", "--project", "{project_dir}"
       ]
     },
-    "basic-memory": {
-      "name": "basic-memory",
-      "description": "Basic Memory - Enhanced memory capabilities for Claude",
-      "prerequisite": "basic-memory",
-      "error_message": "basic-memory not found. Please install it first. See: https://docs.basicmemory.com/getting-started/#installation",
-      "install_command": ["claude", "mcp", "add", "basic-memory", "basic-memory", "mcp"]
-    },
-    "gemini-cli": {
-      "name": "gemini-cli",
-      "description": "Gemini CLI - Google Gemini integration tool",
-      "prerequisite": "npm",
-      "error_message": "npm/npx not found. Please install Node.js first.",
-      "install_command": ["claude", "mcp", "add", "gemini-cli", "--", "npx", "-y", "gemini-mcp-tool"]
-    }
   }
 }
 {{- end -}}

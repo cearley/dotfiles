@@ -6,7 +6,8 @@ brewfiles/
 
 ## Claude
 .claude/*
-!.claude/CLAUDE.md # Ignore everything in .claude except CLAUDE.md
+!.claude/CLAUDE.md
+!.claude/commands/
 
 ## scripts
 scripts/
