@@ -4,6 +4,10 @@
 ## Brewfiles
 brewfiles/
 
+## Claude
+.claude/*
+!.claude/CLAUDE.md # Ignore everything in .claude except CLAUDE.md
+
 ## scripts
 scripts/
 
