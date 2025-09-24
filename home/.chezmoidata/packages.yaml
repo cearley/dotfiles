@@ -3,6 +3,7 @@ packages:
     taps:
     - 'isen-ng/dotnet-sdk-versions'
     - 'localstack/tap'
+    - 'buo/cask-upgrade'
     #- 'microsoft/mssql-release'
     
     # Core packages (always installed)
