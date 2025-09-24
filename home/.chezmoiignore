@@ -4,6 +4,10 @@
 ## Brewfiles
 brewfiles/
 
+## Basic Memory
+.dot_basic-memory/*
+!.dot_basic-memory/config.json.tmpl
+
 ## Claude
 .claude/*
 !.claude/CLAUDE.md

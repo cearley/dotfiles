@@ -1,0 +1,28 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+{{/*
+  Expected KeePassXC Entry: "Basic Memory", Attribute Name: "projects", Attribute Value:
+    {
+      "projects": [
+        {"name": "main", "path": "/path/to/basic-memory"},
+        {"name": "my-project", "path": "/path/to/My Project"},
+        {"name": "another-project", "path": "/path/to/Another Project"}
+      ]
+    }
+*/}}
+{{- $projectsData := dict -}}
+{{- $projectsData = keepassxcAttribute "Basic Memory" "projects" | fromJson -}}
+{
+  "env": "dev",
+  "projects": {
+{{- range $index, $project := $projectsData.projects }}
+    "{{ $project.name }}": "{{ $project.path }}"{{ if lt $index (sub (len $projectsData.projects) 1) }},{{ end }}
+{{- end }}
+  },
+  "default_project": "main",
+  "log_level": "INFO",
+  "sync_delay": 1000,
+  "update_permalinks_on_move": false,
+  "sync_changes": true,
+  "api_url": null
+}
+{{- end -}}
