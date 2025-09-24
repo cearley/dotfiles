@@ -5,6 +5,9 @@ complete -C "$HOMEBREW_PREFIX/bin/aws_completer" aws
 # AWS cli for use with LocalStack. (See https://github.com/localstack/awscli-local#alternative.)
 alias awslocal="AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=${DEFAULT_REGION:-$AWS_DEFAULT_REGION} aws --endpoint-url=http://${LOCALSTACK_HOST:-localhost}:4566"
 . "$HOME/.cargo/env"
+# Load nvm
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
 {{- end }}
 
 {{ if (has "ai" .tags) -}}
