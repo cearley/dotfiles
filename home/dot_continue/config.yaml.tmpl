@@ -1,0 +1,18 @@
+{{- if has "dev" .tags -}}
+name: Local Agent
+version: 1.0.0
+schema: v1
+models:
+  - name: Gemini 2.0 Flash
+    provider: gemini
+    model: gemini-2.0-flash
+    apiKey: {{ keepassxcAttribute "Gemini" "API Key" }}
+  - name: GPT-5
+    provider: openai
+    model: gpt-5
+    apiKey: {{ keepassxcAttribute "OpenAI platform" "CodeGPT_key" }}
+  - name: Autodetect
+    provider: ollama
+    model: AUTODETECT
+    apiKey: test
+{{ end -}}
