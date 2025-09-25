@@ -22,4 +22,8 @@ output = json
 [profile localstack]
 region = us-east-1
 output = json
+{{- else if .has_keepassxc_db -}}
+[default]
+region = us-east-1
+output = json
 {{- end }}
