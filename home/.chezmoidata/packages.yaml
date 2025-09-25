@@ -113,6 +113,7 @@ packages:
       - 'microsoft-teams'
       - 'webex'
       - 'whimsical'
+      - 'windows-app'
       mas:
       - '"Microsoft Excel", id: 462058435'
       - '"Microsoft Outlook", id: 985367838'
