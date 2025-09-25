@@ -111,6 +111,7 @@ packages:
       - 'dotnet-sdk6-0-400'
       - 'microsoft-auto-update'
       - 'microsoft-teams'
+      - 'webex'
       - 'whimsical'
       mas:
       - '"Microsoft Excel", id: 462058435'
