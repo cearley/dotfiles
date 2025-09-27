@@ -3,7 +3,7 @@ Always use:
 - basic-memory to remember and recall previous conversations
 - gemini-cli for large codebase analysis and multi-file comparisons
 - sequential thinking for any decision making
-- serena for semantic code retrieval and editing tools, and always update its symbols after any code changes
+- serena for semantic code retrieval and editing tools.
 Read the CLAUDE.md root file before you do anything.
 
 # Memory Consultation Protocol
