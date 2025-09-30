@@ -5,55 +5,51 @@
 - Use meaningful variable names
 - Follow existing project conventions
 
-## Enhanced Plan Mode Analysis Framework
-When in plan mode and working on coding tasks, follow this enhanced analytical framework to provide more thoughtful, comprehensive analysis rather than jumping straight to implementation details.
+## Strategic Analysis Framework
+When approaching any task, apply this analytical framework to ensure solutions are thoughtful, robust, and well-aligned with the user's underlying goals. Avoid jumping directly to implementation.
 
-### 1. Question Assumptions First
-- **Challenge the premise**: Is the requested approach the right solution?
-- **Examine context**: What are the different ways users might encounter this problem?
-- **Consider alternatives**: What other approaches could address the underlying need?
-- **Validate necessity**: Is this feature actually needed, or is there a simpler solution?
+### 1. Deconstruct the Request
+- **Clarify Intent**: What is the user's ultimate goal? What problem are they *really* trying to solve?
+- **Challenge Assumptions**: Is the user's proposed solution the best one? Are there unstated assumptions in the request?
+- **Identify Constraints**: What are the technical, business, or user-facing constraints?
+- **Define Success**: What does a successful outcome look like?
 
-### 2. Analyze Ecosystem Implications
-- **Integration concerns**: How does this interact with existing tools/systems?
-- **Compatibility issues**: What different environments/setups must be considered?
-- **Dependency conflicts**: Could this interfere with existing dependencies, build systems, or other tooling?
-- **Standards compliance**: Does this follow established patterns in the ecosystem?
+### 2. Analyze the Ecosystem
+- **System-wide Impact**: How will this change affect other parts of the system?
+- **Integration Points**: How does this interact with existing tools, APIs, or workflows?
+- **Dependencies**: What new dependencies are introduced? Could this conflict with existing ones?
+- **Future-Proofing**: Does this align with the project's long-term direction? Will it be maintainable?
 
-### 3. Provide a Spectrum of Solutions
-- **Minimal/Safe approach**: What's the lowest-risk way to address this?
-- **Progressive enhancement**: How can we build up from simple to more complex?
-- **Full-featured solution**: What would the complete implementation look like?
-- **Alternative paradigms**: Are there completely different approaches worth considering?
+### 3. Propose a Spectrum of Solutions
+- **Simple & Safe**: The minimal, low-risk implementation.
+- **Recommended Approach**: The balanced solution that best fits the context.
+- **Ambitious/Full-Featured**: The "gold standard" solution if time and resources were unlimited.
+- **Alternative Paradigms**: Completely different ways to think about the problem.
 
-### 4. Highlight Trade-offs Explicitly
-- **Security vs. Convenience**: What risks come with each approach?
-- **Complexity vs. Maintainability**: How will each solution age?
-- **Performance vs. Features**: What are the resource implications?
-- **User Experience vs. Safety**: Where do we draw boundaries?
+### 4. Articulate Clear Trade-offs
+For each proposed solution, explicitly state the trade-offs:
+- **Complexity vs. Maintainability**: How difficult is it to build versus to support long-term?
+- **Performance vs. Scalability**: How does it perform now, and how will it scale with growth?
+- **Security vs. Usability**: Does it introduce risks, or does it create friction for the user?
+- **Flexibility vs. Simplicity**: How adaptable is the solution versus how easy is it to understand?
 
-### 5. Pattern Classification
-- **Identify if this is**: A good pattern, anti-pattern, or context-dependent
-- **Reference industry examples**: How do established tools handle similar problems?
-- **Consider failure modes**: What could go wrong with each approach?
+### 5. Identify Patterns and Anti-Patterns
+- **Classify the Pattern**: Is the proposed solution a recognized good pattern, an anti-pattern, or context-dependent?
+- **Cite Precedent**: How have other major projects or ecosystems solved similar problems?
+- **Anticipate Failure Modes**: What are the most likely ways this solution could fail, break, or be misused?
 
-## Personal Shortcuts
-- Add common commands or workflows here
+## Large-Scale Analysis
+When a request requires understanding or modifying a large volume of code that exceeds your available context window, use tools or strategies designed for large-scale analysis.
 
-## Development Environment
-- Add your preferred tools and configurations
+### Triggers for Large-Scale Analysis
+- **Codebase-wide questions**: Analyzing or searching across an entire project or many directories.
+- **Cross-file comparisons**: Comparing or finding relationships between multiple large files.
+- **Architectural review**: Understanding project-wide patterns, dependencies, or high-level structure.
+- **Context overflow**: The total size of relevant files exceeds your context capacity (e.g., >100KB).
+- **Broad verification**: Verifying if features, patterns, or security measures are implemented across the entire codebase.
 
-## Using Gemini
-Use gemini when:
-- Analyzing entire codebases or large directories
-- Comparing multiple large files
-- Need to understand project-wide patterns or architecture
-- Current context window is insufficient for the task
-- Working with files totaling more than 100KB
-- Verifying if specific features, patterns, or security measures are implemented
-- Checking for the presence of certain coding patterns across the entire codebase
-
-Important Notes:
-- Paths in @ syntax are relative to your current working directory when invoking gemini
-- Gemini's context window can handle entire codebases that would overflow Claude's context
-- When checking implementations, be specific about what you're looking for to get accurate results
+### Best Practices for Large-Scale Tools
+- **Specify Scope**: Clearly define the files, directories, or patterns to be analyzed.
+- **Be Specific**: Ask precise questions to get accurate and relevant results.
+- **Leverage Full Context**: Utilize tools that can process entire codebases to avoid fragmented analysis.
+- **Use Relative Paths**: When referencing files for analysis, use paths relative to the project root.

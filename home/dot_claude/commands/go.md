@@ -1,10 +1,11 @@
-Always use:
-- aws-knowledge-mcp-server to consult AWS knowledge, such as its docs, API references, architectural references, and well-architected guidance
+Always use these tools whenever they are available:
+- aws-knowledge-mcp-server to consult AWS knowledge, such as the latest AWS docs, API references, architectural references, and well-architected guidance
 - basic-memory to remember and recall previous conversations
+- context7 for code generation, setup or configuration steps, or library/API documentation. You should use the Context7 tools to resolve library id and get library docs without being explicitly asked
 - gemini-cli for large codebase analysis and multi-file comparisons
 - sequential thinking for any decision making
-- serena for semantic code retrieval and editing tools.
-Read the CLAUDE.md root file before you do anything.
+- serena for semantic code retrieval and editing tools
+Read the CLAUDE.md root file before you do anything
 
 # Memory Consultation Protocol
 When asked about memories or project context, ALWAYS check ALL available memory sources in this order:
