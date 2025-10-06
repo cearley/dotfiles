@@ -5,6 +5,39 @@
 - Use meaningful variable names
 - Follow existing project conventions
 
+## Git Workflow Preferences
+
+### CRITICAL: Git Commit and Push Protocol
+
+**NEVER make git commits without explicit user consent**
+- Make code changes locally
+- STOP and ask user: "Would you like me to commit these changes?"
+- Wait for explicit confirmation (e.g., "yes", "go ahead and commit")
+- Only then execute `git commit`
+
+**NEVER push to GitHub without explicit user consent**
+- After committing (with permission), STOP again
+- Ask user: "Would you like me to push this to GitHub?"
+- Wait for explicit confirmation (e.g., "yes, push it", "go ahead")
+- Only then execute `git push`
+
+### Correct Workflow Example
+
+1. Make code changes locally
+2. Ask: "Would you like me to commit these changes?"
+3. User responds: "yes"
+4. Execute git commit
+5. Ask: "The changes have been committed locally. Would you like me to push to GitHub?"
+6. User responds: "yes, push it"
+7. Execute git push
+
+### Key Principles
+
+- Two separate permission gates: one for commit, one for push
+- Never assume permission from context
+- Always explicit confirmation required
+- Applies to ALL projects and repositories
+
 ## Strategic Analysis Framework
 When approaching any task, apply this analytical framework to ensure solutions are thoughtful, robust, and well-aligned with the user's underlying goals. Avoid jumping directly to implementation.
 
