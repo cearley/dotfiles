@@ -55,7 +55,6 @@ packages:
       brews:
       - 'ack'
       - 'act'
-      #- 'asdf'
       - 'aws-sam-cli'
       - 'azure-cli'
       - 'bats-core'
@@ -91,6 +90,7 @@ packages:
       - '"JWT Inspector", id: 1559670160'
       sdk:
       - "java"
+    
     # Optional AI/ML packages (ai tag)
     ai:
       brews:
