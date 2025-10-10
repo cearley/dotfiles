@@ -49,10 +49,10 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
 
 - **Development Toolchains (10-19):**
   - `10` - Install Rust (programming language runtime)
-  - `15` - Install Azul Zulu JDK (Java development kit)
 
 - **Package Management (20-29):**
-  - `20` - Brew bundle install essential packages from packages.yaml
+  - `20` - Install SDKMAN (Java SDK manager for Java, Gradle, Maven, etc.)
+  - `23` - Brew bundle install essential packages from packages.yaml
   - `25` - Brew bundle install additional packages from machine-specific brewfiles
 
 - **Environment Managers (30-39):**
@@ -85,8 +85,8 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 **Script Examples:**
 - `run_once_before_darwin-05-install-rosetta.sh.tmpl`: System foundation (Apple Silicon compatibility)
 - `run_once_before_darwin-10-install-rust.sh.tmpl`: Development toolchain (dev tag)
-- `run_onchange_before_darwin-20-install-packages.sh.tmpl`: Package management (tag-based)
-- `run_once_after_darwin-15-install-azul-zulu-jdk.sh.tmpl`: Development toolchain (dev tag)
+- `run_once_before_darwin-20-install-sdkman.sh.tmpl`: Java SDK manager installation
+- `run_onchange_before_darwin-23-install-packages.sh.tmpl`: Package management (tag-based)
 - `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl`: Environment setup (authentication)
 - `run_onchange_after_darwin-97-test-ssh-github.sh.tmpl`: System validation (triggered by changes)
 
@@ -122,7 +122,7 @@ Scripts in `home/.chezmoiscripts/` can leverage shared utility functions to avoi
 **Scripts Using Shared Utilities**:
 Scripts have been systematically refactored to use shared utilities for consistency:
 - `run_once_before_darwin-10-install-rust.sh.tmpl`: Rust toolchain installation
-- `run_once_after_darwin-15-install-azul-zulu-jdk.sh.tmpl`: JDK installation with jenv integration
+- `run_once_before_darwin-20-install-sdkman.sh.tmpl`: SDKMAN installation
 - `run_once_before_darwin-30-install-uv.sh.tmpl`: Python package manager uv
 - `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager
 - `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl`: GitHub authentication setup
@@ -138,7 +138,7 @@ Scripts have been systematically refactored to use shared utilities for consiste
 - **Package Management**: Dual approach using both `packages.yaml` data file and machine-specific brewfiles
 - **Development Tools**: VS Code extensions, various CLI tools, cloud SDKs
 - **System Defaults**: macOS preferences and application settings via `defaults` commands
-- **External Dependencies**: Managed via `home/.chezmoiexternal.toml` (Oh My Zsh, plugins, jenv, nvm)
+- **External Dependencies**: Managed via `home/.chezmoiexternal.toml` (Oh My Zsh, plugins)
 
 ## Key Commands
 
@@ -247,14 +247,12 @@ This macOS-focused repository uses intuitive emojis (💡 info, ✅ success, ⚠
 - **Smart triggering**: Re-runs automatically when SSH keys change (uses file hashing)
 - **Better diagnostics**: Enhanced error messages and troubleshooting guidance
 
-#### Azul Zulu JDK Installation
-- **New script**: `run_once_after_darwin-15-install-azul-zulu-jdk.sh.tmpl`
-- **Features**:
-  - Dynamic latest LTS version detection via Azul API
-  - Architecture-aware downloads (arm64/x64)
-  - Automatic jenv integration
-  - Proper macOS .jdk directory structure handling
-  - Smart existing installation detection
+#### Java Development Environment
+- **SDKMAN Installation**: `run_once_before_darwin-20-install-sdkman.sh.tmpl`
+  - Manages Java SDKs, Gradle, Maven, and other JVM tools
+  - Replaces deprecated jenv and Azul Zulu JDK installation
+  - Provides centralized SDK version management
+  - Automatic environment initialization via shell profiles
 
 #### Reusable Template System (2025)
 - **Created centralized templates**: `home/.chezmoitemplates/` directory with reusable components
