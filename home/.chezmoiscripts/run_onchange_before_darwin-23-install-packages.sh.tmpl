@@ -79,4 +79,17 @@ mas {{ . }}
 {{ end -}}
 {{- end }}
 EOF
+
+print_message "info" "Installing packages using SDKMAN!..."
+
+if ! command_exists sdk; then
+    source "{{- .chezmoi.homeDir -}}/.sdkman/bin/sdkman-init.sh"
+fi
+
+{{- if has "dev" .tags }}
+# Install dev packages
+{{ range .packages.darwin.dev.sdk -}}
+sdk install {{ . }}
+{{ end -}}
+{{- end }}
 {{ end -}}

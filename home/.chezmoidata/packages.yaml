@@ -89,7 +89,8 @@ packages:
       - 'visual-studio-code'
       mas:
       - '"JWT Inspector", id: 1559670160'
-    
+      sdk:
+      - "java"
     # Optional AI/ML packages (ai tag)
     ai:
       brews:
@@ -111,6 +112,7 @@ packages:
       - 'dotnet-sdk6-0-400'
       - 'microsoft-auto-update'
       - 'microsoft-teams'
+      - 'obsidian'
       - 'webex'
       - 'whimsical'
       - 'windows-app'

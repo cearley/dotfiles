@@ -1,0 +1,136 @@
+{{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
+#!/bin/bash
+
+# Azul Zulu JDK uninstallation script for macOS development environments
+# Safely removes Azul Zulu JDK installed by the now deprecated run_once_after_darwin-15-install-azul-zulu-jdk.sh.tmpl
+set -euo pipefail
+
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+# Constants
+readonly JAVA_INSTALL_DIR="/Library/Java/JavaVirtualMachines"
+
+# Find installed Azul Zulu JDK
+find_zulu_jdk() {
+    local zulu_jdks=()
+
+    if [ ! -d "$JAVA_INSTALL_DIR" ]; then
+        print_message "skip" "No Java installation directory found at $JAVA_INSTALL_DIR"
+        return 1
+    fi
+
+    # Find all Zulu JDK installations
+    while IFS= read -r -d '' jdk_dir; do
+        zulu_jdks+=("$(basename "$jdk_dir")")
+    done < <(find "$JAVA_INSTALL_DIR" -maxdepth 1 -name "zulu*" -type d -print0)
+
+    if [ ${#zulu_jdks[@]} -eq 0 ]; then
+        print_message "skip" "No Azul Zulu JDK installations found"
+        return 1
+    fi
+
+    # Display found installations
+    print_message "info" "Found ${#zulu_jdks[@]} Azul Zulu JDK installation(s):"
+    for jdk in "${zulu_jdks[@]}"; do
+        local java_bin="$JAVA_INSTALL_DIR/$jdk/Contents/Home/bin/java"
+        if [ -x "$java_bin" ]; then
+            local version
+            version=$("$java_bin" -version 2>&1 | head -1)
+            echo "  - $jdk ($version)" >&2
+        else
+            echo "  - $jdk" >&2
+        fi
+    done
+
+    printf '%s\n' "${zulu_jdks[@]}"
+}
+
+# Remove JDK from jenv if available
+remove_from_jenv() {
+    local java_home="$1"
+
+    # Check if jenv is available
+    if ! command_exists jenv; then
+        print_message "info" "jenv not found, skipping jenv removal"
+        return 0
+    fi
+
+    print_message "info" "Checking jenv for JDK: $java_home"
+
+    # Get jenv version for this Java home
+    local jenv_version
+    if jenv_version=$(jenv versions 2>/dev/null | grep "$(basename "$(dirname "$java_home")")" | awk '{print $1}' | tr -d '*' | head -1); then
+        if [ -n "$jenv_version" ]; then
+            print_message "info" "Removing JDK from jenv: $jenv_version"
+            if jenv remove "$jenv_version" 2>/dev/null; then
+                print_message "success" "JDK removed from jenv successfully"
+            else
+                print_message "warning" "Failed to remove JDK from jenv (may not be configured)"
+            fi
+        fi
+    fi
+}
+
+# Uninstall JDK
+uninstall_jdk() {
+    local jdk_name="$1"
+    local jdk_path="$JAVA_INSTALL_DIR/$jdk_name"
+
+    if [ ! -d "$jdk_path" ]; then
+        print_message "error" "JDK not found at: $jdk_path"
+        return 1
+    fi
+
+    print_message "info" "Preparing to uninstall: $jdk_name"
+    print_message "warning" "This will remove: $jdk_path"
+
+    # Remove from jenv first
+    remove_from_jenv "$jdk_path/Contents/Home"
+
+    # Remove the JDK directory
+    print_message "info" "Removing JDK directory (requires sudo)..."
+    if sudo rm -rf "$jdk_path"; then
+        print_message "success" "JDK uninstalled successfully: $jdk_name"
+        return 0
+    else
+        print_message "error" "Failed to remove JDK directory"
+        return 1
+    fi
+}
+
+# Main function
+main() {
+    print_message "info" "Azul Zulu JDK Uninstallation Script"
+
+    # Find installed JDKs
+    local zulu_jdks
+    if ! zulu_jdks=$(find_zulu_jdk); then
+        exit 0
+    fi
+
+    # Convert to array
+    local jdk_array=()
+    while IFS= read -r jdk; do
+        jdk_array+=("$jdk")
+    done <<< "$zulu_jdks"
+
+    # Uninstall each JDK
+    local uninstalled=0
+    for jdk in "${jdk_array[@]}"; do
+        if uninstall_jdk "$jdk"; then
+            ((uninstalled++))
+        fi
+    done
+
+    if [ $uninstalled -gt 0 ]; then
+        print_message "success" "Uninstalled $uninstalled Azul Zulu JDK installation(s)"
+        print_message "info" "You may need to restart your terminal or source your shell profile"
+    else
+        print_message "warning" "No JDKs were uninstalled"
+    fi
+}
+
+# Run main function with all arguments
+main "$@"
+{{ end -}}

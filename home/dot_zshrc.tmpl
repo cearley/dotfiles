@@ -260,3 +260,7 @@ else
     # Fallback: run immediately if zsh-defer is not available
     _defer_shell_integrations
 fi
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+export SDKMAN_DIR="{{- .chezmoi.homeDir -}}/.sdkman"
+[[ -s "{{- .chezmoi.homeDir -}}/.sdkman/bin/sdkman-init.sh" ]] && source "{{- .chezmoi.homeDir -}}/.sdkman/bin/sdkman-init.sh"

@@ -1,0 +1,30 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+set -euo pipefail
+
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+# Check required tools
+if ! require_tools curl zip unzip; then
+    exit 1
+fi
+
+# Exit immediately if sdkman is already installed
+if [[ -d "$HOME/.sdkman" ]] && [[ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
+    print_message "skip" "Skipping sdkman installation: sdkman is already installed"
+    exit 0
+fi
+
+print_message "info" "Installing sdkman (Software Development Kit Manager)..."
+
+# Install sdkman - SDK manager for Java, Gradle, Maven, etc.
+# Using the official installation script from sdkman.io
+export SDKMAN_DIR="$HOME/.sdkman"
+curl -s "https://get.sdkman.io" | bash
+
+print_message "success" "sdkman installed successfully!"
+print_message "info" "sdkman installed to: $SDKMAN_DIR"
+
+{{ end -}}
