@@ -166,10 +166,6 @@ unset __conda_setup
 # Enable frum - Ruby version manager written in Rust https://github.com/TaKO8Ki/frum
 eval "$(frum init)"
 
-# Initialize jenv and use --no-rehash for faster startup
-export PATH="$HOME/.jenv/bin:$PATH"
-eval "$(jenv init - --no-rehash)"
-
 export LIQUIBASE_HOME=/opt/homebrew/opt/liquibase/libexec
 export PATH="$LIQUIBASE_HOME:$PATH"
 
