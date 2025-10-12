@@ -30,7 +30,7 @@ case "$(uname -s)" in
                 echo
                 echo "eval \"\$($HOMEBREW_PREFIX/bin/brew shellenv)\""
             ) >>"$HOME"/.zprofile
-            eval "\$($HOMEBREW_PREFIX/bin/brew shellenv)"
+            eval "$($HOMEBREW_PREFIX/bin/brew shellenv)"
             echo "Homebrew installed successfully!"
         fi
         
