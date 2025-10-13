@@ -180,3 +180,24 @@ prompt_ready() {
     read -n 1 -s -r
     echo ""
 }
+
+# Check if user is signed into iCloud
+# Returns 0 if signed in, 1 if not signed in
+# Note: This checks for iCloud account, not Mac App Store specifically
+is_icloud_signed_in() {
+    # Check if MobileMeAccounts plist exists
+    if [ ! -f ~/Library/Preferences/MobileMeAccounts.plist ]; then
+        return 1
+    fi
+
+    # Extract account ID from MobileMeAccounts
+    local account_id
+    account_id=$(defaults read MobileMeAccounts Accounts 2>/dev/null | grep -m 1 "AccountID" | sed 's/.*= "\(.*\)";/\1/')
+
+    # If we found an account ID, user is signed in
+    if [ -n "$account_id" ]; then
+        return 0
+    fi
+
+    return 1
+}

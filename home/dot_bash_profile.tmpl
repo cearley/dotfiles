@@ -1,4 +1,6 @@
 
+{{- if has "dev" .tags }}
 #THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
 export SDKMAN_DIR="{{- .chezmoi.homeDir -}}/.sdkman"
 [[ -s "{{- .chezmoi.homeDir -}}/.sdkman/bin/sdkman-init.sh" ]] && source "{{- .chezmoi.homeDir -}}/.sdkman/bin/sdkman-init.sh"
+{{ end }}
