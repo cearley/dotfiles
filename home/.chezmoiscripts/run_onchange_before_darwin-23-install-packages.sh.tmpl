@@ -60,16 +60,17 @@ else
     print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
 fi
 
+{{- if has "dev" .tags }}
 print_message "info" "Installing packages using SDKMAN!..."
 
 if ! command_exists sdk; then
-    source "{{- .chezmoi.homeDir -}}/.sdkman/bin/sdkman-init.sh"
+  # Initialize SDKMAN assuming it's installed
+  source "{{- .chezmoi.homeDir -}}/.sdkman/bin/sdkman-init.sh"
 fi
 
-{{- if has "dev" .tags }}
-# Install dev packages
 {{ range .packages.darwin.dev.sdk -}}
 sdk install {{ . }}
 {{ end -}}
-{{- end }}
+{{- end }} # if has "dev" .tags
+
 {{ end -}}
