@@ -1,0 +1,15 @@
+{
+  "Profiles": [
+    {
+      "Name": "Default",
+      "Guid": "B0A3DB92-6BE3-41AA-BFCC-8220B27B0605",
+{{- $computerName := includeTemplate "computer-name" . -}}
+{{- if contains "MacBook Pro" $computerName }}
+      "Normal Font": "MesloLGSNF-Regular 13",
+{{- else -}}
+      "Normal Font": "MesloLGSNF-Regular 13",
+{{- end }}
+      "Dynamic Profile Parent Name": "Default"
+    }
+  ]
+}
