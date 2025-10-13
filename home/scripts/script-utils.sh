@@ -132,43 +132,50 @@ require_tools() {
 
 # Wait for an application to be installed, with timeout and progress updates
 # Usage: wait_for_app_installation "/Applications/AppName.app" "AppName" [timeout_seconds]
+# Returns: Always returns 0 (success) to avoid breaking chezmoi apply
 wait_for_app_installation() {
     local app_path="$1"
     local app_name="$2"
     local timeout="${3:-1800}"  # Default 30 minutes
     local elapsed=0
     local interval=10
-    
+
     # Check if already installed
     if is_app_installed "$app_path"; then
         print_message "success" "$app_name is already installed"
         return 0
     fi
-    
+
     print_message "info" "Waiting for $app_name installation to complete..."
     echo "This script will continue once $app_name is detected at: $app_path"
-    echo "Press Ctrl+C to cancel if you don't want to install $app_name now."
+    echo "You can press Ctrl+C at any time to skip and continue with the rest of the setup."
     echo ""
-    
+
+    # Set up trap to handle Ctrl+C gracefully
+    trap 'print_message "skip" "Skipping $app_name installation. You can install it manually later."; return 0' INT
+
     # Poll for the app installation with timeout
     while [ "$elapsed" -lt "$timeout" ]; do
         if is_app_installed "$app_path"; then
+            trap - INT  # Remove trap
             print_message "success" "$app_name has been successfully installed!"
             return 0
         fi
-        
+
         # Show progress every minute
         if [ $((elapsed % 60)) -eq 0 ] && [ $elapsed -gt 0 ]; then
             print_message "info" "Still waiting for $app_name installation... (${elapsed}s elapsed)"
         fi
-        
+
         sleep $interval
         elapsed=$((elapsed + interval))
     done
-    
-    # Timeout reached
-    print_message "warning" "Installation timeout reached ($((timeout / 60)) minutes). You can run 'chezmoi apply' again later to retry."
-    return 1
+
+    # Remove trap and handle timeout
+    trap - INT
+    print_message "warning" "Installation timeout reached ($((timeout / 60)) minutes). Continuing with setup."
+    print_message "info" "You can install $app_name manually and run 'chezmoi apply' again later."
+    return 0
 }
 
 # Prompt user to press any key to continue, ensuring they see the message
