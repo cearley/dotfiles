@@ -17,7 +17,7 @@ My personal dotfiles and macOS development environment setup, managed with [chez
 
 ## Why You Might Find This Useful
 
-This repository uses several chezmoi patterns that you might find helpful:
+This repository serves as the source of truth for my macOS dotfiles and development environment setup. It's designed so that my setup is easily reproducible across multiple Macs, yet flexible enough to accommodate machine-specific configurations. Therefore it is useful to me, but it also might be useful to you as a reference or starting point for your own dotfiles. It uses several chezmoi patterns that you might find helpful:
 - **Secure secret management** using KeePassXC integration (no hardcoded credentials)
 - **Multi-machine support** with conditional configurations for different Macs using reusable templates
 - **Automated dependency installation** with proper error handling and logging
@@ -87,15 +87,6 @@ chezmoi update
 
 This runs `git pull --autostash --rebase` in your source directory and then
 `chezmoi apply`.
-
-```mermaid
-sequenceDiagram
-    participant H as home directory
-    participant W as working copy
-    participant L as local repo
-    participant R as remote repo
-    R->>H: chezmoi update
-```
 
 ### Pull the latest changes from your repo and see what would change, without actually applying the changes
 
