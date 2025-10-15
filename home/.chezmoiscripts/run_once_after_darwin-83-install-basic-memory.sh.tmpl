@@ -2,10 +2,15 @@
 #!/bin/bash
 
 # Install Basic Memory MCP server for Claude Desktop
-# Prerequisite: uv (installed by run_once_before_darwin-15-install-uv.sh.tmpl)
+# Prerequisites: claude, uv
 
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+if ! is_app_installed "/Applications/Claude.app"; then
+    print_message "skip" "Skipping basic-memory installation: Claude Desktop is not installed"
+    exit 0
+fi
 
 # Check required tools
 if ! require_tools curl uvx; then
@@ -20,12 +25,11 @@ fi
 
 print_message "info" "Installing Basic Memory MCP server for Claude Desktop..."
 
-# Install Basic Memory via the recommended installer
-# This will install uv (if not already installed), install Basic Memory via uv,
-# and configure Claude Desktop automatically with user permission.
+# Install Basic Memory via the recommended installer.
+# This will install Basic Memory via uv, and configure
+# Claude Desktop automatically with user permission.
 curl -LsSf https://basicmemory.com/install/latest.sh | sh
 
 print_message "success" "Basic Memory MCP server installation completed"
-print_message "info" "Basic Memory is now available in Claude Desktop for persistent conversations"
-prompt_ready "Installation complete! Press any key to continue..."
+print_message "info" "Basic Memory is now available in Claude Desktop"
 {{ end -}}
