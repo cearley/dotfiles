@@ -21,7 +21,7 @@ This repository uses several chezmoi patterns that you might find helpful:
 - **Secure secret management** using KeePassXC integration (no hardcoded credentials)
 - **Multi-machine support** with conditional configurations for different Macs using reusable templates
 - **Automated dependency installation** with proper error handling and logging
-- **Tag-based execution** to customize setups for different use cases (work, personal, AI/ML)
+- **Tag-based execution** to customize setups for different use cases (dev, personal, ai, ml, etc.)
 - **Comprehensive validation** - Validates SSH keys, GitHub access, Homebrew installation, etc.
 - **System-wide configuration management** - Shows how to manage `/etc/hosts` and other system files outside the home directory using chezmoi scripts
 - **Reusable template components** - Centralized machine detection and configuration logic in `home/.chezmoitemplates/`
@@ -40,7 +40,7 @@ You can also pass arguments to chezmoi by appending them:
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/main/remote_install.sh)" -- init --apply $GITHUB_USERNAME --keep-going --verbose
 ```
 
-This automatically installs all dependencies (Git, Homebrew, chezmoi, KeePassXC, etc.) and applies your dotfiles.
+This automatically installs all dependencies (chezmoi, Git, Homebrew, KeePassXC, etc.) and applies your dotfiles.
 
 **Requirements:** 
 - A KeePassXC database file is needed for password management
@@ -76,18 +76,6 @@ chezmoi edit --watch $FILENAME
 You don't have to use `chezmoi edit` to edit your dotfiles. For more
 information, see [Do I have to use `chezmoi edit` to edit my
 dotfiles?](frequently-asked-questions/usage.md#how-do-i-edit-my-dotfiles-with-chezmoi)
-
-```mermaid
-sequenceDiagram
-    participant H as home directory
-    participant W as working copy
-    participant L as local repo
-    participant R as remote repo
-    W->>W: chezmoi edit
-    W->>H: chezmoi apply
-    W->>H: chezmoi edit --apply
-    W->>H: chezmoi edit --watch
-```
 
 ### Pull the latest changes from your repo and apply them
 
@@ -128,17 +116,6 @@ chezmoi apply
 ```
 
 to apply them.
-
-```mermaid
-sequenceDiagram
-    participant H as home directory
-    participant W as working copy
-    participant L as local repo
-    participant R as remote repo
-    R->>W: chezmoi git pull
-    W-->>H: chezmoi diff
-    W->>H: chezmoi apply
-```
 
 ### Automatically commit and push changes to your repo
 
@@ -183,16 +160,6 @@ relative to the source directory, for example:
 Be careful when using `autoPush`. If your dotfiles repo is public and you
 accidentally add a secret in plain text, that secret will be pushed to your
 public repo.
-
-```mermaid
-sequenceDiagram
-    participant H as home directory
-    participant W as working copy
-    participant L as local repo
-    participant R as remote repo
-    W->>L: autoCommit
-    W->>R: autoPush
-```
 
 ## Before Forking or Using
 
