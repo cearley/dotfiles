@@ -29,6 +29,7 @@ packages:
       - 'appcleaner'
       - 'chronoagent'
       - 'chronosync'
+      - 'claude'
       - 'cryptomator'
       - 'dropbox'
       - 'etrecheckpro'

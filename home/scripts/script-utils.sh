@@ -132,7 +132,7 @@ require_tools() {
 
 # Wait for an application to be installed, with timeout and progress updates
 # Usage: wait_for_app_installation "/Applications/AppName.app" "AppName" [timeout_seconds]
-# Returns: Always returns 0 (success) to avoid breaking chezmoi apply
+# Returns: 0 (success) or 1 (skipped/timeout)
 wait_for_app_installation() {
     local app_path="$1"
     local app_name="$2"
@@ -152,7 +152,7 @@ wait_for_app_installation() {
     echo ""
 
     # Set up trap to handle Ctrl+C gracefully
-    trap 'print_message "skip" "Skipping $app_name installation. You can install it manually later."; return 0' INT
+    trap 'print_message "skip" "Skipping $app_name installation. You can install it manually later."; return 1' INT
 
     # Poll for the app installation with timeout
     while [ "$elapsed" -lt "$timeout" ]; do
@@ -173,9 +173,9 @@ wait_for_app_installation() {
 
     # Remove trap and handle timeout
     trap - INT
-    print_message "warning" "Installation timeout reached ($((timeout / 60)) minutes). Continuing with setup."
-    print_message "info" "You can install $app_name manually and run 'chezmoi apply' again later."
-    return 0
+    print_message "warning" "Installation timeout reached ($((timeout / 60)) minutes)."
+    print_message "skip" "Skipping $app_name installation. You can install it manually later."
+    return 1
 }
 
 # Prompt user to press any key to continue, ensuring they see the message
