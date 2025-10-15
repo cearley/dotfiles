@@ -68,7 +68,6 @@ packages:
       - 'gopls'
       - 'graphviz'
       - 'hugo'
-      - 'liquibase'
       - 'localstack/tap/localstack-cli'
       - 'neovim'
       - 'nuget'
@@ -88,8 +87,6 @@ packages:
       - 'visual-studio-code'
       mas:
       - '"JWT Inspector", id: 1559670160'
-      sdk:
-      - "java"
     
     # Optional AI/ML packages (ai tag)
     ai:

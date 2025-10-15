@@ -1,0 +1,25 @@
+{{ if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
+#!/bin/bash
+
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+{{ if stat (joinPath .chezmoi.homeDir ".sdkman/bin/sdkman-init.sh") -}}
+if ! command_exists sdk; then
+  print_message "info" "Sourcing SDKMAN! initialization script..."
+  source "{{- .chezmoi.homeDir -}}/.sdkman/bin/sdkman-init.sh"
+fi
+{{- end }}
+
+# Check required tools
+if ! require_tools sdk; then
+    exit 1
+fi
+
+print_message "info" "Installing packages using SDKMAN!..."
+
+{{ range .sdks.darwin.dev -}}
+sdk install {{ . }}
+{{ end -}}
+
+{{ end -}}

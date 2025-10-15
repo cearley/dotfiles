@@ -1,0 +1,8 @@
+sdks:
+  darwin:
+    
+    # Development packages (dev tag)
+    dev:
+    - "java 25-tem"
+    - "java 8.0.462-zulu"
+    - "liquibase"
