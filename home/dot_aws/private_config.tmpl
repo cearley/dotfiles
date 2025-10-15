@@ -1,4 +1,4 @@
-{{ if has "dev" .tags -}}
+{{ if and (has "dev" .tags) .has_keepassxc_db -}}
 [default]
 region = us-east-1
 output = json
