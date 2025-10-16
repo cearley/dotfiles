@@ -1,6 +1,13 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+{{ if lookPath "syncthing" -}}
+# syncthing version: {{ output "syncthing" "--version" }}
+{{- else -}}
+# syncthing is not installed
+exit 0
+{{- end }}
+
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
@@ -8,8 +15,6 @@ source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 if ! require_tools brew; then
     exit 1
 fi
-
-# syncthing version: {{ output "syncthing" "--version" }}
 
 # Check if syncthing service is loaded in brew services
 if brew services list | grep -q "syncthing"; then

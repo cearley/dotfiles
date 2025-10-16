@@ -4,53 +4,59 @@ packages:
     - 'isen-ng/dotnet-sdk-versions'
     - 'localstack/tap'
     - 'buo/cask-upgrade'
-    #- 'microsoft/mssql-release'
     
     # Core packages (always installed)
     core:
       brews:
+      - 'aria2'
+      - 'atuin'
       - 'awscli'
       - 'bat'
-      - 'gh'
+      - 'chezmoi'
+      - 'fzf'
       - 'git'
       - 'jq'
+      - 'lsd'
       - 'mas'
-      - 'openssl@3'
+      - 'neovim'
       - 'pwgen'
       - 'rclone'
       - 'speedtest-cli'
-      - 'sqlite'
-      - 'syncthing'
       - 'tree'
-      - 'fzf'
       - 'zoxide'
-      - 'atuin'
       casks:
       - 'appcleaner'
-      - 'chronoagent'
-      - 'chronosync'
       - 'claude'
-      - 'cryptomator'
       - 'dropbox'
-      - 'etrecheckpro'
       - 'font-hack-nerd-font'
       - 'font-meslo-lg-nerd-font'
       - 'fuse-t'
       - 'google-drive'
-      - 'grammarly-desktop'
       - 'grandperspective'
       - 'iterm2'
-      - 'logi-options+'
+      - 'keepassxc'
       - 'lulu'
-      - 'onyx'
       - 'zoom'
+      mas:
+      - '"The Unarchiver", id: 425424353'
+
+    # Packages that are very specific to my personal setup (personal tag)
+    personal:
+      brews:
+      - 'syncthing'
+      casks:
+      - 'chronoagent'
+      - 'chronosync'
+      - 'cryptomator'
+      - 'etrecheckpro'
+      - 'grammarly-desktop'
+      - 'logi-options+'
       mas:
       - '"ASUS Device Discovery", id: 995124504'
       - '"ASUS Firmware Restoration", id: 1020519014'
       - '"Grammarly for Safari", id: 1462114288'
       - '"Kindle", id: 302584613'
-      - '"The Unarchiver", id: 425424353'
-    
+
     # Optional development packages (dev tag)
     dev:
       brews:
@@ -60,8 +66,11 @@ packages:
       - 'azure-cli'
       - 'bats-core'
       - 'cfn-lint'
+      - 'checkmake'
+      - 'dagger'
       - 'direnv'
       - 'frum'
+      - 'gh'
       - 'git-delta'
       - 'git-gui'
       - 'github-markdown-toc'
@@ -70,15 +79,16 @@ packages:
       - 'graphviz'
       - 'hugo'
       - 'localstack/tap/localstack-cli'
-      - 'neovim'
+      - 'lynis'
       - 'nuget'
       - 'pkgconf'
       - 'snyk-cli'
+      - 'sqlite'
       casks:
       - 'db-browser-for-sqlite'
       - 'docker-desktop'
-      - 'dotnet-sdk8'
       - 'dotnet-sdk8-0-400'
+      - 'dotnet-sdk8'
       - 'google-chrome'
       - 'jetbrains-toolbox'
       - 'miniforge'
@@ -89,25 +99,25 @@ packages:
       mas:
       - '"JWT Inspector", id: 1559670160'
     
-    # Optional AI/ML packages (ai tag)
+    # Optional AI packages (ai tag)
     ai:
       brews:
       casks:
       - 'lm-studio'
       - 'ollama-app'
       mas:
-    
+
     # Optional work packages (work tag)
     work:
       brews:
       - 'csvkit'
-      #- 'microsoft/mssql-release/mssql-tools'
+      - 'vips'
       casks:
       - 'amazon-workspaces'
       - 'box-drive'
       - 'dotnet-sdk3-1-400'
-      - 'dotnet-sdk6'
       - 'dotnet-sdk6-0-400'
+      - 'dotnet-sdk6'
       - 'microsoft-auto-update'
       - 'microsoft-teams'
       - 'obsidian'
@@ -120,6 +130,13 @@ packages:
       - '"Numbers", id: 409203825'
       - '"OneDrive", id: 823766827'
     
+    # Optional school packages (school tag)
+    school:
+      brews:
+      casks:
+      mas:
+      - '"WireGuard", id: 1451685025'
+
     # Optional mobile packages (mobile tag)
     mobile:
       brews:
@@ -127,4 +144,3 @@ packages:
       - 'tunnelblick'
       - 'wifi-explorer-pro'
       mas:
-      - '"WireGuard", id: 1451685025'

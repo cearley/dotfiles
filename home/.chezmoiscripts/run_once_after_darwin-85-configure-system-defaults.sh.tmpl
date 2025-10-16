@@ -26,8 +26,17 @@ defaults write com.googlecode.iterm2 LoadPrefsFromCustomFolder -bool false
 defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile -bool true
 defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile_selection -int 2
 
-# Note: iTerm2 font configuration is managed via Dynamic Profiles
-# See: home/private_Library/private_Application Support/iTerm2/DynamicProfiles/DefaultProfile.json.tmpl
+# iTerm2: Set default profile font to MesloLGSNF size 13
+# Note: This requires iTerm2 to be quit first, otherwise changes may be overwritten
+if pgrep -q "iTerm2"; then
+    print_message "warning" "iTerm2 is running - font changes may not persist until restart"
+fi
+
+if /usr/libexec/PlistBuddy -c "Set 'New Bookmarks':0:'Normal Font' 'MesloLGSNF-Regular 13'" ~/Library/Preferences/com.googlecode.iterm2.plist 2>/dev/null; then
+    print_message "success" "iTerm2 font set to MesloLGSNF-Regular 13"
+else
+    print_message "warning" "Could not set iTerm2 font (profile may not exist yet)"
+fi
 {{- end }}
 
 print_message "success" "System defaults configured successfully"

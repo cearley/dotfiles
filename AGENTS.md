@@ -53,6 +53,7 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
 - **Package Management (20-29):**
   - `20` - Install SDKMAN (Java SDK manager for Java, Gradle, Maven, etc.)
   - `23` - Brew bundle install essential packages from packages.yaml
+  - `24` - Install SDKs (language-specific SDK installations)
   - `25` - Brew bundle install additional packages from machine-specific brewfiles
 
 - **Environment Managers (30-39):**
@@ -65,9 +66,9 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
 
 - **System Configuration (80-99):**
   - `80` - Setup Microsoft Defender (security configuration)
-  - `82` - Setup Claude Desktop (application setup)
-  - `83` - Install Basic Memory MCP server (AI tools, depends on Claude Desktop)
-  - `85` - Configure system defaults (macOS preferences)
+  - `83` - Install Basic Memory MCP server (AI tools)
+  - `84` - Refresh font cache (ensures newly installed fonts are available)
+  - `85` - Configure system defaults (macOS preferences including iTerm2)
   - `88` - Setup ChronoSync symlinks (file management)
   - `90` - Update hosts (system-level modifications)
   - `95` - Restart Syncthing (service management)
@@ -124,11 +125,12 @@ Scripts have been systematically refactored to use shared utilities for consiste
 - `run_once_before_darwin-10-install-rust.sh.tmpl`: Rust toolchain installation
 - `run_once_before_darwin-20-install-sdkman.sh.tmpl`: SDKMAN installation
 - `run_once_before_darwin-30-install-uv.sh.tmpl`: Python package manager uv
-- `run_once_before_darwin-35-install-nvm.sh.tmpl`: Node Version Manager
+- `run_once_after_darwin-35-install-nvm.sh.tmpl`: Node Version Manager
 - `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl`: GitHub authentication setup
 - `run_once_after_darwin-80-setup-microsoft-defender.sh.tmpl`: Microsoft Defender setup
-- `run_once_after_darwin-82-setup-claude-desktop.sh.tmpl`: Claude Desktop app setup
 - `run_once_after_darwin-83-install-basic-memory.sh.tmpl`: Basic Memory MCP server installation
+- `run_once_after_darwin-84-refresh-font-cache.sh.tmpl`: Font cache refresh for fresh installs
+- `run_once_after_darwin-85-configure-system-defaults.sh.tmpl`: System defaults and iTerm2 configuration
 - `run_onchange_after_darwin-97-test-ssh-github.sh.tmpl`: SSH connectivity testing
 
 ### Configuration Structure

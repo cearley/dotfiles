@@ -2,12 +2,15 @@
   "Profiles": [
     {
       "Name": "Default",
-      "Guid": "B0A3DB92-6BE3-41AA-BFCC-8220B27B0605",
+      "Rewritable" : true,
+      "Guid": "625E6312-9F72-4409-BE2E-593DB177E72E",
 {{- $computerName := includeTemplate "computer-name" . -}}
 {{- if contains "MacBook Pro" $computerName }}
       "Normal Font": "MesloLGSNF-Regular 13",
+      "Non Ascii Font": "MesloLGSNF-Regular 13",
 {{- else -}}
       "Normal Font": "MesloLGSNF-Regular 13",
+      "Non Ascii Font": "MesloLGSNF-Regular 13",
 {{- end }}
       "Dynamic Profile Parent Name": "Default"
     }

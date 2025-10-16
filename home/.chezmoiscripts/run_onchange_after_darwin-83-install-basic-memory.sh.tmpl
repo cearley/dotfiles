@@ -1,16 +1,15 @@
-{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+{{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
-# Install Basic Memory MCP server for Claude Desktop
-# Prerequisites: claude, uv
+{{ if (stat "/Applications/Claude.app") -}}
+# Claude Desktop is installed
+{{- else -}}
+# Claude Desktop is not installed
+exit 0
+{{- end }}
 
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
-
-if ! is_app_installed "/Applications/Claude.app"; then
-    print_message "skip" "Skipping basic-memory installation: Claude Desktop is not installed"
-    exit 0
-fi
 
 # Check required tools
 if ! require_tools curl uvx; then

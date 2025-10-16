@@ -11,12 +11,12 @@ fi
 
 print_message "info" "Installing packages using Homebrew..."
 
-brew bundle --file=/dev/stdin <<EOF
+brew update && brew bundle --file=/dev/stdin <<EOF
 {{- range .packages.darwin.taps }}
 tap {{ . | quote }}
 {{- end }}
 
-{{- $categories := list "core" "dev" "ai" "work" "mobile" }}
+{{- $categories := list "core" "personal" "dev" "ai" "work" "school" "mobile" }}
 {{- range $category := $categories }}
   {{- $categoryData := index $.packages.darwin $category }}
   {{- if or (eq $category "core") (has $category $.tags) }}

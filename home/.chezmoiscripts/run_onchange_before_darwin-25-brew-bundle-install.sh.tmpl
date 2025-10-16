@@ -12,7 +12,7 @@ fi
 # This script installs additional packages using Homebrew based on the specific computer name.
 # 
 # Maintenance: Update brewfiles by periodically running:
-# brew bundle dump --file=$HOME/.brewfiles/current --force --force
+# brew bundle dump --file=$HOME/.brewfiles/current --force
 
 {{ $computerName := includeTemplate "computer-name" . }}
 {{- $brewfilePath := includeTemplate "machine-brewfile-path" (dict "computerName" $computerName "chezmoi" .chezmoi) -}}
@@ -28,6 +28,11 @@ if [[ ! -f $brewfile ]]; then
     exit 0
 fi
 
+if brew bundle check --file=$brewfile >/dev/null 2>&1; then
+    print_message "skip" "Skipping additional package installation - all packages already installed"
+    exit 0
+fi
+
 read -p "🍺 Install additional packages from your brewfile? (y/N): " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -37,5 +42,12 @@ fi
 
 print_message "info" "Installing additional packages using Homebrew..."
 
-brew bundle -v --file=$brewfile
+if is_icloud_signed_in; then
+    HOMEBREW_ACCEPT_EULA=Y brew bundle -v --file=$brewfile
+else
+    print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
+    prompt_ready
+    HOMEBREW_ACCEPT_EULA=Y HOMEBREW_BUNDLE_MAS_SKIP=1 brew bundle -v --file=$brewfile
+    print_message "info" "Sign in to iCloud in System Settings, then run 'brew bundle -v --file=$brewfile' to install App Store apps"
+fi
 {{ end -}}

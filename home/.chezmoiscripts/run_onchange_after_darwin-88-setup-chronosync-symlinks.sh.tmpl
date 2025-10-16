@@ -1,6 +1,13 @@
 {{- if and (eq .chezmoi.os "darwin") (stat "/Applications/ChronoSync.app") -}}
 #!/bin/bash
 
+{{ if (stat "/Applications/ChronoSync.app") -}}
+# ChronoSync is installed
+{{- else -}}
+# ChronoSync is not installed
+exit 0
+{{- end }}
+
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
