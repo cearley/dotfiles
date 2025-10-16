@@ -169,6 +169,8 @@ eval "$(frum init)"
 export LIQUIBASE_HOME=/opt/homebrew/opt/liquibase/libexec
 export PATH="$LIQUIBASE_HOME:$PATH"
 
+{{- end }}
+
 # Load NVM, but instead of synchronously (which can add 200-500ms to startup),
 # define a lazy-loading function that only initializes NVM when first used
 export NVM_DIR="$HOME/.nvm"
@@ -182,6 +184,7 @@ nvm() {
     nvm "$@"
 }
 
+{{ if has "dev" .tags -}}
 export PATH=/usr/local/smlnj/bin:"$PATH"
 {{- end }}
 
