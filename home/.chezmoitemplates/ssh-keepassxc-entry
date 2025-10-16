@@ -4,4 +4,6 @@
 SSH (Mac Studio)
 {{- else if contains "MacBook Pro" $computerName -}}
 SSH (MacBook Pro)
+{{- else if contains "Mac mini" $computerName -}}
+SSH (Mac mini)
 {{- end -}}
