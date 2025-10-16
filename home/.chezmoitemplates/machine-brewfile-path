@@ -4,4 +4,6 @@
 {{ .chezmoi.sourceDir }}/brewfiles/mbp-brewfile
 {{- else if contains "Mac Studio" $computerName -}}
 {{ .chezmoi.sourceDir }}/brewfiles/studio-brewfile
+{{- else if contains "Mac mini" $computerName -}}
+{{ .chezmoi.sourceDir }}/brewfiles/mac-mini-brewfile
 {{- end -}}
