@@ -21,14 +21,19 @@ print_message "info" "Setting up GitHub authentication..."
 
 setup_git_credentials() {
     print_message "info" "Configuring git credential helper"
-    
-    # Set up git credential helper to cache credentials
-    git config --global credential.helper cache
-    
+
+    # Set up git credential helper to use macOS Keychain (persistent, secure storage)
+    git config --global credential.helper osxkeychain
+
     # Configure git to use the token for GitHub
     git config --global credential.https://github.com.username "$GITHUB_USERNAME"
-    
-    print_message "success" "Git credential helper configured"
+
+    # Pre-populate the GitHub token in macOS Keychain to avoid password prompt
+    print_message "info" "Storing GitHub token in macOS Keychain"
+    printf "protocol=https\nhost=github.com\nusername=%s\npassword=%s\n" \
+        "$GITHUB_USERNAME" "$GITHUB_TOKEN" | git credential approve
+
+    print_message "success" "Git credential helper configured and token stored in Keychain"
 }
 
 setup_ghcr_login() {
