@@ -1,3 +1,15 @@
-{{ if .has_keepassxc_db -}}
-{{ keepassxcAttribute "Hosts" "json" }}
+{{- /*
+The ~/.hosts-data.json file is managed by chezmoi which uses it to add entries to /etc/hosts.
+
+The JSON structure of this file is expected to be:
+{
+  "hosts": [
+    {"address": "127.0.0.1", "name": "example.local"},
+    {"address": "10.0.0.1", "name": "router.local"}
+  ]
+}
+*/ -}}
+
+{{ if and (.has_keepassxc_db) (has "work" .tags) -}}
+{{ keepassxcAttribute "Hosts (Work)" "json" }}
 {{- end }}
