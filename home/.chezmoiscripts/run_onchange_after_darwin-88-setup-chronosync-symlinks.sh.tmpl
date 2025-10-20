@@ -11,7 +11,7 @@ exit 0
 # Source shared utility functions
 source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 
-{{ $computerName := output "scutil" "--get" "ComputerName" | trim -}}
+{{ $computerName := includeTemplate "computer-name" . -}}
 {{ $documentsTasksDir := joinPath .chezmoi.homeDir "Documents/ChronoSync" $computerName "Tasks" -}}
 {{ $documentsTemplatesDir := joinPath .chezmoi.homeDir "Documents/ChronoSync/Templates" -}}
 
@@ -21,7 +21,6 @@ source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
 # Define required directories
 APP_SUPPORT_TASKS="$HOME/Library/Application Support/ChronoSync/Tasks"
 APP_SUPPORT_TEMPLATES="$HOME/Library/Application Support/ChronoSync/Templates"
-{{ $computerName := output "scutil" "--get" "ComputerName" | trim }}
 DOCUMENTS_TASKS="$HOME/Documents/ChronoSync/{{- $computerName -}}/Tasks"
 DOCUMENTS_TEMPLATES="$HOME/Documents/ChronoSync/Templates"
 

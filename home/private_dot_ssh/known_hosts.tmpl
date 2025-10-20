@@ -1,5 +1,4 @@
-{{ $computerName := includeTemplate "computer-name" . }}
-{{- $sshEntry := includeTemplate "ssh-keepassxc-entry" $computerName -}}
-{{- if and $sshEntry .has_keepassxc_db -}}
-{{- keepassxcAttribute $sshEntry "known_hosts" -}}
+{{ $machineKeyName := includeTemplate "machine-key-name" . }}
+{{- if and $machineKeyName .has_keepassxc_db -}}
+{{- keepassxcAttribute $machineKeyName "known_hosts" -}}
 {{- end }}

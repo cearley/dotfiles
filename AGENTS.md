@@ -158,14 +158,41 @@ cat {name-of-template-script}.tmpl | chezmoi execute-template
 The repository uses chezmoi's templating system extensively with reusable template components:
 
 ### Reusable Templates (`home/.chezmoitemplates/`)
-- `computer-name`: Standardized machine name detection using `scutil --get ComputerName`
-- `machine-brewfile-path`: Maps machine names to appropriate brewfile paths
+
+**Core Templates:**
+- `computer-name`: Cross-platform machine name detection (macOS: `scutil`, Linux: `hostnamectl`, Windows: PowerShell DNS)
+- `machine-config`: Generic lookup template for machine-specific settings from `machines.yaml`
+- `machine-brewfile-path`: Returns full path to machine-specific Homebrew Brewfile (uses `machine-config`)
+- `machine-key-name`: Returns the matched machine pattern name (uses `machine-config`)
 - `ssh-keepassxc-entry`: Determines KeePassXC entry names for SSH credentials based on machine name
 
-### Machine Detection
-- Uses `scutil --get ComputerName` for consistent machine identification across all templates
-- Templates conditionally apply configurations for different Mac models (MacBook Pro vs Mac Studio)
-- Centralized machine detection logic through reusable templates eliminates code duplication
+**Template Composition:**
+Templates can include other templates via `includeTemplate`, enabling reusable components and DRY principles.
+
+Example usage:
+```go-template
+{{- /* Get brewfile path */ -}}
+{{ $brewfilePath := includeTemplate "machine-brewfile-path" . }}
+
+{{- /* Get machine pattern key */ -}}
+{{ $machineKeyName := includeTemplate "machine-key-name" . }}
+
+{{- /* Get any machine-specific setting */ -}}
+{{ $sshKeyId := includeTemplate "machine-config" (merge (dict "setting" "ssh_key_id") .) }}
+```
+
+### Machine Configuration System
+
+**Architecture:**
+- Machine-specific settings are defined in `home/.chezmoidata/machines.yaml`
+- Pattern-based substring matching (e.g., "MacBook Pro" matches "Craig's MacBook Pro M4")
+- Generic `machine-config` template provides single source of truth for all machine lookups
+- Extensible: easily add new machine-specific properties without template changes
+
+**Machine Detection:**
+- Cross-platform via `computer-name` template (macOS, Linux, Windows support)
+- Centralized machine detection logic eliminates code duplication
+- Templates conditionally apply configurations for different machine types
 
 ### Secret Management
 - Integrates with KeePassXC via `keepassxcAttribute` template function
@@ -256,11 +283,34 @@ This macOS-focused repository uses intuitive emojis (💡 info, ✅ success, ⚠
   - Provides centralized SDK version management
   - Automatic environment initialization via shell profiles
 
-#### Reusable Template System (2025)
-- **Created centralized templates**: `home/.chezmoitemplates/` directory with reusable components
-- **Machine detection**: `computer-name` template provides consistent machine identification
-- **Brewfile management**: `machine-brewfile-path` template maps machines to appropriate brewfiles
-- **SSH credential management**: `ssh-keepassxc-entry` template standardizes KeePassXC entry naming
+#### Generic Machine Configuration System (2025)
+
+**Major architectural improvement** creating a reusable, extensible machine configuration lookup system:
+
+- **Generic `machine-config` template**: Single source of truth for all machine-specific lookups
+  - Supports two modes: return setting value OR return matched pattern key
+  - Enables easy addition of new machine properties without template duplication
+  - Uses pattern-based substring matching for flexible machine name detection
+
+- **Cross-platform `computer-name` template**: Works on macOS, Linux, and Windows
+  - macOS: Uses `scutil --get "ComputerName"`
+  - Linux: Uses `hostnamectl` to get static hostname
+  - Windows: Uses PowerShell DNS to get hostname
+
+- **Machine-specific configuration**: Centralized in `home/.chezmoidata/machines.yaml`
+  - Nested YAML structure allows multiple settings per machine
+  - Easy to extend with new properties (brewfile, ssh_key_id, hostname_prefix, etc.)
+  - Pattern matching allows flexible machine name variations
+
+- **Convenience wrapper templates**:
+  - `machine-brewfile-path`: Returns full path to Homebrew Brewfile
+  - `machine-key-name`: Returns matched machine pattern name
+  - Future templates can easily access any machine-specific setting
+
+- **Template composition**: Templates can include other templates via `includeTemplate`
+  - Enables DRY principle across template system
+  - Clean separation of concerns (detection → lookup → path construction)
+  - Backward compatible with existing usage patterns
 
 #### Benefits Achieved
 - **Consistency**: All scripts use identical messaging and utility patterns

@@ -1,9 +1,11 @@
-{{- /* Determine the path to the appropriate Homebrew Brewfile based on the machine's name. */ -}}
-{{- $computerName := .computerName -}}
-{{- if contains "MacBook Pro" $computerName -}}
-{{ .chezmoi.sourceDir }}/brewfiles/mbp-brewfile
-{{- else if contains "Mac Studio" $computerName -}}
-{{ .chezmoi.sourceDir }}/brewfiles/studio-brewfile
-{{- else if contains "Mac mini" $computerName -}}
-{{ .chezmoi.sourceDir }}/brewfiles/mac-mini-brewfile
+{{- /* Determine the path to the appropriate Homebrew Brewfile based on computer name pattern.
+
+     Uses the generic machine-config template to lookup the brewfile setting from machines.yaml,
+     then constructs the full path to the brewfile.
+
+     Returns empty string if no pattern matches or no brewfile is defined.
+*/ -}}
+{{- $brewfile := includeTemplate "machine-config" (merge (dict "setting" "brewfile") .) -}}
+{{- if $brewfile -}}
+{{ .chezmoi.sourceDir }}/brewfiles/{{ $brewfile }}
 {{- end -}}

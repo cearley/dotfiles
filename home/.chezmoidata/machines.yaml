@@ -1,0 +1,29 @@
+# Machine-specific configuration
+# Maps machine name patterns to their corresponding machine settings
+#
+# The machine name is obtained from the `computer-name` template, which returns:
+#   - macOS:   Output of `scutil --get "ComputerName"`
+#   - Linux:   Static hostname from hostnamectl
+#   - Windows: System hostname from DNS
+#
+# Patterns are matched using substring matching (contains), so:
+#   "MacBook Pro" matches "MacBook Pro", "HAL 9000's MacBook Pro", "Work MacBook Pro", etc.
+#   "Mac mini" matches "Mac mini", "NotTheITDept Mac mini", "Office Mac mini", etc.
+#
+# If no pattern matches, templates return empty strings and scripts will skip
+# machine-specific operations gracefully.
+#
+# Explanation of machine-specific properties:
+#
+# brewfile - Specifies the Homebrew Brewfile to use for that machine.
+#            These are located in the brewfiles/ directory within the
+#            chezmoi source directory and the machine's brewfile is
+#            symlinked to $HOME/.brewfiles/current during setup.
+MacBook Pro:
+  brewfile: mbp-brewfile
+
+Mac Studio:
+  brewfile: studio-brewfile
+
+Mac mini:
+  brewfile: mac-mini-brewfile

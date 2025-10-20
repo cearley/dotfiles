@@ -1,6 +1,4 @@
-{{ $computerName := includeTemplate "computer-name" . }}
-{{- $brewfilePath := includeTemplate "machine-brewfile-path" (dict
-"computerName" $computerName "chezmoi" .chezmoi) -}}
-{{- if $brewfilePath -}}
+{{- $brewfilePath := includeTemplate "machine-brewfile-path" . -}}
+{{- if and ($brewfilePath) (stat $brewfilePath) -}}
 {{ $brewfilePath }}
 {{- end -}}

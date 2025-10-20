@@ -1,0 +1,46 @@
+{{- /* Generic machine configuration lookup from machines.yaml
+
+     Matches computer-name against patterns in machines.yaml and returns:
+     - A specific setting value (if 'setting' parameter provided)
+     - The matched machine pattern key (if 'return_key' is true)
+
+     Parameters (pass as dict merged with root context):
+     - setting (optional): Name of the setting to retrieve (e.g., "brewfile", "ssh_key_id")
+     - return_key (optional): If true, returns the matched pattern name instead of a setting value
+
+     Examples:
+       Get brewfile:     {{ includeTemplate "machine-config" (merge (dict "setting" "brewfile") .) }}
+       Get pattern key:  {{ includeTemplate "machine-config" (merge (dict "return_key" true) .) }}
+       Get ssh_key_id:   {{ includeTemplate "machine-config" (merge (dict "setting" "ssh_key_id") .) }}
+
+     Returns:
+     - The requested setting value, the matched pattern key name, or empty string if not found
+*/ -}}
+{{- $setting := "" -}}
+{{- if hasKey . "setting" -}}
+  {{- $setting = .setting -}}
+{{- end -}}
+{{- $returnKey := false -}}
+{{- if hasKey . "return_key" -}}
+  {{- $returnKey = .return_key -}}
+{{- end -}}
+{{- $computerName := includeTemplate "computer-name" . -}}
+{{- $result := "" -}}
+
+{{- /* Find matching machine pattern in machines.yaml */ -}}
+{{- range $pattern, $config := . -}}
+  {{- /* Skip non-machine keys (chezmoi and our parameters) */ -}}
+  {{- if and (ne $pattern "chezmoi") (ne $pattern "setting") (ne $pattern "return_key") (contains $pattern $computerName) -}}
+    {{- if $returnKey -}}
+      {{- /* Return the matched pattern key name */ -}}
+      {{- $result = $pattern -}}
+    {{- else if $setting -}}
+      {{- /* Return the setting value if it exists */ -}}
+      {{- if hasKey $config $setting -}}
+        {{- $result = index $config $setting -}}
+      {{- end -}}
+    {{- end -}}
+    {{- break -}}
+  {{- end -}}
+{{- end -}}
+{{- $result -}}

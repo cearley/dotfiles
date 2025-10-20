@@ -1,1 +1,7 @@
+{{- if eq .chezmoi.os "darwin" -}}
 {{- output "scutil" "--get" "ComputerName" | trim -}}
+{{- else if eq .chezmoi.os "linux" -}}
+{{- output "sh" "-c" "hostnamectl status | grep 'Static hostname' | cut -d ':' -f2 | xargs" | trim -}}
+{{- else if eq .chezmoi.os "windows" -}}
+{{- output "powershell" "-Command" "[System.Net.Dns]::GetHostName()" | trim -}}
+{{- end -}}
