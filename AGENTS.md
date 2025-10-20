@@ -185,7 +185,7 @@ Example usage:
 
 **Architecture:**
 - Machine-specific settings are defined in `home/.chezmoidata/machines.yaml`
-- Pattern-based substring matching (e.g., "MacBook Pro" matches "Craig's MacBook Pro M4")
+- Pattern-based substring matching (e.g., "MacBook Pro" matches "HAL 9000's MacBook Pro")
 - Generic `machine-config` template provides single source of truth for all machine lookups
 - Extensible: easily add new machine-specific properties without template changes
 

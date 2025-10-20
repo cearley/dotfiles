@@ -1,6 +1,6 @@
 {{- /* Generic machine configuration lookup from machines.yaml
 
-     Matches computer-name against patterns in machines.yaml and returns:
+     Matches computer name against patterns in machines.yaml and returns:
      - A specific setting value (if 'setting' parameter provided)
      - The matched machine pattern key (if 'return_key' is true)
 

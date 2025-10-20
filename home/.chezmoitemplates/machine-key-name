@@ -1,10 +1,10 @@
 {{- /* Returns the machine pattern key name from machines.yaml.
 
      Uses the generic machine-config template to find which pattern matches
-     the current computer_name, then returns that pattern key.
+     the current computer name, then returns that pattern key.
 
      Example:
-       computer_name: "Craig's MacBook Pro M4"
+       computer name: "HAL 9000's MacBook Pro"
        Returns: "MacBook Pro"
 
      Returns empty string if no pattern matches.

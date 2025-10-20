@@ -19,12 +19,13 @@ My personal dotfiles and macOS development environment setup, managed with [chez
 
 This repository serves as the source of truth for my macOS dotfiles and development environment setup. It's designed so that my setup is easily reproducible across multiple Macs, yet flexible enough to accommodate machine-specific configurations. Therefore it is useful to me, but it also might be useful to you as a reference or starting point for your own dotfiles. It uses several chezmoi patterns that you might find helpful:
 - **Secure secret management** using KeePassXC integration (no hardcoded credentials)
-- **Multi-machine support** with conditional configurations for different Macs using reusable templates
+- **Generic machine configuration system** - Extensible data-driven approach for machine-specific settings using pattern matching
+- **Cross-platform template support** - Templates work on macOS, Linux, and Windows via `computer-name` template
+- **Multi-machine support** with conditional configurations for different machines using reusable templates
 - **Automated dependency installation** with proper error handling and logging
 - **Tag-based execution** to customize setups for different use cases (dev, personal, ai, ml, etc.)
 - **Comprehensive validation** - Validates SSH keys, GitHub access, Homebrew installation, etc.
 - **System-wide configuration management** - Shows how to manage `/etc/hosts` and other system files outside the home directory using chezmoi scripts
-- **Reusable template components** - Centralized machine detection and configuration logic in `home/.chezmoitemplates/`
 
 ## Quick Start
 
