@@ -16,6 +16,7 @@ print_message() {
             "warning") echo "⚠️  $message" >&2 ;;
             "error") echo "❌ $message" >&2 ;;
             "skip") echo "⏭️ $message" >&2 ;;
+            "tip") echo "💡 $message" >&2 ;;
         esac
     else
         case "$level" in
@@ -24,6 +25,7 @@ print_message() {
             "warning") echo "[WARNING] $message" >&2 ;;
             "error") echo "[ERROR] $message" >&2 ;;
             "skip") echo "[SKIP] $message" >&2 ;;
+            "tip") echo "[TIP] $message" >&2 ;;
         esac
     fi
 }
