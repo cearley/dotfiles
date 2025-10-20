@@ -1,1 +1,7 @@
+{{- if eq .chezmoi.os "darwin" -}}
 {{- output "sh" "-c" "system_profiler SPHardwareDataType | awk '/Serial Number/ {print $NF}'" | trim -}}
+{{- else if eq .chezmoi.os "linux" -}}
+{{- output "sh" "-c" "cat /sys/class/dmi/id/product_serial" | trim -}}
+{{- else if eq .chezmoi.os "windows" -}}
+{{- output "powershell" "-Command" "(Get-WmiObject -Class Win32_BIOS).SerialNumber" | trim -}}
+{{- end -}}
