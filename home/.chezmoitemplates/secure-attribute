@@ -4,7 +4,7 @@ secure-attribute template: Proxy for keepassxcAttribute with AWS Secrets Manager
 Usage: {{ template "secure-attribute" (dict "entry" "AWS (DI Dev)" "attribute" "aws_access_key_id" .) }}
 
 This template:
-1. Checks if KeePassXC is available using .has_keepassxc_db flag
+1. Checks if the KeePassXC database is available using .has_keepassxc_db flag
 2. If available, uses keepassxcAttribute 
 3. Otherwise, falls back to awsSecretsManager using normalized secret name
 
@@ -23,7 +23,6 @@ Note: Uses .has_keepassxc_db flag from [data] section to determine availability
 {{- if .has_keepassxc_db -}}
   {{- keepassxcAttribute $entry $attribute -}}
 {{- else -}}
-  {{- $normalizedEntry := $entry | replace " " "-" | replace "(" "" | replace ")" "" -}}
-  {{- $normalizedAttribute := $attribute | replace " " "-" | replace "(" "" | replace ")" "" -}}
-  {{- awsSecretsManager (printf "%s/%s" $normalizedEntry $normalizedAttribute) -}}
+  {{- $secretName := includeTemplate "normalize-secret-name" (dict "entry" $entry "attribute" $attribute) -}}
+  {{- awsSecretsManager $secretName -}}
 {{- end -}}
