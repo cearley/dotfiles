@@ -18,11 +18,9 @@ set -e
 ZSH_LLM_REPO="git+https://github.com/cearley/zsh-llm-suggestions"
 TOOL_NAME="zsh-llm-suggestions"
 
-{{- if lookPath "zsh-llm-status" }}
-# zsh-llm-suggestions is already installed, use status output to trigger upgrades
-# run_onchange_ will trigger when this hash changes
-# .chezmoiignore hash: {{ output "zsh-llm-status" | sha256sum }}
-
+{{ $path := joinPath .chezmoi.homeDir ".local/bin" -}}
+{{ if findExecutable "zsh-llm-status" $path -}}
+# zsh-llm-status hash: {{ output "zsh-llm-status" | sha256sum }}
 print_message "info" "Upgrading $TOOL_NAME to latest version..."
 if uv tool upgrade "$TOOL_NAME"; then
     print_message "success" "$TOOL_NAME upgraded successfully"
