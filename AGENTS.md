@@ -62,6 +62,7 @@ Scripts use consistent 5-point numbering for logical grouping and future expanda
 
 - **Environment Setup (40-49):**
   - `40` - Initialize conda (Python environment manager)
+  - `42` - Install zsh-llm-suggestions (AI-powered shell suggestions)
   - `45` - Setup GitHub authentication (git, GHCR, GitHub CLI)
 
 - **System Configuration (80-99):**

@@ -189,11 +189,12 @@ export PATH=/usr/local/smlnj/bin:"$PATH"
 {{- end }}
 
 # LLM-based command suggestions for zsh
-source ~/.local/share/zsh-llm-suggestions/zsh-llm-suggestions.zsh
-bindkey '^o' zsh_llm_suggestions_openai # Ctrl + O to have OpenAI suggest a command given a English description
-bindkey '^[^o' zsh_llm_suggestions_openai_explain # Ctrl + alt + O to have OpenAI explain a command
-#bindkey '^p' zsh_llm_suggestions_github_copilot # Ctrl + P to have GitHub Copilot suggest a command given a English description
-#bindkey '^[^p' zsh_llm_suggestions_github_copilot_explain # Ctrl + alt + P to have GitHub Copilot explain a command
+source {{ .chezmoi.homeDir }}/.local/share/zsh-llm-suggestions/zsh-llm-suggestions.zsh
+# zsh-llm-suggestions key bindings
+bindkey '^o' zsh_llm_suggestions_openai
+bindkey '^xo' zsh_llm_suggestions_openai_explain
+bindkey '^p' zsh_llm_suggestions_github_copilot
+bindkey '^xp' zsh_llm_suggestions_github_copilot_explain
 
 # Enable colorls tab completion for flags
 #source $(dirname $(gem which colorls))/tab_complete.sh

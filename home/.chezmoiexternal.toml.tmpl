@@ -25,11 +25,13 @@
     {{- toToml $zshPlugin | nindent 4 }}
     url = "https://github.com/romkatv/powerlevel10k/archive/master.tar.gz"
 
+{{ if has "dev" .tags -}}
 [".local/share/zsh-llm-suggestions"]
     type = "git-repo"
     url = "https://github.com/cearley/zsh-llm-suggestions.git"
     exact = true
     refreshPeriod = "24h"
+{{- end }}
 
 [".local/share/zsh-functions"]
     type = "git-repo"
