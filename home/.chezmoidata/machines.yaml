@@ -15,15 +15,29 @@
 #
 # Explanation of machine-specific properties:
 #
-# brewfile - Specifies the Homebrew Brewfile to use for that machine.
-#            These are located in the brewfiles/ directory within the
-#            chezmoi source directory and the machine's brewfile is
-#            symlinked to $HOME/.brewfiles/current during setup.
+# brewfile         - Specifies the Homebrew Brewfile to use for that machine.
+#                    These are located in the brewfiles/ directory within the
+#                    chezmoi source directory and the machine's brewfile is
+#                    symlinked to $HOME/.brewfiles/current during setup.
+#
+# keepassxc.entrys - Machine-specific KeePassXC entry mappings.
+#                    Maps logical names (e.g., "ssh") to actual KeePassXC
+#                    entry names. (This is useful when different machines
+#                    share the same keepassxc database but have different
+#                    entries for the same purpose.)
+#
 MacBook Pro:
   brewfile: mbp-brewfile
-
+  keepassxc:
+    entrys:
+      ssh: SSH (MacBook Pro)
 Mac Studio:
   brewfile: studio-brewfile
-
+  keepassxc:
+    entrys:
+      ssh: SSH (Mac Studio)
 Mac mini:
   brewfile: mac-mini-brewfile
+  keepassxc:
+    entrys:
+      ssh: SSH (Mac mini)

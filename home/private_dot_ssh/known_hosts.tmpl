@@ -1,4 +1,4 @@
-{{ $machineKeyName := includeTemplate "machine-key-name" . }}
-{{- if and $machineKeyName .has_keepassxc_db -}}
-{{- keepassxcAttribute $machineKeyName "known_hosts" -}}
+{{ $sshEntryName := includeTemplate "machine-keepassxc-entry" (merge (dict "entry" "ssh") .) }}
+{{- if and $sshEntryName .has_keepassxc_db -}}
+{{- keepassxcAttribute $sshEntryName "known_hosts" -}}
 {{- end }}

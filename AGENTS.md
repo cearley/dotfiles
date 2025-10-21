@@ -164,7 +164,7 @@ The repository uses chezmoi's templating system extensively with reusable templa
 - `machine-config`: Generic lookup template for machine-specific settings from `machines.yaml`
 - `machine-brewfile-path`: Returns full path to machine-specific Homebrew Brewfile (uses `machine-config`)
 - `machine-key-name`: Returns the matched machine pattern name (uses `machine-config`)
-- `ssh-keepassxc-entry`: Determines KeePassXC entry names for SSH credentials based on machine name
+- `machine-keepassxc-entry`: Retrieves KeePassXC entry names from `machines.yaml` based on machine name and entry type (e.g., "ssh")
 
 **Template Composition:**
 Templates can include other templates via `includeTemplate`, enabling reusable components and DRY principles.
@@ -197,7 +197,7 @@ Example usage:
 ### Secret Management
 - Integrates with KeePassXC via `keepassxcAttribute` template function
 - No secrets stored in repository - all fetched at apply time
-- Reusable template `ssh-keepassxc-entry` determines appropriate SSH credential entry names based on machine name
+- Reusable template `machine-keepassxc-entry` retrieves KeePassXC entry names from machine configuration based on entry type
 
 ### User Configuration
 - `home/.chezmoi.toml.tmpl` prompts for user data on first run
