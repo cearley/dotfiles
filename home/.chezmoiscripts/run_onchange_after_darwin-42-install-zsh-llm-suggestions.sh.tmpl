@@ -31,6 +31,7 @@ fi
 {{- else }}
 print_message "info" "Installing $TOOL_NAME..."
 if uv tool install "$ZSH_LLM_REPO"; then
+    zsh-llm-install
     print_message "success" "$TOOL_NAME installed successfully"
 else
     print_message "error" "Failed to install $TOOL_NAME"
