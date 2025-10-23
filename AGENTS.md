@@ -162,7 +162,7 @@ The repository uses chezmoi's templating system extensively with reusable templa
 
 **Core Templates:**
 - `computer-name`: Cross-platform machine name detection (macOS: `scutil`, Linux: `hostnamectl`, Windows: PowerShell DNS)
-- `machine-config`: Generic lookup template for machine-specific settings from `machines.yaml`
+- `machine-config`: Generic lookup template for machine-specific settings from `machines.yaml` (supports dot-notation for nested values)
 - `machine-brewfile-path`: Returns full path to machine-specific Homebrew Brewfile (uses `machine-config`)
 - `machine-key-name`: Returns the matched machine pattern name (uses `machine-config`)
 - `machine-keepassxc-entry`: Retrieves KeePassXC entry names from `machines.yaml` based on machine name and entry type (e.g., "ssh")
@@ -180,6 +180,9 @@ Example usage:
 
 {{- /* Get any machine-specific setting */ -}}
 {{ $sshKeyId := includeTemplate "machine-config" (merge (dict "setting" "ssh_key_id") .) }}
+
+{{- /* Get nested setting using dot-notation */ -}}
+{{ $sshEntry := includeTemplate "machine-config" (merge (dict "setting" "keepassxc_entries.ssh") .) }}
 ```
 
 ### Machine Configuration System
@@ -188,6 +191,7 @@ Example usage:
 - Machine-specific settings are defined in `home/.chezmoidata/machines.yaml`
 - Pattern-based substring matching (e.g., "MacBook Pro" matches "HAL 9000's MacBook Pro")
 - Generic `machine-config` template provides single source of truth for all machine lookups
+- Supports dot-notation for nested settings (e.g., `"keepassxc_entries.ssh"`)
 - Extensible: easily add new machine-specific properties without template changes
 
 **Machine Detection:**

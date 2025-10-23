@@ -1,17 +1,21 @@
 {{- /* Generic machine configuration lookup from machines.yaml
 
-     Matches computer name against patterns in machines.yaml and returns:
+     Uses the computer-name template to get the current computer name,
+     matches that name against patterns in machines.yaml, and returns:
      - A specific setting value (if 'setting' parameter provided)
      - The matched machine pattern key (if 'return_key' is true)
 
+     Supports dot-notation for nested paths (e.g., "keepassxc_entries.ssh")
+
      Parameters (pass as dict merged with root context):
-     - setting (optional): Name of the setting to retrieve (e.g., "brewfile", "ssh_key_id")
+     - setting (optional): Name of the setting to retrieve, supports dot-notation for nested values
      - return_key (optional): If true, returns the matched pattern name instead of a setting value
 
      Examples:
-       Get brewfile:     {{ includeTemplate "machine-config" (merge (dict "setting" "brewfile") .) }}
-       Get pattern key:  {{ includeTemplate "machine-config" (merge (dict "return_key" true) .) }}
-       Get ssh_key_id:   {{ includeTemplate "machine-config" (merge (dict "setting" "ssh_key_id") .) }}
+       Get brewfile:           {{ includeTemplate "machine-config" (merge (dict "setting" "brewfile") .) }}
+       Get pattern key:        {{ includeTemplate "machine-config" (merge (dict "return_key" true) .) }}
+       Get ssh_key_id:         {{ includeTemplate "machine-config" (merge (dict "setting" "ssh_key_id") .) }}
+       Get nested SSH entry:   {{ includeTemplate "machine-config" (merge (dict "setting" "keepassxc_entries.ssh") .) }}
 
      Returns:
      - The requested setting value, the matched pattern key name, or empty string if not found
@@ -35,9 +39,24 @@
       {{- /* Return the matched pattern key name */ -}}
       {{- $result = $pattern -}}
     {{- else if $setting -}}
-      {{- /* Return the setting value if it exists */ -}}
-      {{- if hasKey $config $setting -}}
-        {{- $result = index $config $setting -}}
+      {{- /* Parse dot-notation path and navigate nested structures */ -}}
+      {{- $parts := splitList "." $setting -}}
+      {{- $firstKey := index $parts 0 -}}
+      {{- if hasKey $config $firstKey -}}
+        {{- $current := index $config $firstKey -}}
+        {{- /* Navigate through remaining path segments */ -}}
+        {{- if gt (len $parts) 1 -}}
+          {{- range $i, $part := slice $parts 1 -}}
+            {{- if $current -}}
+              {{- if hasKey $current $part -}}
+                {{- $current = index $current $part -}}
+              {{- else -}}
+                {{- $current = "" -}}
+              {{- end -}}
+            {{- end -}}
+          {{- end -}}
+        {{- end -}}
+        {{- $result = $current -}}
       {{- end -}}
     {{- end -}}
     {{- break -}}

@@ -4,7 +4,10 @@
      the current computer name, then returns that pattern key.
 
      Example:
-       computer name: "HAL 9000's MacBook Pro"
+       computer name: "HAL 9000's MacBook Pro" <- from computer-name template
+       machines.yaml patterns:
+         "MacBook Pro":
+         "Workstation":
        Returns: "MacBook Pro"
 
      Returns empty string if no pattern matches.
