@@ -20,24 +20,21 @@
 #                    chezmoi source directory and the machine's brewfile is
 #                    symlinked to $HOME/.brewfiles/current during setup.
 #
-# keepassxc.entrys - Machine-specific KeePassXC entry mappings.
-#                    Maps logical names (e.g., "ssh") to actual KeePassXC
-#                    entry names. (This is useful when different machines
-#                    share the same keepassxc database but have different
-#                    entries for the same purpose.)
+# keepassxc_entries - Machine-specific KeePassXC entry mappings.
+#                     Maps logical names (e.g., "ssh") to actual KeePassXC
+#                     entry names. (This is useful when different machines
+#                     share the same keepassxc database but have different
+#                     entries for the same purpose.)
 #
 MacBook Pro:
   brewfile: mbp-brewfile
-  keepassxc:
-    entrys:
-      ssh: SSH (MacBook Pro)
+  keepassxc_entries:
+    ssh: SSH (MacBook Pro)
 Mac Studio:
   brewfile: studio-brewfile
-  keepassxc:
-    entrys:
-      ssh: SSH (Mac Studio)
+  keepassxc_entries:
+    ssh: SSH (Mac Studio)
 Mac mini:
   brewfile: mac-mini-brewfile
-  keepassxc:
-    entrys:
-      ssh: SSH (Mac mini)
+  keepassxc_entries:
+    ssh: SSH (Mac mini)

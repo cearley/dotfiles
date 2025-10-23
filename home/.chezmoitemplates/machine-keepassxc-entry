@@ -1,6 +1,6 @@
 {{- /* Retrieve KeePassXC entry name from machines.yaml based on computer name pattern.
 
-     Uses the generic machine-config template to lookup the keepassxc entry from machines.yaml.
+     Uses the generic machine-config template to lookup the keepassxc_entries from machines.yaml.
 
      Parameters (pass as dict merged with root context):
      - entry (required): Name of the KeePassXC entry to retrieve (e.g., "ssh")
@@ -15,17 +15,17 @@
   {{- fail "machine-keepassxc-entry template requires 'entry' parameter" -}}
 {{- end -}}
 {{- $entry := .entry -}}
-{{- $machineConfig := includeTemplate "machine-config" (merge (dict "setting" "keepassxc") .) -}}
+{{- $machineConfig := includeTemplate "machine-config" (merge (dict "setting" "keepassxc_entries") .) -}}
 {{- $result := "" -}}
 {{- if $machineConfig -}}
-  {{- /* machine-config returns the entire keepassxc dict, navigate to entrys */ -}}
+  {{- /* machine-config returns the keepassxc_entries map, navigate to entry */ -}}
   {{- $computerName := includeTemplate "computer-name" . -}}
   {{- /* Find matching machine pattern again to access nested structure */ -}}
   {{- range $pattern, $config := . -}}
     {{- if and (ne $pattern "chezmoi") (ne $pattern "entry") (contains $pattern $computerName) -}}
-      {{- if and (hasKey $config "keepassxc") (hasKey $config.keepassxc "entrys") -}}
-        {{- if hasKey $config.keepassxc.entrys $entry -}}
-          {{- $result = index $config.keepassxc.entrys $entry -}}
+      {{- if hasKey $config "keepassxc_entries" -}}
+        {{- if hasKey $config.keepassxc_entries $entry -}}
+          {{- $result = index $config.keepassxc_entries $entry -}}
         {{- end -}}
       {{- end -}}
       {{- break -}}

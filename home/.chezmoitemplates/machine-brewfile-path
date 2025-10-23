@@ -3,6 +3,9 @@
      Uses the generic machine-config template to lookup the brewfile setting from machines.yaml,
      then constructs the full path to the brewfile.
 
+     Usage:
+       {{ $brewfilePath := includeTemplate "machine-brewfile-path" . }}
+
      Returns empty string if no pattern matches or no brewfile is defined.
 */ -}}
 {{- $brewfile := includeTemplate "machine-config" (merge (dict "setting" "brewfile") .) -}}
