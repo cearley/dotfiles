@@ -13,7 +13,7 @@ fi
 print_message "info" "Checking atuin login status..."
 
 # Check if already logged in by looking for session file
-SESSION_FILE="$HOME/.local/share/atuin/session"
+SESSION_FILE="{{ .chezmoi.homeDir }}/.local/share/atuin/session"
 
 if [ -f "$SESSION_FILE" ]; then
     print_message "info" "Verifying existing atuin session..."
@@ -36,14 +36,16 @@ fi
 
 print_message "info" "Logging in to atuin sync..."
 
-ATUIN_USERNAME={{ (keepassxc "atuin").UserName | quote }}
-ATUIN_PASSWORD={{ (keepassxc "atuin").Password | quote }}
-ATUIN_KEY={{ keepassxcAttribute "atuin" "key" | quote }}
+{{- $username := (keepassxc "atuin").UserName }}
+{{- $password := (keepassxc "atuin").Password }}
+{{- $key := keepassxcAttribute "atuin" "key" }}
 
-if atuin login -u "$ATUIN_USERNAME" -p "$ATUIN_PASSWORD" -k "$ATUIN_KEY"; then
+login_output=$(atuin login -u {{ $username | quote }} -p {{ $password | quote }} -k {{ $key | quote }} 2>&1)
+login_status=$?
+
+if [ $login_status -eq 0 ]; then
     print_message "success" "Successfully logged in to atuin sync"
 
-    # Trigger initial sync
     print_message "info" "Performing initial sync..."
     if atuin sync; then
         print_message "success" "Initial sync completed"
@@ -52,6 +54,7 @@ if atuin login -u "$ATUIN_USERNAME" -p "$ATUIN_PASSWORD" -k "$ATUIN_KEY"; then
     fi
 else
     print_message "error" "Failed to login to atuin sync"
+    print_message "info" "Error: $login_output"
     print_message "info" "You can manually login later with: atuin login -u $ATUIN_USERNAME"
     exit 1
 fi
