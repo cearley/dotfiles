@@ -1,3 +1,4 @@
+{{- if has "ai" .tags -}}
 # User Memory
 
 ## Code Preferences
@@ -86,3 +87,4 @@ When a request requires understanding or modifying a large volume of code that e
 - **Be Specific**: Ask precise questions to get accurate and relevant results.
 - **Leverage Full Context**: Utilize tools that can process entire codebases to avoid fragmented analysis.
 - **Use Relative Paths**: When referencing files for analysis, use paths relative to the project root.
+{{ end -}}

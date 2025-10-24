@@ -83,9 +83,7 @@ zstyle ':omz:update' mode disabled  # disable automatic updates
 # Example format: plugins=(rails git textmate ruby lighthouse)
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
-{{- if has "dev" .tags }}
     aws
-{{- end }}
     fast-syntax-highlighting
     fzf
     git
@@ -188,14 +186,6 @@ nvm() {
 export PATH=/usr/local/smlnj/bin:"$PATH"
 {{- end }}
 
-# LLM-based command suggestions for zsh
-source {{ .chezmoi.homeDir }}/.local/share/zsh-llm-suggestions/zsh-llm-suggestions.zsh
-# zsh-llm-suggestions key bindings
-bindkey '^o' zsh_llm_suggestions_openai
-bindkey '^xo' zsh_llm_suggestions_openai_explain
-bindkey '^p' zsh_llm_suggestions_github_copilot
-bindkey '^xp' zsh_llm_suggestions_github_copilot_explain
-
 # Enable colorls tab completion for flags
 #source $(dirname $(gem which colorls))/tab_complete.sh
 
@@ -212,6 +202,14 @@ if [[ -d "$HOME/.local/share/zsh-functions" ]]; then
 fi
 
 {{ if has "ai" .tags -}}
+# LLM-based command suggestions for zsh
+source {{ .chezmoi.homeDir }}/.local/share/zsh-llm-suggestions/zsh-llm-suggestions.zsh
+# zsh-llm-suggestions key bindings
+bindkey '^o' zsh_llm_suggestions_openai
+bindkey '^xo' zsh_llm_suggestions_openai_explain
+bindkey '^p' zsh_llm_suggestions_github_copilot
+bindkey '^xp' zsh_llm_suggestions_github_copilot_explain
+
 # Added by LM Studio CLI (lms)
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"

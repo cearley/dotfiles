@@ -1,3 +1,4 @@
+{{- if has "ai" .tags -}}
 Always use these tools whenever they are available:
 - aws-knowledge-mcp-server to consult AWS knowledge, such as the latest AWS docs, API references, architectural references, and well-architected guidance
 - basic-memory to remember and recall previous conversations
@@ -37,3 +38,4 @@ When reporting memories, clearly identify:
 - **Scope** (project-specific vs user-wide)
 - **Gaps** where memory sources don't have information
 #$ARGUMENTS
+{{ end -}}

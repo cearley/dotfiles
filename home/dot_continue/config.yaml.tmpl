@@ -1,4 +1,4 @@
-{{- if has "dev" .tags -}}
+{{- if and (has "dev" .tags) (has "ai" .tags) -}}
 name: Local Agent
 version: 1.0.0
 schema: v1
