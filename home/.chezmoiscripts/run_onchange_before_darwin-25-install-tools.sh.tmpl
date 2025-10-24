@@ -1,0 +1,26 @@
+{{ if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+# Check required tools
+if ! require_tools uv; then
+    exit 1
+fi
+
+print_message "info" "Installing tools using uv..."
+
+{{- $categories := list "core" "personal" "dev" "ai" "datascience" "work" "mobile" }}
+{{- range $category := $categories }}
+  {{- $categoryData := index $.tools $category }}
+  {{- if and $categoryData (or (eq $category "core") (has $category $.tags)) }}
+
+# Install {{ $category }} tools
+{{ range $categoryData -}}
+uv tool install {{ . }}
+{{ end -}}
+  {{- end }}
+{{- end }}
+
+{{ end -}}
