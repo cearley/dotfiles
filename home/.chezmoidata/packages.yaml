@@ -2,11 +2,11 @@ packages:
   darwin:
     taps:
     - 'isen-ng/dotnet-sdk-versions'
-    - 'localstack/tap'
     - 'buo/cask-upgrade'
-    
+
     # Core packages (always installed)
     core:
+      taps:
       brews:
       - 'aria2'
       - 'atuin'
@@ -41,6 +41,7 @@ packages:
 
     # Packages that are very specific to my personal setup (personal tag)
     personal:
+      taps:
       brews:
       - 'syncthing'
       casks:
@@ -58,6 +59,8 @@ packages:
 
     # Optional development packages (dev tag)
     dev:
+      taps:
+      - 'localstack/tap'
       brews:
       - 'ack'
       - 'act'
@@ -77,7 +80,7 @@ packages:
       - 'gopls'
       - 'graphviz'
       - 'hugo'
-      - 'localstack/tap/localstack-cli'
+      - 'localstack-cli'
       - 'lynis'
       - 'nuget'
       - 'pkgconf'
@@ -100,7 +103,10 @@ packages:
     
     # Optional AI packages (ai tag)
     ai:
+      taps:
+      - 'basicmachines-co/basic-memory'
       brews:
+      - 'basic-memory'
       casks:
       - 'claude'
       - 'lm-studio'
@@ -109,6 +115,7 @@ packages:
 
     # Optional work packages (work tag)
     work:
+      taps:
       brews:
       - 'csvkit'
       - 'vips'
@@ -132,6 +139,7 @@ packages:
     
     # Optional school packages (school tag)
     school:
+      taps:
       brews:
       casks:
       mas:
@@ -139,6 +147,7 @@ packages:
 
     # Optional mobile packages (mobile tag)
     mobile:
+      taps:
       brews:
       casks:
       - 'tunnelblick'

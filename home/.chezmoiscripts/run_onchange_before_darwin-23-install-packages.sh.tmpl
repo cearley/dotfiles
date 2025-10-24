@@ -22,6 +22,12 @@ tap {{ . | quote }}
   {{- if or (eq $category "core") (has $category $.tags) }}
 
 # Install {{ $category }} packages
+    {{- if $categoryData.taps }}
+{{ range $categoryData.taps -}}
+tap {{ . | quote }}
+{{ end -}}
+    {{- end }}
+
     {{- if $categoryData.brews }}
 {{ range $categoryData.brews -}}
 brew {{ . | quote }}
