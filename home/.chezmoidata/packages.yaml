@@ -113,6 +113,19 @@ packages:
       - 'ollama-app'
       mas:
 
+    # Optional data science packages (datascience tag)
+    datascience:
+      taps:
+      brews:
+      - 'csvkit'
+      - 'pandoc'
+      - 'pdfly'
+      casks:
+      - 'cursor'
+      - 'r-app'
+      - 'rstudio'
+      mas:
+
     # Optional work packages (work tag)
     work:
       taps:
@@ -136,14 +149,6 @@ packages:
       - '"Microsoft Outlook", id: 985367838'
       - '"Numbers", id: 409203825'
       - '"OneDrive", id: 823766827'
-    
-    # Optional school packages (school tag)
-    school:
-      taps:
-      brews:
-      casks:
-      mas:
-      - '"WireGuard", id: 1451685025'
 
     # Optional mobile packages (mobile tag)
     mobile:
@@ -153,3 +158,4 @@ packages:
       - 'tunnelblick'
       - 'wifi-explorer-pro'
       mas:
+      - '"WireGuard", id: 1451685025'

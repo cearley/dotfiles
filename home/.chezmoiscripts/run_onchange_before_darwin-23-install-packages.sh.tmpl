@@ -16,7 +16,7 @@ brew update && brew bundle --file=/dev/stdin <<EOF
 tap {{ . | quote }}
 {{- end }}
 
-{{- $categories := list "core" "personal" "dev" "ai" "work" "school" "mobile" }}
+{{- $categories := list "core" "personal" "dev" "ai" "datascience" "work" "mobile" }}
 {{- range $category := $categories }}
   {{- $categoryData := index $.packages.darwin $category }}
   {{- if or (eq $category "core") (has $category $.tags) }}
@@ -47,7 +47,7 @@ EOF
 if is_icloud_signed_in; then
     print_message "info" "Installing Mac App Store packages..."
     brew bundle --file=/dev/stdin <<EOF
-{{- $categories := list "core" "dev" "ai" "work" "mobile" }}
+{{- $categories := list "core" "dev" "ai" "datascience" "work" "mobile" }}
 {{- range $category := $categories }}
   {{- $categoryData := index $.packages.darwin $category }}
   {{- if or (eq $category "core") (has $category $.tags) }}
