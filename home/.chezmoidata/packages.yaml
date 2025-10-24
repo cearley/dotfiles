@@ -130,7 +130,6 @@ packages:
     work:
       taps:
       brews:
-      - 'csvkit'
       - 'vips'
       casks:
       - 'amazon-workspaces'
