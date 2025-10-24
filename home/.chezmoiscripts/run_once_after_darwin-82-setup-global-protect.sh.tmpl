@@ -1,0 +1,58 @@
+{{- if and (eq .chezmoi.os "darwin") (has "work" .tags) -}}
+#!/bin/bash
+
+set -eufo pipefail
+
+# Source shared utility functions
+source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+
+# Check if GlobalProtect is already installed
+if is_app_installed "/Applications/GlobalProtect.app"; then
+    print_message "skip" "Skipping GlobalProtect installation: GlobalProtect is already installed"
+    exit 0
+fi
+
+print_message "info" "Setting up GlobalProtect VPN Client..."
+
+# Open the GlobalProtect portal page
+print_message "info" "Opening GlobalProtect portal page in your default browser..."
+open "https://gp.willdan.com"
+
+echo ""
+print_message "info" "Manual Installation Instructions:"
+echo "1. Log in using your Willdan network credentials through Okta"
+echo "2. Complete MFA (multi-factor authentication)"
+echo "3. Click on 'GlobalProtect Agent'"
+echo "4. Click 'Download Mac 32/64 bit GlobalProtect agent' and save the file"
+echo "5. Run the downloaded GlobalProtect.pkg file from your Downloads folder"
+echo "6. You will need your computer's admin username and password to install"
+echo "7. Follow the installer wizard to complete installation"
+echo ""
+
+# Wait a moment for the page to load
+sleep 3
+
+print_message "info" "Post-Installation Setup:"
+echo "After installation is complete:"
+echo "1. The GlobalProtect icon will appear in your menu bar (top right)"
+echo "2. Click the GlobalProtect icon to open the client"
+echo "3. Enter 'gp.willdan.com' in the Portal Address field"
+echo "4. Click 'Connect'"
+echo "5. Sign in with your Willdan ID and password"
+echo "6. Authenticate with Okta multi-factor authentication"
+echo "7. Once connected, the GlobalProtect icon will show a gray shield"
+echo ""
+
+# Wait for the user to complete the installation
+if wait_for_app_installation "/Applications/GlobalProtect.app" "GlobalProtect"; then
+    print_message "success" "GlobalProtect has been installed successfully!"
+    print_message "info" "You can now configure the VPN connection using the GlobalProtect menu bar icon"
+    print_message "info" "Portal Address: gp.willdan.com"
+    prompt_ready "Setup complete! Press any key to continue..."
+else
+    print_message "warning" "GlobalProtect installation timed out or was cancelled"
+    print_message "info" "You can manually install GlobalProtect from: https://gp.willdan.com"
+    exit 1
+fi
+
+{{ end -}}
