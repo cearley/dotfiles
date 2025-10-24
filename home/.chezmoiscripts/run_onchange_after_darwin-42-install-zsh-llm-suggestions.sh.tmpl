@@ -1,4 +1,4 @@
-{{- if and (eq .chezmoi.os "darwin") (not (has "dev" .tags)) -}}
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) (not (has "dev" .tags)) -}}
 {{- /* On machines with dev tag, this is installed in .chezmoiexternal.toml.tmpl */ -}}
 #!/bin/bash
 
