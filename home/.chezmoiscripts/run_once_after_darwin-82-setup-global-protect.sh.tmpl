@@ -3,8 +3,7 @@
 
 set -eufo pipefail
 
-# Source shared utility functions
-source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 if is_app_installed "/Applications/GlobalProtect.app"; then
     print_message "skip" "Skipping GlobalProtect installation: GlobalProtect is already installed"
