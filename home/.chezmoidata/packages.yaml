@@ -80,7 +80,7 @@ packages:
       - 'gopls'
       - 'graphviz'
       - 'hugo'
-      - 'localstack-cli'
+      - 'localstack/tap/localstack-cli'
       - 'lynis'
       - 'nuget'
       - 'pkgconf'
@@ -106,7 +106,7 @@ packages:
       taps:
       - 'basicmachines-co/basic-memory'
       brews:
-      - 'basic-memory'
+      - 'asicmachines-co/basic-memory/basic-memory'
       casks:
       - 'claude'
       - 'lm-studio'

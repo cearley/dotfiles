@@ -10,7 +10,7 @@
 {{- $aws_secrets_manager_region := promptStringOnce . "aws_secrets_manager_region" "AWS Secrets Manager region" "us-east-1" -}}
 {{- $keepassxc_db := promptStringOnce . "keepassxc_db" "keepassxc database (Absolute path - Can be provided later)" -}}
 
-{{- $tag_choices := list "ai" "datascience" "dev" "ml" "mobile" "personal" "work" -}}
+{{- $tag_choices := list "ai" "datascience" "dev" "mobile" "personal" "work" -}}
 {{- $tags := promptMultichoiceOnce . "tags" "list of tags for this machine (e.g., ai, mobile, work)"
     $tag_choices (list "work")
 -}}
