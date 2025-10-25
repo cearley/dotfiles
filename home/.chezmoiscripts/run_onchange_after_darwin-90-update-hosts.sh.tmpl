@@ -12,10 +12,8 @@
 # }
 # This script runs whenever the hosts data changes, after chezmoi applies other changes on macOS.
 
-# Source shared utility functions
-source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-# Check required tools
 if ! require_tools mktemp grep sed cp mv; then
     exit 1
 fi

@@ -1,8 +1,7 @@
 {{ if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
 #!/bin/bash
 
-# Source shared utility functions
-source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 {{ if stat (joinPath .chezmoi.homeDir ".sdkman/bin/sdkman-init.sh") -}}
 if ! command_exists sdk; then
@@ -11,7 +10,6 @@ if ! command_exists sdk; then
 fi
 {{- end }}
 
-# Check required tools
 if ! require_tools sdk; then
     exit 1
 fi
