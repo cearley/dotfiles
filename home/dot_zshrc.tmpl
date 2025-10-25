@@ -129,6 +129,7 @@ export ARCHFLAGS="-arch $(uname -m)"
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
+{{ if not (lookPath "atuin") -}}
 # Enhanced history searching in zsh 
 # Courtesy to https://www.techrepublic.com/article/enhanced-history-searching-in-zsh/
 #
@@ -137,6 +138,20 @@ export ARCHFLAGS="-arch $(uname -m)"
 #  without pressing enter.
 bindkey "^[[A" history-search-backward
 bindkey "^[[B" history-search-forward
+{{- end }}
+
+# Enable colorls tab completion for flags
+#source $(dirname $(gem which colorls))/tab_complete.sh
+
+# colorls
+#alias lc='colorls -lA --sd'
+
+# lsd - A modern replacement for ls command with lots of features and better defaults
+alias ls='lsd'
+alias l='ls -l'
+alias la='ls -a'
+alias lla='ls -la'
+alias lt='ls --tree'
 
 {{ if has "dev" .tags -}}
 
@@ -164,8 +179,12 @@ unset __conda_setup
 # Enable frum - Ruby version manager written in Rust https://github.com/TaKO8Ki/frum
 eval "$(frum init)"
 
+# Liquibase - Database schema change management tool
 export LIQUIBASE_HOME=/opt/homebrew/opt/liquibase/libexec
 export PATH="$LIQUIBASE_HOME:$PATH"
+
+# SML/NJ - Standard ML of New Jersey
+export PATH=/usr/local/smlnj/bin:"$PATH"
 
 {{- end }}
 
@@ -181,23 +200,6 @@ nvm() {
     # Execute the original nvm command with all arguments
     nvm "$@"
 }
-
-{{ if has "dev" .tags -}}
-export PATH=/usr/local/smlnj/bin:"$PATH"
-{{- end }}
-
-# Enable colorls tab completion for flags
-#source $(dirname $(gem which colorls))/tab_complete.sh
-
-# colorls
-#alias lc='colorls -lA --sd'
-
-# lsd - A modern replacement for ls command with lots of features and better defaults
-alias ls='lsd'
-alias l='ls -l'
-alias la='ls -a'
-alias lla='ls -la'
-alias lt='ls --tree'
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
