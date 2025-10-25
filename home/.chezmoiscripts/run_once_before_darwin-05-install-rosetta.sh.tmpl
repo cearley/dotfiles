@@ -1,8 +1,7 @@
 {{- if and (eq .chezmoi.os "darwin") (eq .chezmoi.arch "arm64") -}}
 #!/bin/bash
 
-# Source shared utility functions
-source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 if /usr/bin/pgrep oahd >/dev/null 2>&1; then
     print_message "skip" "Skipping Rosetta installation: Rosetta is already installed"

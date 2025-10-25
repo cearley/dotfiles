@@ -3,10 +3,8 @@
 
 set -euo pipefail
 
-# Source shared utility functions
-source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-# Check required tools
 if ! require_tools curl zip unzip; then
     exit 1
 fi
@@ -19,8 +17,7 @@ fi
 
 print_message "info" "Installing sdkman (Software Development Kit Manager)..."
 
-# Install sdkman - SDK manager for Java, Gradle, Maven, etc.
-# Using the official installation script from sdkman.io
+# Install sdkman using the official installation script from sdkman.io
 export SDKMAN_DIR="$HOME/.sdkman"
 curl -s "https://get.sdkman.io" | bash
 
