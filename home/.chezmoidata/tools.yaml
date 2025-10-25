@@ -3,3 +3,4 @@ tools:
   # AI tool (ai tag)
   ai:
   - "claude-monitor"
+  - "git+https://github.com/cearley/zsh-llm-suggestions"
