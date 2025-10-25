@@ -1,10 +1,8 @@
 {{- if and (eq .chezmoi.os "darwin") .has_keepassxc_db -}}
 #!/bin/bash
 
-# Source shared utility functions
-source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-# Check required tools
 if ! require_tools atuin; then
     print_message "skip" "atuin not installed - skipping login"
     exit 0
@@ -40,6 +38,12 @@ print_message "info" "Logging in to atuin sync..."
 {{- $password := (keepassxc "atuin").Password }}
 {{- $key := keepassxcAttribute "atuin" "key" }}
 
+if [ "$(atuin key)" != "$key" ]; then
+    print_message "info" "Re-keying atuin store..."
+    atuin store purge >/dev/null 2>&1 || true
+    atuin store rekey {{ $key | quote }} >/dev/null 2>&1 || true
+fi
+
 login_output=$(atuin login -u {{ $username | quote }} -p {{ $password | quote }} -k {{ $key | quote }} 2>&1)
 login_status=$?
 
@@ -55,7 +59,7 @@ if [ $login_status -eq 0 ]; then
 else
     print_message "error" "Failed to login to atuin sync"
     print_message "info" "Error: $login_output"
-    print_message "info" "You can manually login later with: atuin login -u $ATUIN_USERNAME"
+    print_message "info" "You can manually login later with: atuin login -u {{ $username }}"
     exit 1
 fi
 
