@@ -1,15 +1,17 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
-# Source shared utility functions
-source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-# Check required tools
 if ! require_tools defaults /usr/libexec/PlistBuddy; then
     exit 1
 fi
 
 print_message "info" "Configuring macOS system defaults..."
+
+# Set Terminal default font to MesloLGSNF size 13
+defaults write com.apple.terminal "Default Window Settings" -string "MesloLGSNF-Regular 13"
+defaults write com.apple.terminal "Startup Window Settings" -string "MesloLGSNF-Regular 13"
 
 {{- if has "iterm2" .packages.darwin.core.casks }}
 # iTerm2: Enable 'Close windows when quitting an application'
