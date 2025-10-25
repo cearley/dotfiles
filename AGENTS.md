@@ -100,8 +100,8 @@ All darwin-targeted scripts must be wrapped in conditional templates:
 
 Scripts in `home/.chezmoiscripts/` can leverage shared utility functions to avoid code duplication and ensure consistency:
 
-- **Script Utils File**: `home/scripts/script-utils.sh` provides common functions
-- **Usage**: Source with `source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"`
+- **Script Utils File**: `home/scripts/shared-utils.sh` provides common functions
+- **Usage**: Source with `source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"`
 - **Available Functions**:
   - `print_message()`: Consistent messaging with intuitive emoji support (💡 info, ✅ success, ⚠️ warning, ❌ error, ⏩ skip)
   - `command_exists()`: Check if command is available
@@ -267,7 +267,7 @@ This macOS-focused repository uses intuitive emojis (💡 info, ✅ success, ⚠
 **Major refactoring initiative** to improve code consistency and maintainability:
 
 #### Shared Utility Functions
-- **Created**: `home/scripts/script-utils.sh` with common functions for all installation scripts
+- **Created**: `home/scripts/shared-utils.sh` with common functions for all installation scripts
 - **Improved messaging**: Unified emoji set with intuitive icons:
   - 💡 **Info**: Light bulb suggests helpful information
   - ✅ **Success**: Check mark for completed actions  
