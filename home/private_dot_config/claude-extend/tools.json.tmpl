@@ -35,14 +35,14 @@
         "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server",
         "--context", "ide-assistant", "--project", "{project_dir}"
       ]
-    },
+    }{{ if .has_keepassxc_db }},
     "context7": {
       "description": "Up-to-date, version-specific documentation and code examples",
       "command": "npx",
       "args": [
         "-y", "@upstash/context7-mcp", "--api-key", "{{ keepassxcAttribute "Context7" "API KEY" }}"
       ]
-    }
+    }{{ end }}
   }
 }
 {{- end -}}
