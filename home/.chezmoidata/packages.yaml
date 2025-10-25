@@ -106,7 +106,7 @@ packages:
       taps:
       - 'basicmachines-co/basic-memory'
       brews:
-      - 'asicmachines-co/basic-memory/basic-memory'
+      - 'basicmachines-co/basic-memory/basic-memory'
       casks:
       - 'claude'
       - 'lm-studio'
