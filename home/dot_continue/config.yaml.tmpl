@@ -3,6 +3,7 @@ name: Local Agent
 version: 1.0.0
 schema: v1
 models:
+{{- if .has_keepassxc_db }}
   - name: Gemini 2.0 Flash
     provider: gemini
     model: gemini-2.0-flash
@@ -11,6 +12,7 @@ models:
     provider: openai
     model: gpt-5
     apiKey: {{ keepassxcAttribute "OpenAI platform" "CodeGPT_key" }}
+{{- end }}
   - name: Autodetect
     provider: ollama
     model: AUTODETECT
