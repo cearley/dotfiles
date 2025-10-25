@@ -3,10 +3,8 @@
 
 set -euo pipefail
 
-# Source shared utility functions
-source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-# Check required tools
 if ! require_tools curl jq; then
     exit 1
 fi
