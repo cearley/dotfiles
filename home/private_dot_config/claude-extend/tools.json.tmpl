@@ -35,6 +35,45 @@
         "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server",
         "--context", "ide-assistant", "--project", "{project_dir}"
       ]
+    },
+    "aws-api": {
+      "description": "Interact with AWS services programmatically",
+      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
+      "args": ["awslabs.aws-api-mcp-server@latest"],
+      "env": {
+        "AWS_REGION": "us-west-2"
+      }
+    },
+    "aws-knowledge": {
+      "description": "Access up-to-date information from the web",
+      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
+      "args": ["fastmcp", "run", "https://knowledge-mcp.global.api.aws"]
+    },
+    "bedrock-agentcore": {
+      "description": "Integrate with Amazon Bedrock services",
+      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
+      "args": ["awslabs.amazon-bedrock-agentcore-mcp-server@latest"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
+    },
+    "strands-agents": {
+      "description": "Utilize Strands AI agents for various tasks",
+      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
+      "args": ["strands-agents-mcp-server"],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "INFO"
+      },
+      "autoApprove": ["search_docs", "fetch_doc"]
+    },
+    "aws-diagram": {
+      "description": "Generate AWS architecture diagrams from text descriptions",
+      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
+      "args": [
+        "--with",
+        "sarif-om,jschema_to_python",
+        "awslabs.aws-diagram-mcp-server@latest"
+      ]
     }{{ if .has_keepassxc_db }},
     "context7": {
       "description": "Up-to-date, version-specific documentation and code examples",
