@@ -18,7 +18,7 @@
 # brewfile         - Specifies the Homebrew Brewfile to use for that machine.
 #                    These are located in the brewfiles/ directory within the
 #                    chezmoi source directory and the machine's brewfile is
-#                    symlinked to $HOME/.brewfiles/current during setup.
+#                    symlinked to $HOME/Brewfile during setup.
 #
 # keepassxc_entries - Machine-specific KeePassXC entry mappings.
 #                     Maps logical names (e.g., "ssh") to actual KeePassXC

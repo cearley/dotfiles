@@ -6,26 +6,28 @@
 [![Homebrew](https://img.shields.io/badge/package%20manager-Homebrew-orange)](https://brew.sh/)
 [![GitHub last commit](https://img.shields.io/github/last-commit/cearley/dotfiles)](https://github.com/cearley/dotfiles/commits)
 
-My personal dotfiles and macOS development environment setup, managed with [chezmoi](https://chezmoi.io).
+Personal dotfiles and macOS development environment, managed with [chezmoi](https://chezmoi.io).
 
 ## Table of Contents
 
 - [Why You Might Find This Useful](#why-you-might-find-this-useful)
 - [Quick Start](#quick-start)
-- [Daily operations](#daily-operations)
-- [Before Forking or Using](#before-forking-or-using)
+- [Key Features](#key-features)
+- [Using This Repository](#using-this-repository)
+- [Before Forking](#before-forking)
 
 ## Why You Might Find This Useful
 
-This repository serves as the source of truth for my macOS dotfiles and development environment setup. It's designed so that my setup is easily reproducible across multiple Macs, yet flexible enough to accommodate machine-specific configurations. Therefore it is useful to me, but it also might be useful to you as a reference or starting point for your own dotfiles. It uses several chezmoi patterns that you might find helpful:
-- **Secure secret management** using KeePassXC integration (no hardcoded credentials)
-- **Generic machine configuration system** - Extensible data-driven approach for machine-specific settings using pattern matching
-- **Cross-platform template support** - Templates work on macOS, Linux, and Windows via `computer-name` template
-- **Multi-machine support** with conditional configurations for different machines using reusable templates
-- **Automated dependency installation** with proper error handling and logging
-- **Tag-based execution** to customize setups for different use cases (dev, personal, ai, ml, etc.)
-- **Comprehensive validation** - Validates SSH keys, GitHub access, Homebrew installation, etc.
-- **System-wide configuration management** - Shows how to manage `/etc/hosts` and other system files outside the home directory using chezmoi scripts
+This repository demonstrates several advanced chezmoi patterns for managing macOS dotfiles and development environments:
+
+- **Secure secret management** - KeePassXC integration with no hardcoded credentials
+- **Generic machine configuration system** - Data-driven, pattern-matched machine-specific settings
+- **Reusable template components** - DRY templating with `includeTemplate` for cross-platform support
+- **Shared utility functions** - Centralized script utilities for consistent error handling and messaging
+- **Tag-based execution** - Customize installations for different use cases (dev, personal, ai, work)
+- **Structured script execution** - Ordered, frequency-controlled scripts with 5-point spacing convention
+- **System-wide configuration** - Manage files outside home directory (`/etc/hosts`, system defaults)
+- **Comprehensive validation** - Automated checks for SSH keys, GitHub access, Homebrew installation
 
 ## Quick Start
 
@@ -47,143 +49,81 @@ This automatically installs all dependencies (chezmoi, Git, Homebrew, KeePassXC,
 - A KeePassXC database file is needed for password management
 
 **Optional:**
-- Machine-specific brewfiles for additional package management (will be symlinked to `$HOME/.brewfiles/current` if present)
+- Machine-specific brewfiles for additional package management (will be symlinked to `$HOME/Brewfile` if present)
 
-## Daily operations
+## Key Features
 
-### Edit your dotfiles
+### Machine Configuration System
+- **Pattern-based detection** - Automatically detects machine type via `machines.yaml`
+- **Reusable templates** - Cross-platform `computer-name` and `machine-config` templates
+- **Dot-notation support** - Access nested settings (e.g., `keepassxc_entries.ssh`)
+- **Extensible design** - Add new machine-specific properties without template changes
 
-Edit a dotfile with:
+### Script Execution Framework
+Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_{os}-{order}-{description}.sh.tmpl`
 
+**Execution order** (5-point spacing for logical grouping):
+- **00-09**: System Foundation (Rosetta 2)
+- **10-19**: Development Toolchains (Rust)
+- **20-29**: Package Management (SDKMAN, Homebrew bundles, SDKs, UV tools, machine-specific Brewfiles)
+- **30-39**: Environment Managers (uv, nvm)
+- **40-49**: Environment Setup (GitHub auth, shell plugins)
+- **80-99**: System Configuration (security, VPN, sync services, defaults, validation)
+
+### Shared Utilities
+- **Location**: `home/scripts/shared-utils.sh`
+- **Functions**: `print_message()`, `command_exists()`, `require_tools()`, `download_file()`, `wait_for_app_installation()`, `prompt_ready()`, `is_icloud_signed_in()`, etc.
+- **Intuitive emojis**: 🔵 info, ✅ success, ⚠️ warning, ❌ error, ⏭️ skip, 💡 tip
+- **Consistent patterns**: All installation scripts use identical messaging and error handling
+
+### Development Environment
+
+**Three-layer package management:**
+1. **Homebrew packages** (`packages.yaml`) - System packages, apps, CLI tools
+2. **UV tools** (`tools.yaml`) - Python CLI tools and utilities
+3. **SDKMAN SDKs** (`sdks.yaml`) - JVM ecosystem (Java, Gradle, Maven, Kotlin, Scala)
+4. **Machine-specific Brewfiles** - Additional packages requiring confirmation
+
+**Environment managers:**
+- **SDKMAN**: Java/JVM toolchain management (requires `dev` tag)
+- **uv**: Python package and tool management
+- **nvm**: Node.js version management
+- **conda**: Python environment management (Miniforge)
+
+## Using This Repository
+
+**Common operations:**
 ```sh
-chezmoi edit $FILENAME
-```
+# Edit and apply dotfiles
+chezmoi edit --apply ~/.bashrc
 
-This will edit `$FILENAME`'s source file in your source directory. chezmoi will
-not make any changes to the actual dotfile until you run `chezmoi apply`.
+# Preview changes before applying
+chezmoi diff
 
-To automatically run `chezmoi apply` when you quit your editor, run:
-
-```sh
-chezmoi edit --apply $FILENAME
-```
-
-To automatically run `chezmoi apply` whenever you save the file in your editor, run:
-
-```sh
-chezmoi edit --watch $FILENAME
-```
-
-You don't have to use `chezmoi edit` to edit your dotfiles. For more
-information, see [Do I have to use `chezmoi edit` to edit my
-dotfiles?](frequently-asked-questions/usage.md#how-do-i-edit-my-dotfiles-with-chezmoi)
-
-### Pull the latest changes from your repo and apply them
-
-You can pull the changes from your repo and apply them in a single command:
-
-```sh
+# Pull latest changes and apply
 chezmoi update
+
+# Add new dotfile
+chezmoi add ~/.config/newfile
 ```
 
-This runs `git pull --autostash --rebase` in your source directory and then
-`chezmoi apply`.
+See the [chezmoi documentation](https://www.chezmoi.io/user-guide/daily-operations/) for more details.
 
-### Pull the latest changes from your repo and see what would change, without actually applying the changes
+## Before Forking
 
-Run:
+This is a personal configuration reflecting specific workflows and preferences. Consider it a **reference implementation** rather than something to use directly.
 
-```sh
-chezmoi git pull -- --autostash --rebase && chezmoi diff
-```
+**What you'll need to customize:**
+- **KeePassXC database** - Set up your own with required entries
+- **Machine configurations** - Update `home/.chezmoidata/machines.yaml` for your machines
+- **Package selections** - Review `home/.chezmoidata/packages.yaml`, `tools.yaml`, `sdks.yaml`, and machine-specific Brewfiles
+- **Personal tools** - Remove ChronoSync, Syncthing, custom hosts management, etc.
+- **SSH/Git settings** - Update for your accounts and preferences
 
-This runs `git pull --autostash --rebase` in your source directory and `chezmoi
-diff` then shows the difference between the target state computed from your
-source directory and the actual state.
+**Initial setup prompts:**
+- Full name, GitHub username, GitHub emails
+- KeePassXC database path
+- Microsoft email (optional, for subscription app installs)
+- Machine tags (core, dev, ai, work, personal, datascience, mobile) - controls which tools get installed
 
-If you're happy with the changes, then you can run
-
-```sh
-chezmoi apply
-```
-
-to apply them.
-
-### Automatically commit and push changes to your repo
-
-chezmoi can automatically commit and push changes to your source directory to
-your repo. This feature is disabled by default. To enable it, add the following
-to your config file:
-
-```toml title="~/.config/chezmoi/chezmoi.toml"
-[git]
-    autoCommit = true
-    autoPush = true
-```
-
-Whenever a change is made to your source directory, chezmoi will commit the
-changes with an automatically-generated commit message (if `autoCommit` is true)
-and push them to your repo (if `autoPush` is true). `autoPush` implies
-`autoCommit`, i.e. if `autoPush` is true then chezmoi will auto-commit your
-changes. If you only set `autoCommit` to true then changes will be committed but
-not pushed.
-
-By default, `autoCommit` will generate a commit message based on the files
-changed. You can override this by setting the `git.commitMessageTemplate`
-configuration variable. For example, to have chezmoi prompt you for a commit
-message each time, use:
-
-```toml title="~/.config/chezmoi/chezmoi.toml"
-[git]
-    autoCommit = true
-    commitMessageTemplate = "{{ promptString \"Commit message\" }}"
-```
-
-If your commit message is longer than fits in a string then you can set
-`git.commitMessageTemplateFile` to specify a path to the commit message template
-relative to the source directory, for example:
-
-```toml title="~/.config/chezmoi/chezmoi.toml"
-[git]
-    autoCommit = true
-    commitMessageTemplateFile = ".commit_message.tmpl"
-```
-
-Be careful when using `autoPush`. If your dotfiles repo is public and you
-accidentally add a secret in plain text, that secret will be pushed to your
-public repo.
-
-## Before Forking or Using
-
-### What You Need to Consider
-
-This is my personal dotfiles repository, reflecting my specific preferences, workflows, and development needs. What works for me may not align with your setup:
-
-- **Development focus** - Configured for cloud development (AWS, Azure), AI/ML work, and macOS-specific tools
-- **Security preferences** - Uses KeePassXC for all credential management, which requires initial setup
-- **Workflow assumptions** - Assumes use of specific tools like ChronoSync for backups, Syncthing for file sync
-- **Package choices** - Includes my preferred development stack which may be overkill or missing tools you need
-- **System modifications** - Makes opinionated changes to macOS defaults and system configurations
-
-Consider this repository as a reference implementation and starting point rather than something to use directly.
-
-### What You'll Need to Customize
-
-If you decide to fork or use this repository, you'll need to customize several key areas:
-
-- **KeePassXC database** - Set up your own password manager with the entries this config expects
-- **Package lists** - Review `home/.chezmoidata/packages.yaml` for essential packages and machine-specific brewfiles for additional packages
-- **Personal services** - Remove ChronoSync, Syncthing, or other personal workflow tools
-- **SSH/Git configuration** - Update for your own accounts and preferences
-- **Network configurations** - Remove personal hosts file management
-
-### Initial Setup Variables
-When you first run chezmoi, you'll be prompted for:
-- **Full name** - Used in Git configuration and system setup
-- **GitHub username** - For Git configuration and script environment
-- **GitHub emails** - Separate emails for default and work repositories
-- **KeePassXC database path** - Location of your password database file
-- **Microsoft email** (optional) - Enables subscription-based Microsoft app installations
-- **Machine tags** - Choose from: ai, dev, personal, work, etc.
-
-Tags control which scripts run and which tools get installed. For example, "dev" installs NVM, conda, rust, and others, while "ai" installs additional ML tools.
+**Development focus:** Cloud (AWS, Azure), AI/ML, macOS-specific tools

@@ -2,9 +2,9 @@
 .DS_Store
 
 # AI
-.claude/
+.claude/*
+!.claude/commands/
 .continue/
-.serena/
 PROJECT_REVIEW.md
 
 # Syncthing

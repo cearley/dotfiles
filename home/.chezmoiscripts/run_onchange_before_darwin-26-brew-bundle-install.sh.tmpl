@@ -8,9 +8,9 @@ if ! require_tools brew scutil; then
 fi
 
 # This script installs additional packages using Homebrew based on the specific computer name.
-# 
+#
 # Maintenance: Update brewfiles by periodically running:
-# brew bundle dump --file=$HOME/.brewfiles/current --force
+# brew bundle dump --file=$HOME/Brewfile --force
 
 {{ $brewfilePath := includeTemplate "machine-brewfile-path" . }}
 {{- if and ($brewfilePath) (stat $brewfilePath) -}}
