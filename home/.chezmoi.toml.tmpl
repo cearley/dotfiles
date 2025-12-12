@@ -6,6 +6,19 @@
 {{- $gh_commit_email_primary_work := promptStringOnce . "gh_commit_email_primary_work" "GitHub commit email address (Primary work)" -}}
 {{- $microsoft_email := promptStringOnce . "microsoft_email" "Microsoft email address (optional, press enter to skip)" "" -}}
 
+{{- /* GitHub Packages configuration (all optional) */ -}}
+{{- $gh_packages_owner := promptStringOnce . "gh_packages_owner" "GitHub Packages owner/org (optional, press enter to skip all package managers)" "" -}}
+{{- $gh_npm_registry := "" -}}
+{{- $gh_nuget_source := "" -}}
+{{- $gh_maven_repository := "" -}}
+{{- $gh_pip_index := "" -}}
+{{- if ne $gh_packages_owner "" -}}
+{{-   $gh_npm_registry = promptStringOnce . "gh_npm_registry" "npm registry URL (optional, e.g., npm.pkg.github.com)" "" -}}
+{{-   $gh_nuget_source = promptStringOnce . "gh_nuget_source" "NuGet source URL (optional)" "" -}}
+{{-   $gh_maven_repository = promptStringOnce . "gh_maven_repository" "Maven repository URL (optional)" "" -}}
+{{-   $gh_pip_index = promptStringOnce . "gh_pip_index" "pip index URL (optional)" "" -}}
+{{- end -}}
+
 {{- $aws_secrets_manager_profile := promptStringOnce . "aws_secrets_manager_profile" "AWS Secrets Manager profile name" "default" -}}
 {{- $aws_secrets_manager_region := promptStringOnce . "aws_secrets_manager_region" "AWS Secrets Manager region" "us-east-1" -}}
 {{- $keepassxc_db := promptStringOnce . "keepassxc_db" "keepassxc database (Absolute path - Can be provided later)" -}}
@@ -22,6 +35,11 @@ fullname = {{ $fullname | quote }}
 gh_commit_email = {{ $gh_commit_email_default | quote }}
 gh_commit_email_primary_work = {{ $gh_commit_email_primary_work | quote }}
 gh_username = {{ $gh_username | quote }}
+gh_packages_owner = {{ $gh_packages_owner | quote }}
+gh_npm_registry = {{ $gh_npm_registry | quote }}
+gh_nuget_source = {{ $gh_nuget_source | quote }}
+gh_maven_repository = {{ $gh_maven_repository | quote }}
+gh_pip_index = {{ $gh_pip_index | quote }}
 keepassxc_db = {{ $keepassxc_db | quote }}
 has_keepassxc_db = {{ if and (ne $keepassxc_db "") (stat $keepassxc_db) }}true{{ else }}false{{ end }}
 microsoft_email = {{ $microsoft_email | quote }}

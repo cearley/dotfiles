@@ -1,0 +1,22 @@
+﻿{{- if and (has "dev" .tags) .has_keepassxc_db -}}
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+{{- if and (ne .gh_packages_owner "") (ne .gh_nuget_source "") }}
+    <add key="github" value="{{ .gh_nuget_source }}" />
+{{- end }}
+  </packageSources>
+  <activePackageSource>
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </activePackageSource>
+{{- if and (ne .gh_packages_owner "") (ne .gh_nuget_source "") }}
+  <packageSourceCredentials>
+    <github>
+      <add key="Username" value="{{ .gh_username }}" />
+      <add key="ClearTextPassword" value="{{ keepassxcAttribute "GitHub" "Access Token" }}" />
+    </github>
+  </packageSourceCredentials>
+{{- end }}
+</configuration>
+{{- end -}}

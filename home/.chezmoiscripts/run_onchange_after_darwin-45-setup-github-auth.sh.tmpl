@@ -12,8 +12,12 @@ fi
 
 set -e
 
+# Check if GITHUB_TOKEN is available in environment (set by .zsh_secrets)
+GITHUB_TOKEN_IN_ENV="${GITHUB_TOKEN:-}"
+
+# Get credentials from KeePassXC
 GITHUB_USERNAME={{ .gh_username | quote }}
-GITHUB_TOKEN={{ keepassxcAttribute "GitHub" "Access Token" | quote }}
+GH_PAT={{ keepassxcAttribute "GitHub" "Access Token" | quote }}
 
 print_message "info" "Setting up GitHub authentication..."
 
@@ -29,39 +33,112 @@ setup_git_credentials() {
     # Pre-populate the GitHub token in macOS Keychain to avoid password prompt
     print_message "info" "Storing GitHub token in macOS Keychain"
     printf "protocol=https\nhost=github.com\nusername=%s\npassword=%s\n" \
-        "$GITHUB_USERNAME" "$GITHUB_TOKEN" | git credential approve
+        "$GITHUB_USERNAME" "$GH_PAT" | git credential approve
 
     print_message "success" "Git credential helper configured and token stored in Keychain"
 }
 
 setup_ghcr_login() {
     print_message "info" "Logging into GitHub Container Registry (GHCR)"
-    
-    # Login to GHCR using the token
-    echo "$GITHUB_TOKEN" | docker login ghcr.io --username "$GITHUB_USERNAME" --password-stdin
-    
+
+    # Login to GHCR using the token from KeePassXC
+    echo "$GH_PAT" | docker login ghcr.io --username "$GITHUB_USERNAME" --password-stdin
+
     print_message "success" "Successfully logged into GHCR"
 }
 
 setup_gh_cli() {
     print_message "info" "Configuring GitHub CLI authentication"
-    
-    # Set up gh CLI authentication using the token
-    echo "$GITHUB_TOKEN" | gh auth login --with-token
-    
-    print_message "success" "GitHub CLI authentication configured"
+
+    # Prefer GITHUB_TOKEN environment variable (set in .zsh_secrets)
+    # Fall back to gh auth login if GITHUB_TOKEN is not available in environment
+    if [ -n "$GITHUB_TOKEN_IN_ENV" ]; then
+        print_message "success" "GitHub CLI will use GITHUB_TOKEN environment variable"
+    else
+        print_message "warning" "GITHUB_TOKEN not set in environment, falling back to gh auth login"
+        print_message "tip" "Note: gh auth login only works for gh CLI, not other tools"
+        echo "$GH_PAT" | gh auth login --with-token
+        print_message "success" "GitHub CLI authentication configured via gh auth login"
+    fi
+}
+
+setup_npm_github() {
+    {{- if and (ne .gh_packages_owner "") (ne .gh_npm_registry "") }}
+    print_message "info" "Configuring npm for GitHub Packages"
+
+    # Note: .npmrc is created/updated by template file private_dot_npmrc.tmpl
+    # This function validates the configuration is working
+    if [ -f "$HOME/.npmrc" ]; then
+        print_message "success" "npm configured for GitHub Packages"
+    else
+        print_message "warning" "npm configuration file not found (will be created by chezmoi)"
+    fi
+    {{- else }}
+    print_message "skip" "npm GitHub Packages not configured (skipping)"
+    {{- end }}
+}
+
+setup_nuget_github() {
+    {{- if and (ne .gh_packages_owner "") (ne .gh_nuget_source "") }}
+    print_message "info" "Configuring NuGet for GitHub Packages"
+
+    # Note: NuGet.Config is created/updated by template file
+    if [ -f "$HOME/.nuget/NuGet/NuGet.Config" ]; then
+        print_message "success" "NuGet configured for GitHub Packages"
+    else
+        print_message "warning" "NuGet configuration file not found (will be created by chezmoi)"
+    fi
+    {{- else }}
+    print_message "skip" "NuGet GitHub Packages not configured (skipping)"
+    {{- end }}
+}
+
+setup_maven_github() {
+    {{- if and (ne .gh_packages_owner "") (ne .gh_maven_repository "") }}
+    print_message "info" "Configuring Maven for GitHub Packages"
+
+    # Note: settings.xml is created/updated by template file
+    if [ -f "$HOME/.m2/settings.xml" ]; then
+        print_message "success" "Maven configured for GitHub Packages"
+    else
+        print_message "warning" "Maven configuration file not found (will be created by chezmoi)"
+    fi
+    {{- else }}
+    print_message "skip" "Maven GitHub Packages not configured (skipping)"
+    {{- end }}
+}
+
+setup_pip_github() {
+    {{- if and (ne .gh_packages_owner "") (ne .gh_pip_index "") }}
+    print_message "info" "Configuring pip for GitHub Packages"
+
+    # Note: pip.conf is created/updated by template file
+    if [ -f "$HOME/.config/pip/pip.conf" ]; then
+        print_message "success" "pip configured for GitHub Packages"
+    else
+        print_message "warning" "pip configuration file not found (will be created by chezmoi)"
+    fi
+    {{- else }}
+    print_message "skip" "pip GitHub Packages not configured (skipping)"
+    {{- end }}
 }
 
 main() {
     # Set up git credentials
     setup_git_credentials
-    
+
     # Set up GHCR login
     setup_ghcr_login
-    
+
     # Set up GitHub CLI
     setup_gh_cli
-    
+
+    # Set up package managers (conditional - only if configured)
+    setup_npm_github
+    setup_nuget_github
+    setup_maven_github
+    setup_pip_github
+
     print_message "success" "GitHub authentication setup completed successfully"
 }
 

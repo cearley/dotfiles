@@ -1,5 +1,10 @@
-{{ if .has_keepassxc_db -}}
-@OWNER:registry=https://npm.pkg.github.com/
-//npm.pkg.github.com/:_authToken={{ keepassxcAttribute "GitHub" "Access Token" }}
-@lime-energy:registry=https://npm.pkg.github.com/
-{{ end -}}
+{{- if and .has_keepassxc_db (ne .gh_packages_owner "") (ne .gh_npm_registry "") -}}
+//{{ .gh_npm_registry }}/:_authToken={{ keepassxcAttribute "GitHub" "Access Token" }}
+@{{ .gh_packages_owner }}:registry=https://{{ .gh_npm_registry }}
+{{- end }}
+{{- if and .has_keepassxc_db (ne .gh_packages_owner "") (ne .gh_npm_registry "") }}
+
+# To add additional GitHub orgs (e.g., @{{ .gh_username }}), add lines like:
+# @{{ .gh_username }}:registry=https://{{ .gh_npm_registry }}
+# Note: Uses the same auth token configured above
+{{- end -}}

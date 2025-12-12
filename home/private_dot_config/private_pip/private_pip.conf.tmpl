@@ -1,0 +1,4 @@
+{{- if and .has_keepassxc_db (ne .gh_packages_owner "") (ne .gh_pip_index "") -}}
+[global]
+extra-index-url = https://{{ .gh_username }}:{{ keepassxcAttribute "GitHub" "Access Token" }}@{{ .gh_pip_index }}
+{{ end -}}
