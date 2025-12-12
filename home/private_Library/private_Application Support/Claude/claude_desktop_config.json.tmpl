@@ -1,6 +1,31 @@
 {{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
 {
   "mcpServers": {
+    "aws-api": {
+      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
+      "args": [
+        "awslabs.aws-api-mcp-server@latest"
+      ],
+      "env": {
+        "AWS_REGION": "us-west-2"
+      }
+    },
+    "aws-diagram": {
+      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
+      "args": [
+        "--with",
+        "sarif-om,jschema_to_python",
+        "awslabs.aws-diagram-mcp-server@latest"
+      ]
+    },
+    "aws-knowledge": {
+      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
+      "args": [
+        "fastmcp",
+        "run",
+        "https://knowledge-mcp.global.api.aws"
+      ]
+    },
     "basic-memory": {
       "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
       "args": [
@@ -8,21 +33,43 @@
         "mcp"
       ]
     },
-    "gemini-cli": {
-      "command": "npx",
-      "args": ["-y", "gemini-mcp-tool"]
-    },
-    "gmail": {
-      "command": "npx",
+    "bedrock-agentcore": {
+      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
       "args": [
-        "@gongrzhe/server-gmail-autoauth-mcp"
-      ]
+        "awslabs.amazon-bedrock-agentcore-mcp-server@latest"
+      ],
+      "env": {
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
     },
     "fulcrum": {
       "command": "/usr/local/share/dotnet/dotnet",
       "args": [
         "/Users/craig/work/FulcrumMcpServer/FulcrumMcpServer.Console/bin/Release/net8.0/FulcrumMcpServer.Console.dll",
         "mcp"
+      ]
+    },
+    "fulcrum-debug": {
+      "command": "/usr/local/share/dotnet/dotnet",
+      "args": [
+        "/Users/craig/work/FulcrumMcpServer/FulcrumMcpServer.Console/bin/Debug/net8.0/FulcrumMcpServer.Console.dll",
+        "mcp"
+      ],
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
+    },
+    "gemini-cli": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "gemini-mcp-tool"
+      ]
+    },
+    "gmail": {
+      "command": "npx",
+      "args": [
+        "@gongrzhe/server-gmail-autoauth-mcp"
       ]
     },
     "jetbrains": {
@@ -32,38 +79,17 @@
         "@jetbrains/mcp-proxy"
       ]
     },
-    "aws-api": {
-      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
-      "args": ["awslabs.aws-api-mcp-server@latest"],
-      "env": {
-        "AWS_REGION": "us-west-2"
-      }
-    },
-    "aws-knowledge": {
-      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
-      "args": ["fastmcp", "run", "https://knowledge-mcp.global.api.aws"]
-    },
-    "bedrock-agentcore": {
-      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
-      "args": ["awslabs.amazon-bedrock-agentcore-mcp-server@latest"],
-      "env": {
-        "FASTMCP_LOG_LEVEL": "ERROR"
-      }
-    },
     "strands-agents": {
       "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
-      "args": ["strands-agents-mcp-server"],
+      "args": [
+        "strands-agents-mcp-server"
+      ],
       "env": {
         "FASTMCP_LOG_LEVEL": "INFO"
       },
-      "autoApprove": ["search_docs", "fetch_doc"]
-    },
-    "aws-diagram": {
-      "command": "{{- .chezmoi.homeDir -}}/.local/bin/uvx",
-      "args": [
-        "--with",
-        "sarif-om,jschema_to_python",
-        "awslabs.aws-diagram-mcp-server@latest"
+      "autoApprove": [
+        "search_docs",
+        "fetch_doc"
       ]
     }
   }
