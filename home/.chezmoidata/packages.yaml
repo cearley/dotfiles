@@ -12,6 +12,7 @@ packages:
       - 'atuin'
       - 'awscli'
       - 'bat'
+      - 'chezmoi'
       - 'fzf'
       - 'git'
       - 'jq'
@@ -109,6 +110,7 @@ packages:
       - 'basicmachines-co/basic-memory/basic-memory'
       casks:
       - 'claude'
+      - 'jan'
       - 'lm-studio'
       - 'ollama-app'
       mas:
@@ -121,6 +123,7 @@ packages:
       - 'pandoc'
       - 'pdfly'
       casks:
+      - 'basictex'
       - 'cursor'
       - 'r-app'
       - 'rstudio'
@@ -146,6 +149,7 @@ packages:
       mas:
       - '"Microsoft Excel", id: 462058435'
       - '"Microsoft Outlook", id: 985367838'
+      - '"Microsoft Word", id: 462054704'
       - '"Numbers", id: 409203825'
       - '"OneDrive", id: 823766827'
 

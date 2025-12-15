@@ -1,3 +1,4 @@
+tap "basicmachines-co/basic-memory"
 tap "buo/cask-upgrade"
 tap "codeclimate/formulae"
 tap "isen-ng/dotnet-sdk-versions"
@@ -6,7 +7,6 @@ tap "microsoft/mssql-release"
 brew "ack"
 brew "act"
 brew "openssl@3"
-brew "sqlite"
 brew "aria2"
 brew "atuin"
 brew "aws-sam-cli"
@@ -18,10 +18,10 @@ brew "cabextract"
 brew "cdrtools"
 brew "cfn-lint"
 brew "checkmake"
+brew "chezmoi"
 brew "csvkit"
 brew "dagger"
 brew "direnv"
-brew "displayplacer"
 brew "frum"
 brew "fzf"
 brew "gh"
@@ -51,6 +51,7 @@ brew "tree"
 brew "vips"
 brew "wimlib"
 brew "zoxide"
+brew "basicmachines-co/basic-memory/basic-memory"
 brew "localstack/tap/localstack-cli"
 brew "microsoft/mssql-release/msodbcsql18"
 brew "microsoft/mssql-release/mssql-tools18"
@@ -64,6 +65,7 @@ cask "chronosync"
 cask "claude"
 cask "cryptomator"
 cask "db-browser-for-sqlite"
+cask "discord"
 cask "docker-desktop"
 cask "dotnet-sdk3"
 cask "dotnet-sdk3-1-400"
@@ -82,6 +84,7 @@ cask "google-drive"
 cask "grammarly-desktop"
 cask "grandperspective"
 cask "iterm2"
+cask "jan"
 cask "jetbrains-toolbox"
 cask "jiggler"
 cask "jordanbaird-ice"
@@ -132,6 +135,7 @@ mas "Kindle", id: 302584613
 mas "Memory Diag", id: 748212890
 mas "Microsoft Excel", id: 462058435
 mas "Microsoft Outlook", id: 985367838
+mas "Microsoft Word", id: 462054704
 mas "MonitorControlLite", id: 1595464182
 mas "Numbers", id: 409203825
 mas "OneDrive", id: 823766827
@@ -145,8 +149,6 @@ mas "Tabs Saver for Safari", id: 1440006971
 mas "Tabs Switcher", id: 1406718335
 mas "The Unarchiver", id: 425424353
 mas "Timery", id: 1425368544
-mas "Under My Roof", id: 1524335878
-mas "Windows App", id: 1295203466
 mas "WireGuard", id: 1451685025
 vscode "2guys1account.quackrack-cursor"
 vscode "adrianwilczynski.libman"
