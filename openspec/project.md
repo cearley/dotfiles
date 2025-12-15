@@ -120,8 +120,8 @@ Uses non-standard chezmoi layout with `home/` as root (defined in `.chezmoiroot`
 Centralized, extensible machine-specific settings:
 
 **Components:**
-1. **`machines.yaml`**: Machine-specific settings with pattern-based substring matching
-2. **`computer-name` template**: Cross-platform machine name detection (macOS/Linux/Windows)
+1. **`config.yaml`**: Machine-specific settings with pattern-based substring matching
+2. **`machine-name` template**: Cross-platform machine name detection (macOS/Linux/Windows)
 3. **`machine-config` template**: Generic lookup supporting any setting or returning matched key
 4. **`machine-settings` template**: Returns all machine settings as a JSON dict for efficient property access
 
@@ -139,7 +139,7 @@ Centralized, extensible machine-specific settings:
 ```
 
 **Adding New Properties:**
-Simply add to `machines.yaml` - automatically available via `$settings.property_name`:
+Simply add to `config.yaml` - automatically available via `$settings.property_name`:
 ```yaml
 MacBook Pro:
   brewfile: mbp-brewfile
