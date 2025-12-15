@@ -6,15 +6,15 @@ The machine configuration system provides centralized, extensible machine-specif
 ## Requirements
 
 ### Requirement: Machine Data Storage
-Machine-specific settings SHALL be stored in `home/.chezmoidata/machines.yaml` as a static YAML file.
+Machine-specific settings SHALL be stored in `home/.chezmoidata/config.yaml` as a static YAML file.
 
 #### Scenario: Machine settings definition
-- **WHEN** a new machine "MacBook Pro" is added to `machines.yaml`
+- **WHEN** a new machine "MacBook Pro" is added to `config.yaml`
 - **THEN** the file SHALL contain nested YAML properties for that machine
 - **AND** SHALL support arbitrary key-value pairs
 
 #### Scenario: Nested property support
-- **WHEN** `machines.yaml` contains nested properties like `keepassxc_entries.ssh`
+- **WHEN** `config.yaml` contains nested properties like `keepassxc_entries.ssh`
 - **THEN** templates SHALL be able to access nested values using dot-notation
 
 ### Requirement: Pattern-Based Machine Detection
@@ -27,7 +27,7 @@ The system SHALL match machine names using substring pattern matching.
 
 #### Scenario: Multiple pattern match
 - **WHEN** multiple patterns could match a machine name
-- **THEN** the first matching pattern in `machines.yaml` SHALL be used
+- **THEN** the first matching pattern in `config.yaml` SHALL be used
 
 #### Scenario: No pattern match
 - **WHEN** no pattern matches the computer name
@@ -39,16 +39,16 @@ The system SHALL detect machine names across macOS, Linux, and Windows platforms
 
 #### Scenario: macOS machine name detection
 - **WHEN** running on macOS
-- **THEN** the `computer-name` template SHALL use `scutil --get "ComputerName"`
+- **THEN** the `machine-name` template SHALL use `scutil --get "ComputerName"`
 - **AND** SHALL return the user-visible computer name
 
 #### Scenario: Linux machine name detection
 - **WHEN** running on Linux
-- **THEN** the `computer-name` template SHALL use `hostnamectl` to get the static hostname
+- **THEN** the `machine-name` template SHALL use `hostnamectl` to get the static hostname
 
 #### Scenario: Windows machine name detection
 - **WHEN** running on Windows
-- **THEN** the `computer-name` template SHALL use PowerShell DNS to get the hostname
+- **THEN** the `machine-name` template SHALL use PowerShell DNS to get the hostname
 
 ### Requirement: Generic Configuration Lookup
 The `machine-config` template SHALL provide a single source of truth for all machine-specific lookups.
@@ -93,7 +93,7 @@ The system SHALL provide a `machine-settings` template that returns all machine 
 
 #### Scenario: All properties included
 - **WHEN** a machine pattern matches
-- **THEN** the returned dict SHALL contain all properties defined for that machine in `machines.yaml`
+- **THEN** the returned dict SHALL contain all properties defined for that machine in `config.yaml`
 - **AND** SHALL preserve nested structures (e.g., `keepassxc_entries`)
 
 #### Scenario: Special machine key property
@@ -174,26 +174,26 @@ Templates using machine settings SHALL follow a consistent pattern for dict retr
 Adding new machine-specific properties SHALL NOT require changes to templates.
 
 #### Scenario: New property addition
-- **WHEN** a new property `ssh_key_id` is added to a machine in `machines.yaml`
+- **WHEN** a new property `ssh_key_id` is added to a machine in `config.yaml`
 - **THEN** templates can immediately access it via `machine-config`
 - **AND** SHALL NOT require modifications to existing templates
 
 #### Scenario: Backward compatibility
-- **WHEN** a new property is added to `machines.yaml`
+- **WHEN** a new property is added to `config.yaml`
 - **THEN** existing machines without that property SHALL return empty string
 - **AND** SHALL continue to function normally
 
 ### Requirement: Static Data File Requirement
-The `machines.yaml` file SHALL be a static file, not a template.
+The `config.yaml` file SHALL be a static file, not a template.
 
 #### Scenario: Template engine dependency
 - **WHEN** chezmoi's template engine initializes
-- **THEN** `machines.yaml` MUST exist and be readable
+- **THEN** `config.yaml` MUST exist and be readable
 - **AND** SHALL NOT have a `.tmpl` suffix
 
 #### Scenario: Data file immutability during templating
 - **WHEN** templates are being executed
-- **THEN** `machines.yaml` SHALL NOT be modified
+- **THEN** `config.yaml` SHALL NOT be modified
 - **AND** SHALL provide consistent data throughout the templating process
 
 ## Design Decisions

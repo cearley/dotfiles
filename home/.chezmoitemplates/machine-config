@@ -1,7 +1,7 @@
-{{- /* Generic machine configuration lookup from machines.yaml
+{{- /* Generic machine configuration lookup from config.yaml
 
-     Uses the computer-name template to get the current computer name,
-     matches that name against patterns in machines.yaml, and returns:
+     Uses the machine-name template to get the current computer name,
+     matches that name against patterns in config.yaml, and returns:
      - A specific setting value (if 'setting' parameter provided)
      - The matched machine pattern key (if 'return_key' is true)
 
@@ -28,10 +28,10 @@
 {{- if hasKey . "return_key" -}}
   {{- $returnKey = .return_key -}}
 {{- end -}}
-{{- $computerName := includeTemplate "computer-name" . -}}
+{{- $computerName := includeTemplate "machine-name" . -}}
 {{- $result := "" -}}
 
-{{- /* Find matching machine pattern in machines.yaml */ -}}
+{{- /* Find matching machine pattern in config.yaml */ -}}
 {{- range $pattern, $config := . -}}
   {{- /* Skip non-machine keys (chezmoi and our parameters) */ -}}
   {{- if and (ne $pattern "chezmoi") (ne $pattern "setting") (ne $pattern "return_key") (contains $pattern $computerName) -}}

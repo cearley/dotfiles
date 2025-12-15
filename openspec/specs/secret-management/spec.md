@@ -46,7 +46,7 @@ The system SHALL support machine-specific KeePassXC entry names via the machine 
 #### Scenario: Shared KeePassXC database
 - **WHEN** multiple machines share the same KeePassXC database
 - **THEN** each machine MAY use different entry names for the same logical credential type
-- **AND** SHALL map entry names via `machines.yaml` configuration
+- **AND** SHALL map entry names via `config.yaml` configuration
 
 ### Requirement: Template-Time Secret Injection
 Secrets SHALL be injected during template execution, not stored in target files.

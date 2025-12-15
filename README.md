@@ -54,8 +54,8 @@ This automatically installs all dependencies (chezmoi, Git, Homebrew, KeePassXC,
 ## Key Features
 
 ### Machine Configuration System
-- **Pattern-based detection** - Automatically detects machine type via `machines.yaml`
-- **Reusable templates** - Cross-platform `computer-name` and `machine-config` templates
+- **Pattern-based detection** - Automatically detects machine type via `config.yaml`
+- **Reusable templates** - Cross-platform `machine-name` and `machine-config` templates
 - **Dot-notation support** - Access nested settings (e.g., `keepassxc_entries.ssh`)
 - **Extensible design** - Add new machine-specific properties without template changes
 
@@ -115,7 +115,7 @@ This is a personal configuration reflecting specific workflows and preferences. 
 
 **What you'll need to customize:**
 - **KeePassXC database** - Set up your own with required entries
-- **Machine configurations** - Update `home/.chezmoidata/machines.yaml` for your machines
+- **Machine configurations** - Update `home/.chezmoidata/config.yaml` for your machines
 - **Package selections** - Review `home/.chezmoidata/packages.yaml`, `tools.yaml`, `sdks.yaml`, and machine-specific Brewfiles
 - **Personal tools** - Remove ChronoSync, Syncthing, custom hosts management, etc.
 - **SSH/Git settings** - Update for your accounts and preferences

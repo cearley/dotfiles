@@ -23,11 +23,11 @@ brewfile=""
 {{- else -}}
 brewfile=""
 {{- end }}
-{{ $computerName := includeTemplate "computer-name" . }}
+{{ $computerName := includeTemplate "machine-name" . }}
 
 if [[ ! -f $brewfile ]]; then
     print_message "skip" "Skipping additional package installation - brewfile not found for this machine ({{- $computerName -}})"
-    print_message "tip" "You can create a brewfile at '{{ .chezmoi.sourceDir }}/brewfiles/your-brewfile' and update '{{ .chezmoi.sourceDir }}/.chezmoidata/machines.yaml' to point to it."
+    print_message "tip" "You can create a brewfile at '{{ .chezmoi.sourceDir }}/brewfiles/your-brewfile' and update '{{ .chezmoi.sourceDir }}/.chezmoidata/config.yaml' to point to it."
     exit 0
 fi
 

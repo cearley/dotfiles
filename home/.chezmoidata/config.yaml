@@ -1,7 +1,7 @@
 # Machine-specific configuration
 # Maps machine name patterns to their corresponding machine settings
 #
-# The machine name is obtained from the `computer-name` template, which returns:
+# The machine name is obtained from the `machine-name` template, which returns:
 #   - macOS:   Output of `scutil --get "ComputerName"`
 #   - Linux:   Static hostname from hostnamectl
 #   - Windows: System hostname from DNS

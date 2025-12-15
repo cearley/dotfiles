@@ -20,7 +20,7 @@
 ### Essential Files
 - `openspec/project.md` - Complete project context, tech stack, conventions
 - `docs/command-reference.md` - Daily command cheat sheet
-- `home/.chezmoidata/machines.yaml` - Machine-specific settings
+- `home/.chezmoidata/config.yaml` - Machine-specific settings
 - `home/.chezmoidata/packages.yaml` - Homebrew package definitions
 - `home/.chezmoidata/tools.yaml` - UV tool definitions
 - `home/.chezmoidata/sdks.yaml` - SDKMAN SDK definitions

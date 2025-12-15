@@ -1,7 +1,7 @@
 {{- /* Returns all machine settings as a JSON-encoded dict.
 
      Uses machine-config to find the matched machine pattern,
-     then returns all settings from machines.yaml for that machine.
+     then returns all settings from config.yaml for that machine.
 
      Example:
        {{- $settings := includeTemplate "machine-settings" . | fromJson -}}
