@@ -1,4 +1,5 @@
-{{ $sshEntryName := includeTemplate "machine-keepassxc-entry" (merge (dict "entry" "ssh") .) }}
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{ $sshEntryName := $settings.keepassxc_entries.ssh }}
 {{- if and $sshEntryName .has_keepassxc_db -}}
 {{- keepassxcAttribute $sshEntryName "id_ed25519" -}}
 {{- end }}

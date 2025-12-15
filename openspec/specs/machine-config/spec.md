@@ -83,20 +83,92 @@ Templates SHALL support inclusion of other templates via `includeTemplate`.
 - **WHEN** calling `includeTemplate` with `merge (dict "key" "value") .`
 - **THEN** the included template SHALL have access to both the new parameter and the original context
 
-### Requirement: Convenience Wrapper Templates
-The system SHALL provide convenience wrappers for common machine lookups.
+### Requirement: Machine Settings Dict Template
+The system SHALL provide a `machine-settings` template that returns all machine configuration as a structured dict.
 
-#### Scenario: Brewfile path wrapper
-- **WHEN** `machine-brewfile-path` template is included
-- **THEN** it SHALL return the full path to the machine-specific Homebrew Brewfile
+#### Scenario: JSON-encoded output
+- **WHEN** `machine-settings` template is executed
+- **THEN** it SHALL return a valid JSON string
+- **AND** SHALL be deserializable via `fromJson`
 
-#### Scenario: Machine key name wrapper
-- **WHEN** `machine-key-name` template is included
-- **THEN** it SHALL return the matched machine pattern name from `machines.yaml`
+#### Scenario: All properties included
+- **WHEN** a machine pattern matches
+- **THEN** the returned dict SHALL contain all properties defined for that machine in `machines.yaml`
+- **AND** SHALL preserve nested structures (e.g., `keepassxc_entries`)
 
-#### Scenario: KeePassXC entry wrapper
-- **WHEN** `machine-keepassxc-entry` is called with entry type "ssh"
-- **THEN** it SHALL return the KeePassXC entry name for SSH from the matched machine's settings
+#### Scenario: Special machine key property
+- **WHEN** `machine-settings` returns a dict
+- **THEN** it SHALL include a `_machine_key` property
+- **AND** the value SHALL be the matched machine pattern name (e.g., "MacBook Pro")
+
+#### Scenario: Performance optimization
+- **WHEN** a template needs multiple machine properties
+- **THEN** using `machine-settings` SHALL require only one pattern matching operation
+- **AND** SHALL be more efficient than multiple individual `machine-config` calls
+
+#### Scenario: Backward compatibility with machine-config
+- **WHEN** templates use the new `machine-settings` approach
+- **THEN** the core `machine-config` template SHALL remain unchanged
+- **AND** SHALL continue to work for any existing direct usage
+
+#### Scenario: Machine settings dict retrieval
+- **WHEN** `machine-settings` template is included
+- **THEN** it SHALL return a JSON-encoded dict containing all machine settings
+- **AND** SHALL include a special `_machine_key` property with the matched machine pattern name
+
+#### Scenario: Dict deserialization and property access
+- **WHEN** the returned JSON is parsed with `fromJson`
+- **THEN** templates SHALL access properties using dot-notation
+- **AND** SHALL support nested properties like `keepassxc_entries.ssh`
+
+#### Scenario: Empty machine settings
+- **WHEN** no machine pattern matches the current computer name
+- **THEN** `machine-settings` SHALL return an empty JSON dict `{}`
+- **AND** property access SHALL return nil/empty values
+
+#### Scenario: Single template include for multiple settings
+- **WHEN** a template needs multiple machine properties
+- **THEN** it SHALL call `machine-settings` once
+- **AND** SHALL access all needed properties from the returned dict
+- **AND** SHALL NOT require multiple `includeTemplate` calls
+
+#### Scenario: Brewfile path construction
+- **WHEN** a template needs the Brewfile path
+- **THEN** it SHALL get settings via `machine-settings`
+- **AND** SHALL construct the path using `printf "%s/brewfiles/%s" .chezmoi.sourceDir $settings.brewfile`
+
+#### Scenario: KeePassXC entry retrieval
+- **WHEN** a template needs a KeePassXC entry name
+- **THEN** it SHALL get settings via `machine-settings`
+- **AND** SHALL access nested entries like `$settings.keepassxc_entries.ssh`
+
+#### Scenario: Machine pattern key retrieval
+- **WHEN** a template needs the matched machine pattern name
+- **THEN** it SHALL access `$settings._machine_key` from the returned dict
+- **AND** SHALL receive the same value as calling `machine-config` with `return_key: true`
+
+### Requirement: Call Site Pattern
+Templates using machine settings SHALL follow a consistent pattern for dict retrieval and property access.
+
+#### Scenario: Standard dict retrieval pattern
+- **WHEN** a template needs machine settings
+- **THEN** it SHALL use the pattern: `$settings := includeTemplate "machine-settings" . | fromJson`
+- **AND** SHALL check for property existence before using (e.g., `if $settings.brewfile`)
+
+#### Scenario: Property access pattern
+- **WHEN** accessing machine properties from the dict
+- **THEN** templates SHALL use dot-notation: `$settings.property_name`
+- **AND** SHALL use nested access for sub-properties: `$settings.parent.child`
+
+#### Scenario: Path construction pattern
+- **WHEN** constructing paths from machine settings
+- **THEN** templates SHALL use explicit path construction at call sites
+- **AND** SHALL NOT rely on pre-constructed paths from templates
+
+#### Scenario: Conditional usage pattern
+- **WHEN** machine settings may be absent
+- **THEN** templates SHALL check property existence: `if $settings.property_name`
+- **AND** SHALL gracefully handle empty/missing values
 
 ### Requirement: Extensibility Without Template Changes
 Adding new machine-specific properties SHALL NOT require changes to templates.

@@ -1,0 +1,35 @@
+{{- /* Returns all machine settings as a JSON-encoded dict.
+
+     Uses machine-config to find the matched machine pattern,
+     then returns all settings from machines.yaml for that machine.
+
+     Example:
+       {{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+       {{- $brewfile := $settings.brewfile -}}
+       {{- $sshEntry := $settings.keepassxc_entries.ssh -}}
+       {{- $machineKey := $settings._machine_key -}}
+
+     Returns empty dict {} if no machine matches.
+
+     Special property:
+       _machine_key: The matched machine pattern name (e.g., "MacBook Pro")
+*/ -}}
+{{- $result := dict -}}
+{{- $machineKey := includeTemplate "machine-config" (merge (dict "return_key" true) .) -}}
+
+{{- if $machineKey -}}
+  {{- /* Add the machine key itself as a special property */ -}}
+  {{- $_ := set $result "_machine_key" $machineKey -}}
+
+  {{- /* Iterate over root context to find matching machine and copy all properties */ -}}
+  {{- range $pattern, $config := . -}}
+    {{- /* Skip non-machine keys */ -}}
+    {{- if and (ne $pattern "chezmoi") (eq $pattern $machineKey) -}}
+      {{- range $key, $value := $config -}}
+        {{- $_ := set $result $key $value -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- toJson $result -}}

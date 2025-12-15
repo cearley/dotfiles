@@ -123,23 +123,31 @@ Centralized, extensible machine-specific settings:
 1. **`machines.yaml`**: Machine-specific settings with pattern-based substring matching
 2. **`computer-name` template**: Cross-platform machine name detection (macOS/Linux/Windows)
 3. **`machine-config` template**: Generic lookup supporting any setting or returning matched key
-4. **Convenience wrappers**: `machine-brewfile-path`, `machine-key-name`, `machine-keepassxc-entry`
+4. **`machine-settings` template**: Returns all machine settings as a JSON dict for efficient property access
 
 **Template Composition:**
 - Templates can include other templates via `includeTemplate`
 - DRY principle: shared logic in reusable components
-- Clean separation: detection → lookup → path construction
+- Single lookup per file: `machine-settings` returns all properties as a dict for efficient access
+
+**Usage Pattern:**
+```go-template
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $brewfile := $settings.brewfile -}}
+{{- $sshEntry := $settings.keepassxc_entries.ssh -}}
+{{- $machineKey := $settings._machine_key -}}
+```
 
 **Adding New Properties:**
-Simply add to `machines.yaml` - no template changes needed:
+Simply add to `machines.yaml` - automatically available via `$settings.property_name`:
 ```yaml
 MacBook Pro:
   brewfile: mbp-brewfile
   keepassxc_entries:
     ssh: SSH (MacBook Pro)
   # New properties work automatically:
-  # ssh_key_id: macbook_ed25519
-  # hostname_prefix: mbp
+  ssh_key_id: macbook_ed25519  # Access via: $settings.ssh_key_id
+  hostname_prefix: mbp         # Access via: $settings.hostname_prefix
 ```
 
 #### Package Management Strategy

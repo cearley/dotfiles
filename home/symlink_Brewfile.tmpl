@@ -1,4 +1,7 @@
-{{- $brewfilePath := includeTemplate "machine-brewfile-path" . -}}
-{{- if and ($brewfilePath) (stat $brewfilePath) -}}
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- if $settings.brewfile -}}
+{{- $brewfilePath := printf "%s/brewfiles/%s" .chezmoi.sourceDir $settings.brewfile -}}
+{{- if stat $brewfilePath -}}
 {{ $brewfilePath }}
+{{- end -}}
 {{- end -}}
