@@ -41,14 +41,14 @@
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       }
-    },
+    }{{- if stat (print .chezmoi.homeDir "/work/FulcrumMcpServer/FulcrumMcpServer.Console/bin/Release/net8.0/FulcrumMcpServer.Console.dll") }},
     "fulcrum": {
       "command": "/usr/local/share/dotnet/dotnet",
       "args": [
         "/Users/craig/work/FulcrumMcpServer/FulcrumMcpServer.Console/bin/Release/net8.0/FulcrumMcpServer.Console.dll",
         "mcp"
       ]
-    },
+    }{{- end }}{{- if stat (print .chezmoi.homeDir "/work/FulcrumMcpServer/FulcrumMcpServer.Console/bin/Debug/net8.0/FulcrumMcpServer.Console.dll") }},
     "fulcrum-debug": {
       "command": "/usr/local/share/dotnet/dotnet",
       "args": [
@@ -58,7 +58,7 @@
       "env": {
         "DOTNET_ENVIRONMENT": "Development"
       }
-    },
+    }{{- end }},
     "gemini-cli": {
       "command": "npx",
       "args": [
