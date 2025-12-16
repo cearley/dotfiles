@@ -9,9 +9,24 @@ fi
 
 print_message "info" "Configuring macOS system defaults..."
 
-# Set Terminal default font to MesloLGSNF size 13
-defaults write com.apple.terminal "Default Window Settings" -string "MesloLGSNF-Regular 13"
-defaults write com.apple.terminal "Startup Window Settings" -string "MesloLGSNF-Regular 13"
+# Set Terminal font to MesloLGSNF size 13 for all profiles
+osascript <<'APPLESCRIPT' 2>/dev/null
+tell application "Terminal"
+    set ProfileNames to name of every settings set
+    repeat with ProfileName in ProfileNames
+        tell settings set ProfileName
+            set font name to "MesloLGSNF-Regular"
+            set font size to 13
+        end tell
+    end repeat
+end tell
+APPLESCRIPT
+
+if [ $? -eq 0 ]; then
+    print_message "success" "Terminal.app fonts set to MesloLGSNF-Regular 13 for all profiles"
+else
+    print_message "warning" "Could not configure Terminal.app fonts"
+fi
 
 {{- if has "iterm2" .packages.darwin.core.casks }}
 # iTerm2: Enable 'Close windows when quitting an application'
@@ -29,13 +44,15 @@ defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile -b
 defaults write com.googlecode.iterm2 NoSyncNeverRemindPrefsChangesLostForFile_selection -int 2
 
 # iTerm2: Set default profile font to MesloLGSNF size 13
-# Note: This requires iTerm2 to be quit first, otherwise changes may be overwritten
-if pgrep -q "iTerm2"; then
-    print_message "warning" "iTerm2 is running - font changes may not persist until restart"
-fi
+ITERM_PLIST=~/Library/Preferences/com.googlecode.iterm2.plist
 
-if /usr/libexec/PlistBuddy -c "Set 'New Bookmarks':0:'Normal Font' 'MesloLGSNF-Regular 13'" ~/Library/Preferences/com.googlecode.iterm2.plist 2>/dev/null; then
-    print_message "success" "iTerm2 font set to MesloLGSNF-Regular 13"
+if /usr/libexec/PlistBuddy -c "Set 'New Bookmarks':0:'Normal Font' 'MesloLGSNF-Regular 13'" "$ITERM_PLIST" 2>/dev/null; then
+    if pgrep -q "iTerm2"; then
+        print_message "warning" "iTerm2 font configured, but restart required for changes to persist"
+        print_message "tip" "Quit and reopen iTerm2 to apply font changes"
+    else
+        print_message "success" "iTerm2 font set to MesloLGSNF-Regular 13"
+    fi
 else
     print_message "warning" "Could not set iTerm2 font (profile may not exist yet)"
 fi
