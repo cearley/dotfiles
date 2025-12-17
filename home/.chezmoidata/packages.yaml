@@ -80,6 +80,7 @@ packages:
       - 'go'
       - 'gopls'
       - 'graphviz'
+      - 'http-server'
       - 'hugo'
       - 'localstack/tap/localstack-cli'
       - 'lynis'
