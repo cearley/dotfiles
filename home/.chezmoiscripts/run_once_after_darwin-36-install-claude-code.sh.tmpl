@@ -1,0 +1,40 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+#!/bin/bash
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools curl; then
+    exit 1
+fi
+
+# Check if Claude Code is already installed
+if command -v claude &> /dev/null; then
+    CLAUDE_VERSION=$(claude --version 2>/dev/null || echo "unknown")
+    print_message "skip" "Skipping Claude Code installation: already installed ($CLAUDE_VERSION)"
+    exit 0
+fi
+
+print_message "info" "Installing Claude Code (native method)..."
+
+# Install Claude Code using the native installation method.
+# This is the recommended installation method from Anthropic.
+if curl -fsSL https://claude.ai/install.sh | bash; then
+    if command -v claude &> /dev/null; then
+        CLAUDE_VERSION=$(claude --version 2>/dev/null || echo "unknown")
+        print_message "success" "Claude Code installed successfully! Version: $CLAUDE_VERSION"
+        print_message "info" "Run 'claude' in your project directory to start using Claude Code"
+        print_message "tip" "Authenticate with: claude (follow the prompts)"
+    else
+        print_message "error" "Installation completed but 'claude' command not found in PATH"
+        print_message "info" "You may need to restart your terminal or add ~/.local/bin to your PATH"
+        exit 1
+    fi
+else
+    print_message "error" "Failed to install Claude Code"
+    print_message "info" "Visit https://code.claude.com/docs/en/setup for troubleshooting"
+    exit 1
+fi
+
+{{ end -}}

@@ -207,7 +207,7 @@ nvm() {
 # Add zsh-functions to fpath and autoload all functions
 if [[ -d "$HOME/.local/share/zsh-functions" ]]; then
   fpath=( "$HOME/.local/share/zsh-functions/autoload" "${fpath[@]}" )
-  autoload -Uz "$HOME"/.local/share/zsh-functions/autoload/*
+  autoload -Uz brew-list-formulas gemini openspec
 fi
 
 {{ if has "ai" .tags -}}

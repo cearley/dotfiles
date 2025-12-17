@@ -109,8 +109,10 @@ packages:
       - 'basicmachines-co/basic-memory'
       brews:
       - 'basicmachines-co/basic-memory/basic-memory'
+      - 'qwen-code'
       casks:
       - 'claude'
+      - 'codex'
       - 'jan'
       - 'lm-studio'
       - 'ollama-app'

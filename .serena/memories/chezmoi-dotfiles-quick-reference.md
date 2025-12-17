@@ -66,6 +66,7 @@ For details on major system changes, see archived change proposals:
 - **26**: Machine-specific Brewfile (Package Management - Additional)
 - **30**: UV package manager (Environment Managers)
 - **35**: nvm (Environment Managers)
+- **36**: Claude Code (AI Development Tools - requires `ai` tag)
 - **45**: GitHub authentication (Environment Setup)
 - **80**: Microsoft Defender (System Configuration - Security)
 - **82**: Global Protect VPN (System Configuration - Work)
