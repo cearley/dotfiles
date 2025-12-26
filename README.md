@@ -10,24 +10,10 @@ Personal dotfiles and macOS development environment, managed with [chezmoi](http
 
 ## Table of Contents
 
-- [Why You Might Find This Useful](#why-you-might-find-this-useful)
 - [Quick Start](#quick-start)
 - [Key Features](#key-features)
 - [Using This Repository](#using-this-repository)
 - [Before Forking](#before-forking)
-
-## Why You Might Find This Useful
-
-This repository demonstrates several advanced chezmoi patterns for managing macOS dotfiles and development environments:
-
-- **Secure secret management** - KeePassXC integration with no hardcoded credentials
-- **Generic machine configuration system** - Data-driven, pattern-matched machine-specific settings
-- **Reusable template components** - DRY templating with `includeTemplate` for cross-platform support
-- **Shared utility functions** - Centralized script utilities for consistent error handling and messaging
-- **Tag-based execution** - Customize installations for different use cases (dev, personal, ai, work)
-- **Structured script execution** - Ordered, frequency-controlled scripts with 5-point spacing convention
-- **System-wide configuration** - Manage files outside home directory (`/etc/hosts`, system defaults)
-- **Comprehensive validation** - Automated checks for SSH keys, GitHub access, Homebrew installation
 
 ## Quick Start
 
@@ -62,7 +48,7 @@ This automatically installs all dependencies (chezmoi, Git, Homebrew, KeePassXC,
 ### Script Execution Framework
 Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_{os}-{order}-{description}.sh.tmpl`
 
-**Execution order** (5-point spacing for logical grouping):
+**Execution order** (10-point range grouping for logical categorization):
 - **00-09**: System Foundation (Rosetta 2)
 - **10-19**: Development Toolchains (Rust)
 - **20-29**: Package Management (SDKMAN, Homebrew bundles, SDKs, UV tools, machine-specific Brewfiles)
@@ -73,7 +59,6 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 ### Shared Utilities
 - **Location**: `home/scripts/shared-utils.sh`
 - **Functions**: `print_message()`, `command_exists()`, `require_tools()`, `download_file()`, `wait_for_app_installation()`, `prompt_ready()`, `is_icloud_signed_in()`, etc.
-- **Intuitive emojis**: 🔵 info, ✅ success, ⚠️ warning, ❌ error, ⏭️ skip, 💡 tip
 - **Consistent patterns**: All installation scripts use identical messaging and error handling
 
 ### Development Environment
@@ -124,6 +109,6 @@ This is a personal configuration reflecting specific workflows and preferences. 
 - Full name, GitHub username, GitHub emails
 - KeePassXC database path
 - Microsoft email (optional, for subscription app installs)
-- Machine tags (core, dev, ai, work, personal, datascience, mobile) - controls which tools get installed
+- Machine tags (core, dev, ai, work, personal, data-science, mobile) - controls which tools get installed
 
-**Development focus:** Cloud (AWS, Azure), AI/ML, macOS-specific tools
+**Development focus:** Programming, Cloud (AWS, Azure), AI/ML, macOS-specific tools

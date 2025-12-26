@@ -12,7 +12,7 @@
 ### Key Directories
 - **Specs**: `openspec/specs/` - Authoritative requirements and design
 - **Docs**: `docs/` - Command references and macOS utilities
-- **Scripts**: `home/.chezmoiscripts/` - Numbered setup scripts (5-point spacing)
+- **Scripts**: `home/.chezmoiscripts/` - Numbered setup scripts (10-point range grouping)
 - **Utilities**: `home/scripts/shared-utils.sh` - Common script functions
 - **Templates**: `home/.chezmoitemplates/` - Reusable template components
 - **Data**: `home/.chezmoidata/` - Static configuration files (packages.yaml, tools.yaml, sdks.yaml)
@@ -56,7 +56,7 @@ For details on major system changes, see archived change proposals:
 
 ## Quick Script Lookup
 
-### Script Execution Order (5-point spacing)
+### Script Execution Order (10-point range grouping)
 - **05**: Rosetta 2 (System Foundation)
 - **10**: Rust (Development Toolchains)
 - **20**: SDKMAN (Package Management - JVM)
