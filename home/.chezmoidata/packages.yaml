@@ -106,9 +106,7 @@ packages:
     # Optional AI packages (ai tag)
     ai:
       taps:
-      - 'basicmachines-co/basic-memory'
       brews:
-      - 'basicmachines-co/basic-memory/basic-memory'
       - 'qwen-code'
       casks:
       - 'claude'

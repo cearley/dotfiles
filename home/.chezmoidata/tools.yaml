@@ -1,6 +1,7 @@
 tools:
 
-  # AI tool (ai tag)
+  # AI tools (ai tag)
   ai:
+  - "basic-memory"
   - "claude-monitor"
   - "git+https://github.com/cearley/zsh-llm-suggestions"

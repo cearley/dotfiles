@@ -33,7 +33,23 @@
       "command": "uvx",
       "args": [
         "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server",
-        "--context", "ide-assistant", "--project", "{project_dir}"
+        "--context", "ide", "--project-from-cwd"
+      ]
+    },
+    "serena-claude-jetbrains": {
+      "description": "Semantic code analysis and intelligent IDE assistant",
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server",
+        "--context", "claude-code", "--project-from-cwd",
+        "--language-backend", "JetBrains"
+      ]
+    },
+    "whimsical": {
+      "description": "Enables the creation of Whimsical diagrams programmatically",
+      "command": "/Users/craig/.nvm/versions/node/v24.7.0/bin/node",
+      "args": [
+        "/Users/craig/work/whimsical-mcp-server/dist/index.js"
       ]
     },
     "aws-api": {
