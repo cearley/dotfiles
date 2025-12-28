@@ -4,4 +4,5 @@ tools:
   ai:
   - "basic-memory"
   - "claude-monitor"
+  - "git+https://github.com/cearley/claude-extend@latest"
   - "git+https://github.com/cearley/zsh-llm-suggestions"
