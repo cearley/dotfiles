@@ -157,7 +157,7 @@ The following scripts are currently implemented (as of baseline):
 - `20`: Install SDKMAN (Java SDK manager)
 - `23`: Brew bundle install essential packages from packages.yaml
 - `24`: Install SDKs via SDKMAN
-- `25`: Install UV tools from tools.yaml
+- `25`: Install UV tools from uv-tools.yaml
 - `26`: Brew bundle install machine-specific packages
 
 **Environment Managers (30-39):**

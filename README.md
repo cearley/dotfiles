@@ -65,8 +65,8 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 
 **Three-layer package management:**
 1. **Homebrew packages** (`packages.yaml`) - System packages, apps, CLI tools
-2. **UV tools** (`tools.yaml`) - Python CLI tools and utilities
-3. **SDKMAN SDKs** (`sdks.yaml`) - JVM ecosystem (Java, Gradle, Maven, Kotlin, Scala)
+2. **UV tools** (`uv-tools.yaml`) - Python CLI tools and utilities
+3. **SDKMAN SDKs** (`sdkman-sdks.yaml`) - JVM ecosystem (Java, Gradle, Maven, Kotlin, Scala)
 4. **Machine-specific Brewfiles** - Additional packages requiring confirmation
 
 **Environment managers:**
@@ -101,7 +101,7 @@ This is a personal configuration reflecting specific workflows and preferences. 
 **What you'll need to customize:**
 - **KeePassXC database** - Set up your own with required entries
 - **Machine configurations** - Update `home/.chezmoidata/config.yaml` for your machines
-- **Package selections** - Review `home/.chezmoidata/packages.yaml`, `tools.yaml`, `sdks.yaml`, and machine-specific Brewfiles
+- **Package selections** - Review `home/.chezmoidata/packages.yaml`, `uv-tools.yaml`, `sdkman-sdks.yaml`, and machine-specific Brewfiles
 - **Personal tools** - Remove ChronoSync, Syncthing, custom hosts management, etc.
 - **SSH/Git settings** - Update for your accounts and preferences
 

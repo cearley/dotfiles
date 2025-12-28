@@ -153,8 +153,8 @@ MacBook Pro:
 #### Package Management Strategy
 Three-layer approach:
 1. **Homebrew packages** (`packages.yaml`): Tag-based categories for system packages, apps, and CLI tools
-2. **UV tools** (`tools.yaml`): Tag-based Python CLI tools and utilities
-3. **SDKMAN SDKs** (`sdks.yaml`): JVM ecosystem SDKs and build tools (requires `dev` tag)
+2. **UV tools** (`uv-tools.yaml`): Tag-based Python CLI tools and utilities
+3. **SDKMAN SDKs** (`sdkman-sdks.yaml`): JVM ecosystem SDKs and build tools (requires `dev` tag)
 4. **Machine-specific Brewfiles**: Additional Homebrew packages requiring user confirmation
 
 Tags control installation scope:

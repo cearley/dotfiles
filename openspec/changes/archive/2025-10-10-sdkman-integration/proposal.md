@@ -1,5 +1,19 @@
 # Change: SDKMAN Integration for Java SDK Management
 
+## Migration Note (2025-12-28)
+
+As of 2025-12-28, the data file referenced in this proposal has been renamed for clarity:
+- `sdks.yaml` → `sdkman-sdks.yaml` (SDKMAN JVM SDKs)
+
+**Important discovery**: Chezmoi strips prefixes before hyphens in filenames, so:
+- `sdkman-sdks.yaml` → accessible as `.sdks` (not `.sdkman-sdks`)
+
+This means **no template syntax changes were required**. The renaming is purely for file organization and clarity.
+
+See `openspec/changes/archive/2025-12-28-rename-data-files-for-clarity/` for details.
+
+---
+
 ## Why
 The previous Java SDK management approach using jenv and manually installed Azul Zulu JDK had several limitations:
 - **Manual version management**: Required manual downloads and jenv configuration

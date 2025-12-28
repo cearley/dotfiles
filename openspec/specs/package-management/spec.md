@@ -258,10 +258,10 @@ The `uv` package manager SHALL be installed before UV tools are installed.
 - **THEN** the installation script SHALL skip reinstallation
 
 ### Requirement: UV Tool Definition
-UV tools SHALL be defined in `home/.chezmoidata/tools.yaml` organized by tag category.
+UV tools SHALL be defined in `home/.chezmoidata/uv-tools.yaml` organized by tag category.
 
 #### Scenario: Tool organization structure
-- **WHEN** tools are defined in `tools.yaml`
+- **WHEN** tools are defined in `uv-tools.yaml`
 - **THEN** the YAML structure SHALL include `tools.<category>` with lists of tool specifications
 
 #### Scenario: Tool specification formats
@@ -293,7 +293,7 @@ UV tools SHALL be installed via a `run_onchange_before` script at position 25.
 #### Scenario: Tool installation execution
 - **WHEN** the tool installation script runs
 - **THEN** it SHALL execute `uv tool install <tool>` for each selected tool
-- **AND** SHALL re-run whenever the script content or `tools.yaml` changes
+- **AND** SHALL re-run whenever the script content or `uv-tools.yaml` changes
 
 #### Scenario: Tool installation idempotency
 - **WHEN** a tool is already installed
@@ -305,22 +305,22 @@ UV tools SHALL be organized into the same logical categories as Homebrew package
 
 #### Scenario: AI tool category
 - **WHEN** a tool is AI-related (claude-monitor, zsh-llm-suggestions)
-- **THEN** it SHALL be placed in the `ai` category in `tools.yaml`
+- **THEN** it SHALL be placed in the `ai` category in `uv-tools.yaml`
 
 #### Scenario: Development tool category
 - **WHEN** a tool is development-related (linters, formatters, build tools)
-- **THEN** it SHALL be placed in the `dev` category in `tools.yaml`
+- **THEN** it SHALL be placed in the `dev` category in `uv-tools.yaml`
 
 #### Scenario: Core tool category
 - **WHEN** a tool is essential for basic operations
-- **THEN** it SHALL be placed in the `core` category in `tools.yaml`
+- **THEN** it SHALL be placed in the `core` category in `uv-tools.yaml`
 
 ### Requirement: Static UV Tools Data File
-The `tools.yaml` file SHALL be a static file, not a template.
+The `uv-tools.yaml` file SHALL be a static file, not a template.
 
 #### Scenario: Pre-template availability
 - **WHEN** chezmoi's template engine initializes
-- **THEN** `tools.yaml` MUST exist and be parseable
+- **THEN** `uv-tools.yaml` MUST exist and be parseable
 - **AND** SHALL NOT require template processing
 
 ## SDKMAN SDK Management
@@ -342,7 +342,7 @@ SDKMAN SHALL be installed before SDKs are installed, and only on machines with t
 - **THEN** the installation script SHALL skip reinstallation
 
 ### Requirement: SDK Definition
-SDKs SHALL be defined in `home/.chezmoidata/sdks.yaml` organized by platform and category.
+SDKs SHALL be defined in `home/.chezmoidata/sdkman-sdks.yaml` organized by platform and category.
 
 #### Scenario: Platform-based SDK organization
 - **WHEN** SDKs are defined for macOS
@@ -371,7 +371,7 @@ SDKs SHALL be installed via a `run_onchange_before` script at position 24.
 #### Scenario: SDK installation execution
 - **WHEN** the SDK installation script runs with `dev` tag
 - **THEN** it SHALL execute `sdk install <sdk> <version>` for each defined SDK
-- **AND** SHALL re-run whenever the script content or `sdks.yaml` changes
+- **AND** SHALL re-run whenever the script content or `sdkman-sdks.yaml` changes
 
 #### Scenario: SDK installation idempotency
 - **WHEN** an SDK version is already installed
@@ -400,14 +400,14 @@ SDKs SHALL be organized into logical categories, currently only `dev` is used.
 
 #### Scenario: Build tools
 - **WHEN** JVM build tools are needed (Liquibase, Gradle, Maven)
-- **THEN** they SHALL be placed in the `dev` category in `sdks.yaml`
+- **THEN** they SHALL be placed in the `dev` category in `sdkman-sdks.yaml`
 
 ### Requirement: Static SDK Data File
-The `sdks.yaml` file SHALL be a static file, not a template.
+The `sdkman-sdks.yaml` file SHALL be a static file, not a template.
 
 #### Scenario: Pre-template availability
 - **WHEN** chezmoi's template engine initializes
-- **THEN** `sdks.yaml` MUST exist and be parseable
+- **THEN** `sdkman-sdks.yaml` MUST exist and be parseable
 - **AND** SHALL NOT require template processing
 
 ## Script Execution Order
@@ -486,7 +486,7 @@ Separate Brewfiles per machine allow:
 - Brewfile symlink enables manual `brew bundle` commands
 
 ### Static Data Files
-Making package data files (`packages.yaml`, `tools.yaml`, `sdks.yaml`) static ensures:
+Making package data files (`packages.yaml`, `uv-tools.yaml`, `sdkman-sdks.yaml`) static ensures:
 - Available before template engine runs
 - Simple YAML editing without template syntax
 - Clear separation between data and logic
@@ -551,7 +551,7 @@ packages:
       # ... etc
 ```
 
-#### tools.yaml (UV)
+#### uv-tools.yaml (UV)
 ```yaml
 tools:
   core:
@@ -562,7 +562,7 @@ tools:
   # ... etc
 ```
 
-#### sdks.yaml (SDKMAN)
+#### sdkman-sdks.yaml (SDKMAN)
 ```yaml
 sdks:
   darwin:
@@ -579,6 +579,6 @@ sdks:
 | `run_once_before_darwin-20-install-sdkman.sh.tmpl` | 20 | Once | Install SDKMAN (requires `dev` tag) |
 | `run_onchange_before_darwin-23-install-packages.sh.tmpl` | 23 | On change | Install Homebrew packages from packages.yaml |
 | `run_onchange_before_darwin-24-install-sdks.sh.tmpl` | 24 | On change | Install SDKs via SDKMAN (requires `dev` tag) |
-| `run_onchange_before_darwin-25-install-tools.sh.tmpl` | 25 | On change | Install UV tools from tools.yaml |
+| `run_onchange_before_darwin-25-install-tools.sh.tmpl` | 25 | On change | Install UV tools from uv-tools.yaml |
 | `run_onchange_before_darwin-26-brew-bundle-install.sh.tmpl` | 26 | On change | Install machine-specific Homebrew packages |
 | `run_once_before_darwin-30-install-uv.sh.tmpl` | 30 | Once | Install UV package manager |

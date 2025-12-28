@@ -63,5 +63,7 @@ initial_prompt: ""
 project_name: "chezmoi"
 languages:
 - bash
+- go
 included_optional_tools: []
 encoding: utf-8
+fixed_tools: []

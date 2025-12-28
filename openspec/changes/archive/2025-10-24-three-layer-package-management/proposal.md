@@ -1,5 +1,21 @@
 # Change: Three-Layer Package Management System
 
+## Migration Note (2025-12-28)
+
+As of 2025-12-28, the data files referenced in this proposal have been renamed for clarity:
+- `tools.yaml` → `uv-tools.yaml` (UV Python CLI tools)
+- `sdks.yaml` → `sdkman-sdks.yaml` (SDKMAN JVM SDKs)
+
+**Important discovery**: Chezmoi strips prefixes before hyphens in filenames, so:
+- `uv-tools.yaml` → accessible as `.tools` (not `.uv-tools`)
+- `sdkman-sdks.yaml` → accessible as `.sdks` (not `.sdkman-sdks`)
+
+This means **no template syntax changes were required**. The renaming is purely for file organization and clarity.
+
+See `openspec/changes/archive/2025-12-28-rename-data-files-for-clarity/` for details.
+
+---
+
 ## Why
 The previous package management approach used only Homebrew for all package types, which had limitations:
 - **Ecosystem mismatch**: Python CLI tools installed via Homebrew instead of Python package managers
