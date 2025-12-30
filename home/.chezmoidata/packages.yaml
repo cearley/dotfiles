@@ -98,7 +98,7 @@ packages:
       - 'miniforge'
       - 'nosql-workbench'
       - 'postman'
-      - 'smlnj'
+      - 'smlnj' # Standard ML of New Jersey - See https://www.smlnj.org/dist/working/110.99.9/macos.html
       - 'visual-studio-code'
       mas:
       - '"JWT Inspector", id: 1559670160'
