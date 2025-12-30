@@ -64,7 +64,7 @@ Scripts SHALL execute in ascending numerical order defined by the order componen
 - **THEN** execution order between those scripts is undefined but deterministic
 
 ### Requirement: Execution Order Categories
-Scripts SHALL use 5-point spacing for logical grouping of related operations.
+Scripts SHALL use 10-point range grouping (00-09, 10-19, 20-29, etc.) for logical categorization, with flexible spacing within each range.
 
 #### Scenario: System foundation stage (00-09)
 - **WHEN** scripts are numbered 00-09
@@ -138,9 +138,10 @@ Scripts SHALL be safe to re-run without causing unintended side effects.
 
 ## Design Decisions
 
-### 5-Point Spacing Rationale
-The 5-point spacing system (05, 10, 15, 20, etc.) provides:
-- Clear logical grouping of related scripts
+### 10-Point Range Grouping Rationale
+The 10-point range system (00-09, 10-19, 20-29, etc.) provides:
+- Clear categorical grouping of related scripts by tens digit
+- Flexible spacing within each range (scripts can be numbered 20, 23, 24, 25, 26, etc.)
 - Room for future insertions between existing scripts
 - Visual clarity in directory listings
 

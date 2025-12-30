@@ -494,9 +494,10 @@ Making package data files (`packages.yaml`, `uv-tools.yaml`, `sdkman-sdks.yaml`)
 - Consistent pattern across all three package management layers
 
 ### Script Execution Order Design
-The numbered script execution order (20, 23, 24, 25, 26, 30) with 5-point spacing provides:
-- **Logical grouping**: Related operations are numerically close
-- **Future expansion**: 5-point gaps allow inserting new scripts without renumbering
+The numbered script execution order (20, 23, 24, 25, 26, 30) uses 10-point range grouping:
+- **Categorical grouping**: Scripts in 20-29 range handle package management, 30-39 handle environment managers
+- **Flexible spacing**: Within each range, scripts use 1-5 point spacing as needed (20, 23, 24, 25, 26)
+- **Future expansion**: Gaps within ranges allow inserting new scripts without renumbering
 - **Dependency management**: Package managers install before their packages
 - **Predictable order**: Clear, documented sequence for troubleshooting
 

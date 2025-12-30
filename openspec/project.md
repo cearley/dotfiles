@@ -64,7 +64,7 @@ Scripts in `home/.chezmoiscripts/` use structured naming:
 - **Frequency**: `run_once_` (init tasks) or `run_onchange_` (maintenance tasks)
 - **Timing**: `before` or `after` (relative to dotfile application)
 - **OS**: `darwin` (macOS-specific)
-- **Order**: 5-point spacing for logical grouping (05, 10, 15, 20, etc.)
+- **Order**: Numbers within 10-point ranges for categorical grouping (e.g., 20-29 for Package Management)
 - **Description**: Kebab-case description of task
 
 **Execution Order Categories:**
