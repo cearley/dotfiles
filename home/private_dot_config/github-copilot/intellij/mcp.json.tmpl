@@ -1,0 +1,75 @@
+{{ if and (.has_keepassxc_db) (has "ai" .tags) (has "work" .tags) -}}
+{
+  "servers": {
+    "serena": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server",
+        "--context",
+        "ide-assistant"
+      ],
+      "x-metadata": {
+        "registry": {
+          "api": {
+            "baseUrl": "https://api.mcp.github.com",
+            "version": "v0.1"
+          },
+          "mcpServer": {
+            "name": "oraios/serena",
+            "version": "1.0.0"
+          }
+        }
+      }
+    },
+    "io.github.upstash/context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@1.0.31"
+      ],
+      "env": {
+        "CONTEXT7_API_KEY": {{ keepassxcAttribute "Context7" "API KEY" | quote }}
+      },
+      "x-metadata": {
+        "registry": {
+          "api": {
+            "baseUrl": "https://api.mcp.github.com",
+            "version": "v0.1"
+          },
+          "mcpServer": {
+            "name": "io.github.upstash/context7",
+            "version": "1.0.31"
+          }
+        }
+      }
+    },
+    "microsoft/azure-devops-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "{ado_org}",
+        "-d",
+        "{ado_domain}"
+      ],
+      "x-metadata": {
+        "registry": {
+          "api": {
+            "baseUrl": "https://api.mcp.github.com",
+            "version": "v0.1"
+          },
+          "mcpServer": {
+            "name": "microsoft/azure-devops-mcp",
+            "version": "1.0.0"
+          }
+        }
+      }
+    }
+  }
+}
+{{- end }}
