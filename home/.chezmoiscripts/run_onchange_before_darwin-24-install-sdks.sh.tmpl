@@ -1,4 +1,4 @@
-{{ if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
+{{ if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
@@ -16,8 +16,17 @@ fi
 
 print_message "info" "Installing packages using SDKMAN!..."
 
-{{ range .sdks.darwin.dev -}}
+{{- $categories := prepend .tag_choices "core" }}
+{{- range $category := $categories }}
+  {{- $categoryData := index $.packages.darwin $category }}
+  {{- if or (eq $category "core") (has $category $.tags) }}
+    {{- if and (hasKey $categoryData "sdkman") $categoryData.sdkman }}
+# Install {{ $category }} SDKs
+{{ range $categoryData.sdkman -}}
 sdk install {{ . }}
 {{ end -}}
+    {{- end }}
+  {{- end }}
+{{- end }}
 
 {{ end -}}

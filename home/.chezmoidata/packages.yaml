@@ -102,21 +102,29 @@ packages:
       - 'visual-studio-code'
       mas:
       - '"JWT Inspector", id: 1559670160'
+      sdkman:
+      - "java 25-tem"
+      - "java 8.0.462-zulu"
+      - "liquibase"
     
     # Optional AI packages (ai tag)
     ai:
       taps:
       brews:
-      - 'copilot-cli'
-      - 'copilot-cli@prerelease'
       - 'qwen-code'
       casks:
       - 'claude'
       - 'codex'
+      #- 'copilot-cli'
+      - 'copilot-cli@prerelease'
       - 'jan'
       - 'lm-studio'
       - 'ollama-app'
-      mas:
+      uv:
+      - "basic-memory"
+      - "claude-monitor"
+      - "git+https://github.com/cearley/claude-extend@latest"
+      - "git+https://github.com/cearley/zsh-llm-suggestions"
 
     # Optional data science packages (datascience tag)
     datascience:

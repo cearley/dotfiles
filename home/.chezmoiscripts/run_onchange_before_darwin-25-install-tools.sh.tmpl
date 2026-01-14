@@ -9,15 +9,16 @@ fi
 
 print_message "info" "Installing tools using uv..."
 
-{{- $categories := list "core" "personal" "dev" "ai" "datascience" "work" "mobile" }}
+{{- $categories := prepend .tag_choices "core" }}
 {{- range $category := $categories }}
-  {{- $categoryData := index $.tools $category }}
-  {{- if and $categoryData (or (eq $category "core") (has $category $.tags)) }}
-
+  {{- $categoryData := index $.packages.darwin $category }}
+  {{- if or (eq $category "core") (has $category $.tags) }}
+    {{- if and (hasKey $categoryData "uv") $categoryData.uv }}
 # Install {{ $category }} tools
-{{ range $categoryData -}}
+{{ range $categoryData.uv -}}
 uv tool install {{ . }}
 {{ end -}}
+    {{- end }}
   {{- end }}
 {{- end }}
 
