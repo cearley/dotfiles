@@ -107,6 +107,8 @@ packages:
     ai:
       taps:
       brews:
+      - 'copilot-cli'
+      - 'copilot-cli@prerelease'
       - 'qwen-code'
       casks:
       - 'claude'
