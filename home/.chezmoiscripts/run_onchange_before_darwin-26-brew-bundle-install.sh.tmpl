@@ -13,17 +13,17 @@ fi
 # brew bundle dump --file=$HOME/Brewfile --force
 {{ $settings := includeTemplate "machine-settings" . | fromJson }}
 {{- if $settings.brewfile -}}
-{{- $brewfilePath := printf "%s/brewfiles/%s" .chezmoi.sourceDir $settings.brewfile -}}
-{{- if stat $brewfilePath -}}
+  {{- $brewfilePath := printf "%s/brewfiles/%s" .chezmoi.sourceDir $settings.brewfile -}}
+  {{- if stat $brewfilePath -}}
 brewfile={{ $brewfilePath }}
 # brewfile hash: {{ include $brewfilePath | sha256sum }}
-{{- else -}}
+  {{- else -}}
 brewfile=""
-{{- end -}}
+  {{- end -}}
 {{- else -}}
 brewfile=""
 {{- end }}
-{{ $computerName := includeTemplate "machine-name" . }}
+{{- $computerName := includeTemplate "machine-name" . }}
 
 if [[ ! -f $brewfile ]]; then
     print_message "skip" "Skipping additional package installation - brewfile not found for this machine ({{- $computerName -}})"
@@ -45,12 +45,21 @@ fi
 
 print_message "info" "Installing additional packages using Homebrew..."
 
-if is_icloud_signed_in; then
+{{- $icloudAccountId := includeTemplate "icloud-account-id" . | trim }}
+{{- $icloudSignedIn := ne $icloudAccountId "" }}
+
+{{ if not $icloudSignedIn -}}
+print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
+{{ end -}}
+
+{{ if $icloudSignedIn -}}
     HOMEBREW_ACCEPT_EULA=Y brew bundle -v --file=$brewfile
-else
-    print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
-    prompt_ready
+{{- else -}}
     HOMEBREW_ACCEPT_EULA=Y HOMEBREW_BUNDLE_MAS_SKIP=1 brew bundle -v --file=$brewfile
-    print_message "info" "Sign in to iCloud in System Settings, then run 'brew bundle -v --file=$brewfile' to install App Store apps"
-fi
+{{ end -}}
+
+{{ if not $icloudSignedIn -}}
+print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
+{{ end -}}
+
 {{ end -}}
