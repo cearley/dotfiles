@@ -1,0 +1,5 @@
+{{- /* Returns the iCloud account ID if signed in, empty string otherwise */ -}}
+{{- /* Usage: {{ includeTemplate "icloud-account-id" . }} */ -}}
+{{- if eq .chezmoi.os "darwin" -}}
+  {{- output "sh" "-c" "defaults read MobileMeAccounts Accounts 2>/dev/null | grep -m 1 'AccountID' | sed 's/.*= \"\\(.*\\)\";/\\1/'" | trim -}}
+{{- end -}}

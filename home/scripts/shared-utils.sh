@@ -194,6 +194,7 @@ prompt_ready() {
 # Returns 0 if signed in, 1 if not signed in
 # Note: This checks for iCloud account, not Mac App Store specifically
 is_icloud_signed_in() {
+    print_message "warning" "is_icloud_signed_in() deprecated: Use includeTemplate 'icloud-account-id' instead."
     # Check if MobileMeAccounts plist exists
     if [ ! -f ~/Library/Preferences/MobileMeAccounts.plist ]; then
         return 1

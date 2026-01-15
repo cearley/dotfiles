@@ -9,6 +9,12 @@ fi
 
 print_message "info" "Installing packages using Homebrew..."
 
+{{- $icloudAccountId := includeTemplate "icloud-account-id" . | trim -}}
+{{- $icloudSignedIn := ne $icloudAccountId "" -}}
+{{ if not $icloudSignedIn -}}
+print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
+{{ end -}}
+
 brew update && brew bundle --file=/dev/stdin <<EOF
 {{- range .packages.darwin.taps }}
 tap {{ . | quote }}
@@ -20,38 +26,25 @@ tap {{ . | quote }}
   {{- if or (eq $category "core") (has $category $.tags) }}
 
 # Install {{ $category }} packages
-    {{- if $categoryData.taps }}
+    {{- if and (hasKey $categoryData "taps") $categoryData.taps }}
 {{ range $categoryData.taps -}}
 tap {{ . | quote }}
 {{ end -}}
     {{- end }}
 
-    {{- if $categoryData.brews }}
+    {{- if and (hasKey $categoryData "brews") $categoryData.brews }}
 {{ range $categoryData.brews -}}
 brew {{ . | quote }}
 {{ end -}}
     {{- end }}
 
-    {{- if $categoryData.casks }}
+    {{- if and (hasKey $categoryData "casks") $categoryData.casks }}
 {{ range $categoryData.casks -}}
 cask {{ . | quote }}
 {{ end -}}
     {{- end }}
-  {{- end }}
-{{- end }}
-EOF
 
-# Install Mac App Store packages (only if signed into iCloud)
-if is_icloud_signed_in; then
-    print_message "info" "Installing Mac App Store packages..."
-    brew bundle --file=/dev/stdin <<EOF
-{{- $categories := prepend .tag_choices "core" }}
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if or (eq $category "core") (has $category $.tags) }}
-    {{- if and (hasKey $categoryData "mas") $categoryData.mas }}
-
-# {{ $category }} Mac App Store packages
+    {{- if and $icloudSignedIn (hasKey $categoryData "mas") $categoryData.mas }}
 {{ range $categoryData.mas -}}
 mas {{ . }}
 {{ end -}}
@@ -59,8 +52,8 @@ mas {{ . }}
   {{- end }}
 {{- end }}
 EOF
-else
-    print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
-    print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
-fi
+
+{{ if not $icloudSignedIn -}}
+print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
+{{ end -}}
 {{ end -}}

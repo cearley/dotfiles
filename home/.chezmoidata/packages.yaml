@@ -138,7 +138,6 @@ packages:
       - 'cursor'
       - 'r-app'
       - 'rstudio'
-      mas:
 
     # Optional work packages (work tag)
     work:
