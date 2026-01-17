@@ -44,6 +44,7 @@ keepassxc_db = {{ $keepassxc_db | quote }}
 has_keepassxc_db = {{ if and (ne $keepassxc_db "") (stat $keepassxc_db) }}true{{ else }}false{{ end }}
 microsoft_email = {{ $microsoft_email | quote }}
 tags = {{ $tags | toToml }}
+tag_choices = {{ $tag_choices | toToml }}
 
 [scriptEnv]
 GITHUB_USERNAME = {{ $gh_username | quote }}
