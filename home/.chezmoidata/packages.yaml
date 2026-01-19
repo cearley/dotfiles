@@ -57,6 +57,7 @@ packages:
       - '"ASUS Firmware Restoration", id: 1020519014'
       - '"Grammarly for Safari", id: 1462114288'
       - '"Kindle", id: 302584613'
+      - '"Tabby - Classic", id: 6746771292'
 
     # Optional development packages (dev tag)
     dev:
@@ -102,7 +103,7 @@ packages:
       - 'visual-studio-code'
       mas:
       - '"JWT Inspector", id: 1559670160'
-      sdkman:
+      sdkman: # Note that sdkman is installed only if the dev tag is present
       - "java 25-tem"
       - "java 8.0.462-zulu"
       - "liquibase"
