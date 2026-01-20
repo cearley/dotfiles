@@ -1,5 +1,5 @@
 {{- $fullname := promptStringOnce . "fullname" "Your full name" -}}
-{{- $gh_username := promptStringOnce . "gh_username" "GitHub user name" -}}
+{{- $gh_username := promptStringOnce . "gh_username" "GitHub user name" (env "GITHUB_USERNAME") -}}
 
 {{- $computed_gh_commit_email := cat $gh_username "@users.noreply.github.com" | nospace -}}
 {{- $gh_commit_email_default := promptStringOnce . "gh_commit_email" "GitHub commit email address (Default)" $computed_gh_commit_email -}}
