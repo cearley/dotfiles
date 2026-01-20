@@ -154,6 +154,17 @@ MacBook Pro:
   hostname_prefix: mbp         # Access via: index $settings "hostname_prefix"
 ```
 
+#### Utility Templates
+Reusable templates for common system detection tasks:
+
+- **`icloud-account-id`**: Returns the iCloud account ID if signed in on macOS, empty string otherwise
+  ```go-template
+  {{- $accountId := includeTemplate "icloud-account-id" . }}
+  {{- if $accountId }}
+    # iCloud is signed in as {{ $accountId }}
+  {{- end }}
+  ```
+
 #### Package Management Strategy
 Unified approach with all packages defined in `packages.yaml`:
 1. **Homebrew packages**: Tag-based categories for system packages, apps, and CLI tools (`taps`, `brews`, `casks`, `mas`)

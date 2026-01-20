@@ -81,8 +81,15 @@ Available in `home/scripts/shared-utils.sh`:
 - `require_tools()` - Validate dependencies
 - `wait_for_app_installation()` - Interactive app installation wait
 - `prompt_ready()` - User prompt helper
-- `is_icloud_signed_in()` - iCloud status check
+- `is_icloud_signed_in()` - **DEPRECATED**: Use `includeTemplate "icloud-account-id"` instead
 - `is_root()` - Root privilege check
+
+### Reusable Templates
+Available in `home/.chezmoitemplates/`:
+- `machine-name` - Cross-platform machine name detection
+- `machine-config` - Machine-specific setting lookup
+- `machine-settings` - Returns all machine settings as JSON dict
+- `icloud-account-id` - Returns iCloud account ID if signed in (macOS)
 
 ---
 
