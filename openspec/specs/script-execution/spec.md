@@ -157,13 +157,14 @@ The following scripts are currently implemented (as of baseline):
 **Package Management (20-29):**
 - `20`: Install SDKMAN (Java SDK manager)
 - `23`: Brew bundle install essential packages from packages.yaml
-- `24`: Install SDKs via SDKMAN
-- `25`: Install UV tools from uv-tools.yaml
+- `24`: Install SDKs via SDKMAN from packages.yaml
+- `25`: Install UV tools from packages.yaml
 - `26`: Brew bundle install machine-specific packages
 
 **Environment Managers (30-39):**
 - `30`: Install uv (Python package manager)
 - `35`: Install nvm (Node Version Manager)
+- `36`: Install Claude Code (AI coding assistant, requires `ai` tag)
 
 **Environment Setup (40-49):**
 - `45`: Setup GitHub authentication (git, GHCR, GitHub CLI)

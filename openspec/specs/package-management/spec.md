@@ -1,13 +1,14 @@
 # Package Management System
 
 ## Purpose
-The package management system provides a comprehensive three-layer approach for installing packages across different ecosystems:
+The package management system provides a unified approach for installing packages across different ecosystems, all defined in a single `packages.yaml` file:
 - **Homebrew**: System packages, applications, and CLI tools (essential tag-based + machine-specific)
-- **UV Tools**: Python-based CLI tools and utilities (tag-based)
-- **SDKMAN**: JVM ecosystem SDKs and build tools (tag-based, requires `dev` tag)
+- **UV Tools**: Python-based CLI tools and utilities (tag-based, within `packages.yaml`)
+- **SDKMAN SDKs**: JVM ecosystem SDKs and build tools (tag-based, within `packages.yaml`, requires `dev` tag)
+
 ## Requirements
 ### Requirement: Central Package Definition
-Essential packages SHALL be defined in `home/.chezmoidata/packages.yaml` organized by platform and tag.
+All packages SHALL be defined in `home/.chezmoidata/packages.yaml` organized by platform and tag.
 
 #### Scenario: Platform-based package organization
 - **WHEN** packages are defined for the darwin platform
@@ -15,7 +16,7 @@ Essential packages SHALL be defined in `home/.chezmoidata/packages.yaml` organiz
 
 #### Scenario: Tag-based package categories
 - **WHEN** packages are categorized by tags (core, dev, ai, work, personal, datascience, mobile)
-- **THEN** each tag SHALL contain separate lists for `taps`, `brews`, `casks`, and `mas` packages
+- **THEN** each tag SHALL contain separate lists for `taps`, `brews`, `casks`, `mas`, `sdkman`, and `uv` packages
 
 ### Requirement: Tag-Based Package Selection
 Package installation SHALL be controlled by user-selected tags during chezmoi initialization.
@@ -258,34 +259,30 @@ The `uv` package manager SHALL be installed before UV tools are installed.
 - **THEN** the installation script SHALL skip reinstallation
 
 ### Requirement: UV Tool Definition
-UV tools SHALL be defined in `home/.chezmoidata/uv-tools.yaml` organized by tag category.
+UV tools SHALL be defined within tag categories in `home/.chezmoidata/packages.yaml` using the `uv` key.
 
 #### Scenario: Tool organization structure
-- **WHEN** tools are defined in `uv-tools.yaml`
-- **THEN** the YAML structure SHALL include `tools.<category>` with lists of tool specifications
+- **WHEN** tools are defined in `packages.yaml`
+- **THEN** the YAML structure SHALL include `packages.darwin.<tag>.uv` with lists of tool specifications
 
 #### Scenario: Tool specification formats
 - **WHEN** a tool is defined
 - **THEN** it SHALL use one of these formats:
   - Simple package name: `"package-name"`
-  - Git repository: `"git+https://github.com/org/repo"`
+  - Git repository: `"git+https://github.com/org/repo@latest"`
   - Version-pinned: `"package-name==1.0.0"`
 
 ### Requirement: Tag-Based UV Tool Selection
-UV tool installation SHALL be controlled by user-selected tags, with `core` tools always installed.
-
-#### Scenario: Core tools always installed
-- **WHEN** chezmoi applies configuration
-- **THEN** tools in the `core` category SHALL be installed regardless of other selected tags
+UV tool installation SHALL be controlled by user-selected tags.
 
 #### Scenario: Tag-conditional tools
 - **WHEN** a user selects the `ai` tag
-- **THEN** tools in the `ai` category SHALL be installed
-- **AND** tools in unselected categories SHALL be skipped
+- **THEN** tools in the `ai` tag's `uv` list SHALL be installed
+- **AND** tools in unselected tag categories SHALL be skipped
 
 #### Scenario: Multiple tool categories
 - **WHEN** a user selects tags `core,dev,ai`
-- **THEN** tools from all three categories SHALL be installed via `uv tool install`
+- **THEN** UV tools from all three tag categories SHALL be installed via `uv tool install`
 
 ### Requirement: UV Tool Installation Script
 UV tools SHALL be installed via a `run_onchange_before` script at position 25.
@@ -293,7 +290,7 @@ UV tools SHALL be installed via a `run_onchange_before` script at position 25.
 #### Scenario: Tool installation execution
 - **WHEN** the tool installation script runs
 - **THEN** it SHALL execute `uv tool install <tool>` for each selected tool
-- **AND** SHALL re-run whenever the script content or `uv-tools.yaml` changes
+- **AND** SHALL re-run whenever the script content or `packages.yaml` changes
 
 #### Scenario: Tool installation idempotency
 - **WHEN** a tool is already installed
@@ -301,27 +298,19 @@ UV tools SHALL be installed via a `run_onchange_before` script at position 25.
 - **AND** SHALL continue with remaining tools
 
 ### Requirement: UV Tool Categories
-UV tools SHALL be organized into the same logical categories as Homebrew packages.
+UV tools SHALL be organized within the same tag categories as Homebrew packages in `packages.yaml`.
 
 #### Scenario: AI tool category
 - **WHEN** a tool is AI-related (claude-monitor, zsh-llm-suggestions)
-- **THEN** it SHALL be placed in the `ai` category in `uv-tools.yaml`
+- **THEN** it SHALL be placed under the `ai` tag's `uv` list in `packages.yaml`
 
 #### Scenario: Development tool category
 - **WHEN** a tool is development-related (linters, formatters, build tools)
-- **THEN** it SHALL be placed in the `dev` category in `uv-tools.yaml`
+- **THEN** it SHALL be placed under the `dev` tag's `uv` list in `packages.yaml`
 
 #### Scenario: Core tool category
 - **WHEN** a tool is essential for basic operations
-- **THEN** it SHALL be placed in the `core` category in `uv-tools.yaml`
-
-### Requirement: Static UV Tools Data File
-The `uv-tools.yaml` file SHALL be a static file, not a template.
-
-#### Scenario: Pre-template availability
-- **WHEN** chezmoi's template engine initializes
-- **THEN** `uv-tools.yaml` MUST exist and be parseable
-- **AND** SHALL NOT require template processing
+- **THEN** it SHALL be placed under the `core` tag's `uv` list in `packages.yaml`
 
 ## SDKMAN SDK Management
 
@@ -342,11 +331,11 @@ SDKMAN SHALL be installed before SDKs are installed, and only on machines with t
 - **THEN** the installation script SHALL skip reinstallation
 
 ### Requirement: SDK Definition
-SDKs SHALL be defined in `home/.chezmoidata/sdkman-sdks.yaml` organized by platform and category.
+SDKs SHALL be defined within the `dev` tag in `home/.chezmoidata/packages.yaml` using the `sdkman` key.
 
-#### Scenario: Platform-based SDK organization
-- **WHEN** SDKs are defined for macOS
-- **THEN** the YAML structure SHALL include `sdks.darwin.<category>` with lists of SDK specifications
+#### Scenario: SDK organization structure
+- **WHEN** SDKs are defined in `packages.yaml`
+- **THEN** the YAML structure SHALL include `packages.darwin.dev.sdkman` with a list of SDK specifications
 
 #### Scenario: SDK specification format
 - **WHEN** an SDK is defined
@@ -354,7 +343,7 @@ SDKs SHALL be defined in `home/.chezmoidata/sdkman-sdks.yaml` organized by platf
 - **EXAMPLE**: `"java 25-tem"`, `"java 8.0.462-zulu"`, `"liquibase"`
 
 ### Requirement: Tag-Based SDK Selection
-SDK installation SHALL require the `dev` tag and support category-based selection.
+SDK installation SHALL require the `dev` tag.
 
 #### Scenario: Dev tag required
 - **WHEN** SDKs are being installed
@@ -362,7 +351,7 @@ SDK installation SHALL require the `dev` tag and support category-based selectio
 - **AND** the installation script SHALL skip execution if `dev` tag is not present
 
 #### Scenario: Development SDK category
-- **WHEN** SDKs are in the `dev` category
+- **WHEN** SDKs are listed under `packages.darwin.dev.sdkman`
 - **THEN** they SHALL be installed when the `dev` tag is selected
 
 ### Requirement: SDK Installation Script
@@ -371,7 +360,7 @@ SDKs SHALL be installed via a `run_onchange_before` script at position 24.
 #### Scenario: SDK installation execution
 - **WHEN** the SDK installation script runs with `dev` tag
 - **THEN** it SHALL execute `sdk install <sdk> <version>` for each defined SDK
-- **AND** SHALL re-run whenever the script content or `sdkman-sdks.yaml` changes
+- **AND** SHALL re-run whenever the script content or `packages.yaml` changes
 
 #### Scenario: SDK installation idempotency
 - **WHEN** an SDK version is already installed
@@ -391,24 +380,16 @@ SDKMAN SHALL be initialized in shell profiles to make SDKs available in interact
 - **THEN** SDKMAN initialization SHALL NOT be included in shell profiles
 
 ### Requirement: SDK Categories
-SDKs SHALL be organized into logical categories, currently only `dev` is used.
+SDKs SHALL be defined under the `dev` tag's `sdkman` key in `packages.yaml`.
 
 #### Scenario: Java SDK versions
 - **WHEN** multiple Java versions are needed
-- **THEN** they SHALL be defined separately in the `dev` category
+- **THEN** they SHALL be defined separately under `packages.darwin.dev.sdkman`
 - **EXAMPLE**: `"java 25-tem"` and `"java 8.0.462-zulu"`
 
 #### Scenario: Build tools
 - **WHEN** JVM build tools are needed (Liquibase, Gradle, Maven)
-- **THEN** they SHALL be placed in the `dev` category in `sdkman-sdks.yaml`
-
-### Requirement: Static SDK Data File
-The `sdkman-sdks.yaml` file SHALL be a static file, not a template.
-
-#### Scenario: Pre-template availability
-- **WHEN** chezmoi's template engine initializes
-- **THEN** `sdkman-sdks.yaml` MUST exist and be parseable
-- **AND** SHALL NOT require template processing
+- **THEN** they SHALL be placed under `packages.darwin.dev.sdkman` in `packages.yaml`
 
 ## Script Execution Order
 
@@ -485,13 +466,13 @@ Separate Brewfiles per machine allow:
 - Easy experimentation with new tools on one machine
 - Brewfile symlink enables manual `brew bundle` commands
 
-### Static Data Files
-Making package data files (`packages.yaml`, `uv-tools.yaml`, `sdkman-sdks.yaml`) static ensures:
+### Static Data File
+Making the package data file (`packages.yaml`) static ensures:
 - Available before template engine runs
 - Simple YAML editing without template syntax
 - Clear separation between data and logic
 - Easier for tools to parse and validate
-- Consistent pattern across all three package management layers
+- Single source of truth for all package definitions
 
 ### Script Execution Order Design
 The numbered script execution order (20, 23, 24, 25, 26, 30) uses 10-point range grouping:
@@ -538,39 +519,40 @@ This table shows which tags control package installation across all three packag
 
 ### Data File Structure
 
-#### packages.yaml (Homebrew)
+#### packages.yaml (Unified Package Definition)
 ```yaml
 packages:
   darwin:
+    taps:
+    - 'isen-ng/dotnet-sdk-versions'
+    - 'buo/cask-upgrade'
+
     core:
       taps: [...]
       brews: [...]
       casks: [...]
       mas: [...]
+
     dev:
       taps: [...]
-      # ... etc
-```
-
-#### uv-tools.yaml (UV)
-```yaml
-tools:
-  core:
-    - "package-name"
-  ai:
-    - "claude-monitor"
-    - "git+https://github.com/org/repo"
-  # ... etc
-```
-
-#### sdkman-sdks.yaml (SDKMAN)
-```yaml
-sdks:
-  darwin:
-    dev:
+      brews: [...]
+      casks: [...]
+      mas: [...]
+      sdkman:       # SDKMAN SDKs (only in dev tag)
       - "java 25-tem"
       - "java 8.0.462-zulu"
       - "liquibase"
+
+    ai:
+      taps: [...]
+      brews: [...]
+      casks: [...]
+      uv:           # UV Python tools (can be in any tag)
+      - "basic-memory"
+      - "claude-monitor"
+      - "git+https://github.com/org/repo@latest"
+
+    # ... other tags (work, personal, datascience, mobile)
 ```
 
 ### Installation Scripts
@@ -579,7 +561,7 @@ sdks:
 |--------|----------|-----------|---------|
 | `run_once_before_darwin-20-install-sdkman.sh.tmpl` | 20 | Once | Install SDKMAN (requires `dev` tag) |
 | `run_onchange_before_darwin-23-install-packages.sh.tmpl` | 23 | On change | Install Homebrew packages from packages.yaml |
-| `run_onchange_before_darwin-24-install-sdks.sh.tmpl` | 24 | On change | Install SDKs via SDKMAN (requires `dev` tag) |
-| `run_onchange_before_darwin-25-install-tools.sh.tmpl` | 25 | On change | Install UV tools from uv-tools.yaml |
+| `run_onchange_before_darwin-24-install-sdks.sh.tmpl` | 24 | On change | Install SDKs via SDKMAN from packages.yaml (requires `dev` tag) |
+| `run_onchange_before_darwin-25-install-tools.sh.tmpl` | 25 | On change | Install UV tools from packages.yaml |
 | `run_onchange_before_darwin-26-brew-bundle-install.sh.tmpl` | 26 | On change | Install machine-specific Homebrew packages |
 | `run_once_before_darwin-30-install-uv.sh.tmpl` | 30 | Once | Install UV package manager |

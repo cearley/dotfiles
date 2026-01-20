@@ -153,12 +153,15 @@ Templates using machine settings SHALL follow a consistent pattern for dict retr
 #### Scenario: Standard dict retrieval pattern
 - **WHEN** a template needs machine settings
 - **THEN** it SHALL use the pattern: `$settings := includeTemplate "machine-settings" . | fromJson`
-- **AND** SHALL check for property existence before using (e.g., `if $settings.brewfile`)
+- **AND** SHALL use defensive property access to handle missing keys
 
 #### Scenario: Property access pattern
 - **WHEN** accessing machine properties from the dict
-- **THEN** templates SHALL use dot-notation: `$settings.property_name`
-- **AND** SHALL use nested access for sub-properties: `$settings.parent.child`
+- **THEN** templates SHALL use `index` for safe access: `index $settings "property_name"`
+- **AND** SHALL use `default dict` combined with `index` for nested properties:
+  - `$parent := default dict (index $settings "parent")`
+  - `$child := index $parent "child"`
+- **NOTE**: Direct dot-notation (`$settings.property_name`) will error if the key doesn't exist
 
 #### Scenario: Path construction pattern
 - **WHEN** constructing paths from machine settings
@@ -167,7 +170,8 @@ Templates using machine settings SHALL follow a consistent pattern for dict retr
 
 #### Scenario: Conditional usage pattern
 - **WHEN** machine settings may be absent
-- **THEN** templates SHALL check property existence: `if $settings.property_name`
+- **THEN** templates SHALL extract the value first: `$value := index $settings "property_name"`
+- **AND** SHALL check the extracted value: `if $value`
 - **AND** SHALL gracefully handle empty/missing values
 
 ### Requirement: Extensibility Without Template Changes

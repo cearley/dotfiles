@@ -6,7 +6,7 @@
 [![Homebrew](https://img.shields.io/badge/package%20manager-Homebrew-orange)](https://brew.sh/)
 [![GitHub last commit](https://img.shields.io/github/last-commit/cearley/dotfiles)](https://github.com/cearley/dotfiles/commits)
 
-Personal dotfiles and macOS development environment, managed with [chezmoi](https://chezmoi.io).
+Automated macOS development environment setup - dotfiles, packages, toolchains, and system configuration, managed with [chezmoi](https://chezmoi.io).
 
 ## Table of Contents
 
@@ -20,12 +20,14 @@ Personal dotfiles and macOS development environment, managed with [chezmoi](http
 Bootstrap a new macOS machine with a single command:
 
 ```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/main/remote_install.sh)"
+export GITHUB_USERNAME="your-github-username"
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/main/remote_install.sh)" -- init --apply $GITHUB_USERNAME
 ```
 
 You can also pass arguments to chezmoi by appending them:
 
 ```sh
+export GITHUB_USERNAME="your-github-username"
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/main/remote_install.sh)" -- init --apply $GITHUB_USERNAME --keep-going --verbose
 ```
 
@@ -63,10 +65,10 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 
 ### Development Environment
 
-**Three-layer package management:**
-1. **Homebrew packages** (`packages.yaml`) - System packages, apps, CLI tools
-2. **UV tools** (`uv-tools.yaml`) - Python CLI tools and utilities
-3. **SDKMAN SDKs** (`sdkman-sdks.yaml`) - JVM ecosystem (Java, Gradle, Maven, Kotlin, Scala)
+**Unified package management** (all in `packages.yaml`):
+1. **Homebrew packages** - System packages, apps, CLI tools (`taps`, `brews`, `casks`, `mas`)
+2. **UV tools** - Python CLI tools and utilities (`uv` key within tags)
+3. **SDKMAN SDKs** - JVM ecosystem (Java, Gradle, Maven) (`sdkman` key in `dev` tag)
 4. **Machine-specific Brewfiles** - Additional packages requiring confirmation
 
 **Environment managers:**
@@ -101,7 +103,7 @@ This is a personal configuration reflecting specific workflows and preferences. 
 **What you'll need to customize:**
 - **KeePassXC database** - Set up your own with required entries
 - **Machine configurations** - Update `home/.chezmoidata/config.yaml` for your machines
-- **Package selections** - Review `home/.chezmoidata/packages.yaml`, `uv-tools.yaml`, `sdkman-sdks.yaml`, and machine-specific Brewfiles
+- **Package selections** - Review `home/.chezmoidata/packages.yaml` and machine-specific Brewfiles
 - **Personal tools** - Remove ChronoSync, Syncthing, custom hosts management, etc.
 - **SSH/Git settings** - Update for your accounts and preferences
 

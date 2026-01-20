@@ -15,15 +15,13 @@
 - **Scripts**: `home/.chezmoiscripts/` - Numbered setup scripts (10-point range grouping)
 - **Utilities**: `home/scripts/shared-utils.sh` - Common script functions
 - **Templates**: `home/.chezmoitemplates/` - Reusable template components
-- **Data**: `home/.chezmoidata/` - Static configuration files (packages.yaml, uv-tools.yaml, sdkman-sdks.yaml)
+- **Data**: `home/.chezmoidata/` - Static configuration files (packages.yaml, config.yaml)
 
 ### Essential Files
 - `openspec/project.md` - Complete project context, tech stack, conventions
 - `docs/command-reference.md` - Daily command cheat sheet
 - `home/.chezmoidata/config.yaml` - Machine-specific settings
-- `home/.chezmoidata/packages.yaml` - Homebrew package definitions
-- `home/.chezmoidata/uv-tools.yaml` - UV tool definitions
-- `home/.chezmoidata/sdkman-sdks.yaml` - SDKMAN SDK definitions
+- `home/.chezmoidata/packages.yaml` - All package definitions (Homebrew, UV tools, SDKMAN SDKs)
 
 ---
 

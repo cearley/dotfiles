@@ -32,7 +32,7 @@ Quick reference guide for AI assistants working with this chezmoi dotfiles repos
 
 ### Key Directories
 - `home/.chezmoiscripts/` - Numbered setup scripts (see openspec/project.md for execution order)
-- `home/.chezmoidata/` - Static data files (packages.yaml, uv-tools.yaml, sdkman-sdks.yaml)
+- `home/.chezmoidata/` - Static data files (packages.yaml, config.yaml)
 - `home/.chezmoitemplates/` - Reusable template components
 - `scripts/shared-utils.sh` - Common script functions
 

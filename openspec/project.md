@@ -133,28 +133,32 @@ Centralized, extensible machine-specific settings:
 **Usage Pattern:**
 ```go-template
 {{- $settings := includeTemplate "machine-settings" . | fromJson -}}
-{{- $brewfile := $settings.brewfile -}}
-{{- $sshEntry := $settings.keepassxc_entries.ssh -}}
-{{- $machineKey := $settings._machine_key -}}
+{{- /* Use index for safe access to optional top-level properties */ -}}
+{{- $brewfile := index $settings "brewfile" -}}
+{{- /* Use default dict for safe access to nested properties */ -}}
+{{- $keepassxcEntries := default dict (index $settings "keepassxc_entries") -}}
+{{- $sshEntry := index $keepassxcEntries "ssh" -}}
+{{- /* _machine_key is always present when a machine matches */ -}}
+{{- $machineKey := index $settings "_machine_key" -}}
 ```
 
 **Adding New Properties:**
-Simply add to `config.yaml` - automatically available via `$settings.property_name`:
+Simply add to `config.yaml` - automatically available via `index $settings "property_name"`:
 ```yaml
 MacBook Pro:
   brewfile: mbp-brewfile
   keepassxc_entries:
     ssh: SSH (MacBook Pro)
   # New properties work automatically:
-  ssh_key_id: macbook_ed25519  # Access via: $settings.ssh_key_id
-  hostname_prefix: mbp         # Access via: $settings.hostname_prefix
+  ssh_key_id: macbook_ed25519  # Access via: index $settings "ssh_key_id"
+  hostname_prefix: mbp         # Access via: index $settings "hostname_prefix"
 ```
 
 #### Package Management Strategy
-Three-layer approach:
-1. **Homebrew packages** (`packages.yaml`): Tag-based categories for system packages, apps, and CLI tools
-2. **UV tools** (`uv-tools.yaml`): Tag-based Python CLI tools and utilities
-3. **SDKMAN SDKs** (`sdkman-sdks.yaml`): JVM ecosystem SDKs and build tools (requires `dev` tag)
+Unified approach with all packages defined in `packages.yaml`:
+1. **Homebrew packages**: Tag-based categories for system packages, apps, and CLI tools (`taps`, `brews`, `casks`, `mas`)
+2. **UV tools**: Tag-based Python CLI tools and utilities (`uv` key within tags, e.g., `ai.uv`)
+3. **SDKMAN SDKs**: JVM ecosystem SDKs and build tools (`sdkman` key within `dev` tag)
 4. **Machine-specific Brewfiles**: Additional Homebrew packages requiring user confirmation
 
 Tags control installation scope:
