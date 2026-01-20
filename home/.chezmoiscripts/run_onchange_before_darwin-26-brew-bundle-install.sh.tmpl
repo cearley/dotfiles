@@ -12,8 +12,9 @@ fi
 # Maintenance: Update brewfiles by periodically running:
 # brew bundle dump --file=$HOME/Brewfile --force
 {{ $settings := includeTemplate "machine-settings" . | fromJson }}
-{{- if $settings.brewfile -}}
-  {{- $brewfilePath := printf "%s/brewfiles/%s" .chezmoi.sourceDir $settings.brewfile -}}
+{{- $brewfile := index $settings "brewfile" -}}
+{{- if $brewfile -}}
+  {{- $brewfilePath := printf "%s/brewfiles/%s" .chezmoi.sourceDir $brewfile -}}
   {{- if stat $brewfilePath -}}
 brewfile={{ $brewfilePath }}
 # brewfile hash: {{ include $brewfilePath | sha256sum }}

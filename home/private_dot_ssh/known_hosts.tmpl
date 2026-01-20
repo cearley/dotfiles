@@ -1,5 +1,6 @@
 {{- $settings := includeTemplate "machine-settings" . | fromJson -}}
-{{ $sshEntryName := $settings.keepassxc_entries.ssh }}
+{{- $keepassxcEntries := default dict (index $settings "keepassxc_entries") -}}
+{{- $sshEntryName := index $keepassxcEntries "ssh" -}}
 {{- if and $sshEntryName .has_keepassxc_db -}}
 {{- keepassxcAttribute $sshEntryName "known_hosts" -}}
 {{- end }}

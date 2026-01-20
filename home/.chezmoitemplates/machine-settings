@@ -3,11 +3,12 @@
      Uses machine-config to find the matched machine pattern,
      then returns all settings from config.yaml for that machine.
 
-     Example:
+     Example (use index/default for safe property access):
        {{- $settings := includeTemplate "machine-settings" . | fromJson -}}
-       {{- $brewfile := $settings.brewfile -}}
-       {{- $sshEntry := $settings.keepassxc_entries.ssh -}}
-       {{- $machineKey := $settings._machine_key -}}
+       {{- $brewfile := index $settings "brewfile" -}}
+       {{- $keepassxcEntries := default dict (index $settings "keepassxc_entries") -}}
+       {{- $sshEntry := index $keepassxcEntries "ssh" -}}
+       {{- $machineKey := index $settings "_machine_key" -}}
 
      Returns empty dict {} if no machine matches.
 
