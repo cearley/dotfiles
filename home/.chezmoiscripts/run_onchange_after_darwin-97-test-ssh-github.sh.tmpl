@@ -221,6 +221,7 @@ main() {
         echo "Generate SSH keys first:"
         echo "  ssh-keygen -t ed25519 -C \"your machine name\""
         echo "  ssh-keygen -t rsa -b 4096 -C \"your machine name\"  # if ed25519 not supported"
+        print_message "info" "Then add the public key to your GitHub account. Re-run this test afterward."
         exit 0
     fi
     
