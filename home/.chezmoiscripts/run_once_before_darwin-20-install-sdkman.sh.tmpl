@@ -9,9 +9,12 @@ if ! require_tools curl zip unzip; then
     exit 1
 fi
 
-# Exit immediately if sdkman is already installed
 if [[ -d "$HOME/.sdkman" ]] && [[ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
-    print_message "skip" "Skipping sdkman installation: sdkman is already installed"
+    print_message "info" "sdkman is already installed. Updating..."
+    set +u  # disable nounset; sdkman scripts reference unbound variables (e.g., ZSH_VERSION)
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    sdk update
+    set -u  # re-enable nounset
     exit 0
 fi
 
@@ -22,6 +25,6 @@ export SDKMAN_DIR="$HOME/.sdkman"
 curl -s "https://get.sdkman.io" | bash
 
 print_message "success" "sdkman installed successfully!"
-print_message "info" "sdkman installed to: $SDKMAN_DIR"
+print_message "info" "sdkman installed to: $SDKMAN_DIR. You may need to restart your terminal to start using it."
 
 {{ end -}}

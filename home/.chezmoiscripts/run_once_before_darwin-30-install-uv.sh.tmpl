@@ -9,9 +9,9 @@ if ! require_tools curl; then
     exit 1
 fi
 
-# Exit immediately if uv is already in $PATH
 if command_exists uv; then
-    print_message "skip" "Skipping uv installation: uv is already installed"
+    print_message "info" "uv is already installed. Updating..."
+    uv self update
     exit 0
 fi
 

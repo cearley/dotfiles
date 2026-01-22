@@ -51,13 +51,11 @@ print_message "info" "Installing additional packages using Homebrew..."
 
 {{ if not $icloudSignedIn -}}
 print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
+export HOMEBREW_BUNDLE_MAS_SKIP=1
 {{ end -}}
 
-{{ if $icloudSignedIn -}}
-    HOMEBREW_ACCEPT_EULA=Y brew bundle -v --file=$brewfile
-{{- else -}}
-    HOMEBREW_ACCEPT_EULA=Y HOMEBREW_BUNDLE_MAS_SKIP=1 brew bundle -v --file=$brewfile
-{{ end -}}
+export HOMEBREW_ACCEPT_EULA=Y
+brew update && brew bundle -v --file=$brewfile
 
 {{ if not $icloudSignedIn -}}
 print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
