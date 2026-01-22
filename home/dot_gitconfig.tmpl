@@ -12,9 +12,6 @@
 	pager = delta
 {{- end }}
 
-[includeIf "gitdir:~/work/"]
-    path = ~/.gitconfig-primary-work
-
 [credential "https://github.com"]
 	username = {{ .gh_username }}
 
@@ -33,3 +30,17 @@
 [init]
 	defaultBranch = main
 {{- end }}
+
+# Include config for specific repos. Since Git processes config in order 
+# and later values win, the more specific include will override the broader one.
+
+{{- if ne .gh_commit_email_primary_work "" }}
+[includeIf "gitdir:~/work/"]
+    path = ~/.gitconfig-primary-work
+{{- end }}
+
+[includeIf "gitdir:~/work/cearley.github.io/"]
+    path = ~/.gitconfig-personal
+
+[includeIf "gitdir:~/work/cearley/"]
+    path = ~/.gitconfig-personal

@@ -1,3 +1,7 @@
+{{- if ne .gh_commit_email_primary_work "" }}
 [user]
 	name = {{ .fullname }}
 	email = {{ .gh_commit_email_primary_work }}
+[commit]
+	gpgsign = true
+{{ end -}}
