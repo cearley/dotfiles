@@ -95,6 +95,7 @@ packages:
       - 'dotnet-sdk8-0-400'
       - 'dotnet-sdk8'
       - 'google-chrome'
+      - 'gitbutler'
       - 'jetbrains-toolbox'
       - 'miniforge'
       - 'nosql-workbench'
@@ -111,8 +112,10 @@ packages:
     # Optional AI packages (ai tag)
     ai:
       taps:
+      - 'specstoryai/tap'
       brews:
       - 'qwen-code'
+      - 'specstoryai/tap/specstory'
       casks:
       - 'claude'
       - 'codex'

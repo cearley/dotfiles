@@ -18,6 +18,7 @@ scripts/
 
 # Files compiled with the zcompile builtin
 .oh-my-zsh/**/*.zwc
+.oh-my-zsh/custom/completions/
 
 
 # Files and folders to ignore in the home directory
