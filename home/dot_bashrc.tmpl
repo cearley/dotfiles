@@ -11,6 +11,11 @@ export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || pr
 {{- end }}
 
 {{ if (has "ai" .tags) -}}
+# SpecStory https://specstory.com/specstory-cli
+alias claudespec='specstory run claude'
+alias codexspec='specstory run codex'
+alias geminispec='specstory run gemini'
+
 # Added by LM Studio CLI (lms)
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"

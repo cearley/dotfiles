@@ -44,3 +44,7 @@
 
 [includeIf "gitdir:~/work/cearley/"]
     path = ~/.gitconfig-personal
+{{ if has "ai" .tags -}}
+[gitbutler]
+	aiModelProvider = anthropic
+{{- end }}

@@ -129,15 +129,11 @@ export ARCHFLAGS="-arch $(uname -m)"
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-{{ if not (lookPath "atuin") -}}
-# Enhanced history searching in zsh 
-# Courtesy to https://www.techrepublic.com/article/enhanced-history-searching-in-zsh/
-#
-# To invoke the history search, you must press [Ctrl]-R which will present the search prompt. 
-# Type in the text you want to search for (i.e., perl) and then press the up and down keys
-#  without pressing enter.
-bindkey "^[[A" history-search-backward
-bindkey "^[[B" history-search-forward
+{{ if has "ai" .tags -}}
+# SpecStory https://specstory.com/specstory-cli
+alias claudespec='specstory run claude'
+alias codexspec='specstory run codex'
+alias geminispec='specstory run gemini'
 {{- end }}
 
 # Enable colorls tab completion for flags
