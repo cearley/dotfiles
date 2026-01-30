@@ -2,3 +2,11 @@
 # .zshenv file for Zsh shell configuration
 . "$HOME/.cargo/env"
 {{- end }}
+
+# Add zsh-functions to fpath and autoload all functions
+# (in .zshenv so it works for non-interactive shells like Claude Code)
+if [[ -d "$HOME/.local/share/zsh-functions" ]]; then
+  export ZSH_FUNCTIONS_DIR="$HOME/.local/share/zsh-functions"
+  fpath=( "$ZSH_FUNCTIONS_DIR/autoload" "${fpath[@]}" )
+  autoload -Uz brew-list-formulas gemini openspec
+fi

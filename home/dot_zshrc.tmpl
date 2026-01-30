@@ -200,12 +200,6 @@ nvm() {
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-# Add zsh-functions to fpath and autoload all functions
-if [[ -d "$HOME/.local/share/zsh-functions" ]]; then
-  fpath=( "$HOME/.local/share/zsh-functions/autoload" "${fpath[@]}" )
-  autoload -Uz brew-list-formulas gemini openspec
-fi
-
 {{ if has "ai" .tags -}}
 # LLM-based command suggestions for zsh
 source {{ .chezmoi.homeDir }}/.local/share/zsh-llm-suggestions/zsh-llm-suggestions.zsh
