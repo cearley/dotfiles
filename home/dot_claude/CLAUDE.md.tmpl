@@ -40,51 +40,12 @@
 - Applies to ALL projects and repositories
 
 ## Strategic Analysis Framework
-When approaching any task, apply this analytical framework to ensure solutions are thoughtful, robust, and well-aligned with the user's underlying goals. Avoid jumping directly to implementation.
-
-### 1. Deconstruct the Request
-- **Clarify Intent**: What is the user's ultimate goal? What problem are they *really* trying to solve?
-- **Challenge Assumptions**: Is the user's proposed solution the best one? Are there unstated assumptions in the request?
-- **Identify Constraints**: What are the technical, business, or user-facing constraints?
-- **Define Success**: What does a successful outcome look like?
-
-### 2. Analyze the Ecosystem
-- **System-wide Impact**: How will this change affect other parts of the system?
-- **Integration Points**: How does this interact with existing tools, APIs, or workflows?
-- **Dependencies**: What new dependencies are introduced? Could this conflict with existing ones?
-- **Future-Proofing**: Does this align with the project's long-term direction? Will it be maintainable?
-
-### 3. Propose a Spectrum of Solutions
-- **Simple & Safe**: The minimal, low-risk implementation.
-- **Recommended Approach**: The balanced solution that best fits the context.
-- **Ambitious/Full-Featured**: The "gold standard" solution if time and resources were unlimited.
-- **Alternative Paradigms**: Completely different ways to think about the problem.
-
-### 4. Articulate Clear Trade-offs
-For each proposed solution, explicitly state the trade-offs:
-- **Complexity vs. Maintainability**: How difficult is it to build versus to support long-term?
-- **Performance vs. Scalability**: How does it perform now, and how will it scale with growth?
-- **Security vs. Usability**: Does it introduce risks, or does it create friction for the user?
-- **Flexibility vs. Simplicity**: How adaptable is the solution versus how easy is it to understand?
-
-### 5. Identify Patterns and Anti-Patterns
-- **Classify the Pattern**: Is the proposed solution a recognized good pattern, an anti-pattern, or context-dependent?
-- **Cite Precedent**: How have other major projects or ecosystems solved similar problems?
-- **Anticipate Failure Modes**: What are the most likely ways this solution could fail, break, or be misused?
+Before implementing non-trivial tasks, pause to analyze:
+- **Clarify intent**: What problem is the user *really* trying to solve? Challenge assumptions.
+- **Assess impact**: How will this affect other parts of the system? What dependencies are involved?
+- **Propose options**: Offer a simple/safe approach, a recommended approach, and alternatives when appropriate.
+- **State trade-offs**: Explicitly call out complexity vs. maintainability, security vs. usability, etc.
+- **Anticipate failures**: Identify likely failure modes and known anti-patterns.
 
 ## Large-Scale Analysis
-When a request requires understanding or modifying a large volume of code that exceeds your available context window, use tools or strategies designed for large-scale analysis.
-
-### Triggers for Large-Scale Analysis
-- **Codebase-wide questions**: Analyzing or searching across an entire project or many directories.
-- **Cross-file comparisons**: Comparing or finding relationships between multiple large files.
-- **Architectural review**: Understanding project-wide patterns, dependencies, or high-level structure.
-- **Context overflow**: The total size of relevant files exceeds your context capacity (e.g., >100KB).
-- **Broad verification**: Verifying if features, patterns, or security measures are implemented across the entire codebase.
-
-### Best Practices for Large-Scale Tools
-- **Specify Scope**: Clearly define the files, directories, or patterns to be analyzed.
-- **Be Specific**: Ask precise questions to get accurate and relevant results.
-- **Leverage Full Context**: Utilize tools that can process entire codebases to avoid fragmented analysis.
-- **Use Relative Paths**: When referencing files for analysis, use paths relative to the project root.
-{{ end -}}
+For tasks spanning many files or exceeding context capacity, use subagents or tool-based search rather than reading files individually. Scope searches precisely and use relative paths.

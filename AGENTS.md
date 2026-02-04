@@ -17,7 +17,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
 
-# AGENTS.md
+# Chezmoi Dotfiles
 
 Quick reference guide for AI assistants working with this chezmoi dotfiles repository.
 
@@ -34,7 +34,20 @@ Quick reference guide for AI assistants working with this chezmoi dotfiles repos
 - `home/.chezmoiscripts/` - Numbered setup scripts (see openspec/project.md for execution order)
 - `home/.chezmoidata/` - Static data files (packages.yaml, config.yaml)
 - `home/.chezmoitemplates/` - Reusable template components
-- `scripts/shared-utils.sh` - Common script functions
+- `home/scripts/shared-utils.sh` - Common script functions
+
+## Common Commands
+
+```bash
+chezmoi apply                  # Apply changes to home directory
+chezmoi diff                   # Preview changes before applying
+chezmoi update                 # Pull latest from repo and apply
+chezmoi status                 # Show files that would change
+chezmoi add ~/.<file>          # Add a dotfile to source state
+chezmoi edit ~/.<file>         # Edit the source version of a file
+chezmoi cd                     # Open shell in source directory
+chezmoi managed                # List all managed files
+```
 
 ## Practical Quick Reference
 
