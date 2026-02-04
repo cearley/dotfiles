@@ -114,9 +114,11 @@ packages:
       taps:
       - 'specstoryai/tap'
       brews:
+      - 'block-goose-cli'
       - 'qwen-code'
       - 'specstoryai/tap/specstory'
       casks:
+      - 'block-goose'
       - 'claude'
       - 'codex'
       #- 'copilot-cli'
