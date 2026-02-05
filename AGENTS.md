@@ -47,6 +47,7 @@ chezmoi add ~/.<file>          # Add a dotfile to source state
 chezmoi edit ~/.<file>         # Edit the source version of a file
 chezmoi cd                     # Open shell in source directory
 chezmoi managed                # List all managed files
+chezmoi cat ~/path/to/file     # Preview generated file content (verify templates/modify_ scripts)
 ```
 
 ## Practical Quick Reference
@@ -86,6 +87,14 @@ cat script-name.tmpl | chezmoi execute-template
 ```
 
 ### Template Best Practices
+
+**Partial file management (modify_ scripts):**
+Use `modify_` prefix for files where you only manage specific keys (e.g., JSON configs modified by applications at runtime).
+- `modify_<filename>.tmpl` — bash script receiving current file on stdin, outputs merged result
+- Use jq for JSON merging: `echo "$existing" | jq --argjson servers "$managed" '.mcpServers = $servers'`
+- `modify_` scripts CAN use `.tmpl` extension (for chezmoi template expansion)
+- `chezmoi:modify-template` directive files must NOT use `.tmpl` extension (different mechanism)
+- Example: `modify_claude_desktop_config.json.tmpl` manages only `mcpServers`, preserves app-managed `preferences`
 
 **Command validation:**
 ```go-template
