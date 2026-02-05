@@ -73,6 +73,6 @@ args = ["--wait", "--diff"]
 command = "bash"
 args = [
     "-c",
-    "cp {{ "{{" }} .Target {{ "}}" }} {{ "{{" }} .Target {{ "}}" }}.base && code --new-window --wait --merge {{ "{{" }} .Destination {{ "}}" }} {{ "{{" }} .Target {{ "}}" }} {{ "{{" }} .Target {{ "}}" }}.base {{ "{{" }} .Source {{ "}}" }}"
+    "cp {{ "{{" }} .Target | quote {{ "}}" }} {{ "{{" }} .Target | quote {{ "}}" }}.base && code --new-window --wait --merge {{ "{{" }} .Destination | quote {{ "}}" }} {{ "{{" }} .Target | quote {{ "}}" }} {{ "{{" }} .Target | quote {{ "}}" }}.base {{ "{{" }} .Source | quote {{ "}}" }}"
 ]
 {{- end }}
