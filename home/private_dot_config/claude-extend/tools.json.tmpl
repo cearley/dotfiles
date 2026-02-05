@@ -90,6 +90,11 @@
         "sarif-om,jschema_to_python",
         "awslabs.aws-diagram-mcp-server@latest"
       ]
+    },
+    "github": {
+      "description": "GitHub API integration for issues, PRs, and repositories",
+      "command": "bash",
+      "args": ["-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) exec github-mcp-server stdio"]
     }{{ if .has_keepassxc_db }},
     "context7": {
       "description": "Up-to-date, version-specific documentation and code examples",

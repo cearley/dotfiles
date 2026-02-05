@@ -115,6 +115,7 @@ packages:
       - 'specstoryai/tap'
       brews:
       - 'block-goose-cli'
+      - 'github-mcp-server'
       - 'qwen-code'
       - 'specstoryai/tap/specstory'
       casks:

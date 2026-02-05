@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/protect-data-files.sh",
+            "timeout": 5,
+            "statusMessage": "Checking data file constraints..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/validate-template.sh",
+            "timeout": 10,
+            "statusMessage": "Validating template..."
+          }
+        ]
+      }
+    ]
+  }
+}

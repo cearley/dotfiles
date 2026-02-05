@@ -4,6 +4,10 @@
 # AI
 .claude/*
 !.claude/commands/
+!.claude/hooks/
+!.claude/skills/
+!.claude/agents/
+!.claude/settings.json
 .continue/
 PROJECT_REVIEW.md
 
