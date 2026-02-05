@@ -135,6 +135,24 @@ See `openspec/specs/machine-config/` for complete machine configuration system d
 4. **Consistent messaging** - Always use shared utilities for script output
 5. **Platform wrapping** - Darwin scripts must use conditional templates
 
+## Claude Code Automations
+
+### Hooks (`.claude/settings.json`)
+- **Template validation** (PostToolUse): Runs `chezmoi execute-template` on `.tmpl` files after edits
+- **Data file protection** (PreToolUse): Blocks `{{ }}` expressions in `.chezmoidata/` files
+
+### Skills
+- `/new-script` - Generate a chezmoi script with correct naming, boilerplate, and conventions
+- `/apply` - Safe diff-then-apply workflow with confirmation
+
+### Agents
+- `template-reviewer` - Scans all templates for convention violations (read-only)
+
+### MCP Server Configuration
+- **Global MCP servers**: `home/private_dot_config/claude-extend/tools.json.tmpl` (deployed to `~/.config/claude-extend/tools.json`)
+- **Project MCP servers**: `.mcp.json` (if needed)
+- GitHub MCP uses `gh auth token` for authentication — no PAT management needed
+
 ## When to Reference openspec/
 
 - **Architecture questions** → `openspec/project.md`
