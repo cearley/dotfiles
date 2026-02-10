@@ -13,6 +13,7 @@ packages:
       - 'awscli'                   # Official Amazon AWS command-line interface
       - 'bat'                      # Clone of cat(1) with syntax highlighting and Git integration
       - 'chezmoi'                  # Manage your dotfiles across multiple diverse machines, securely
+      - 'fd'                       # Simple, fast and user-friendly alternative to find
       - 'fzf'                      # Command-line fuzzy finder written in Go
       - 'git'                      # Distributed revision control system
       - 'jq'                       # Lightweight and flexible command-line JSON processor
