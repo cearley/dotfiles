@@ -45,7 +45,6 @@ brew "psutils"
 brew "pwgen"
 brew "rclone"
 brew "snyk-cli"
-brew "speedtest-cli"
 brew "syncthing", restart_service: :changed
 brew "tree"
 brew "vips"

@@ -124,7 +124,7 @@ Packages SHALL be organized into logical categories based on their purpose.
 - **THEN** they SHALL be placed in the `work` tag category
 
 #### Scenario: Personal packages
-- **WHEN** packages are personal productivity tools (Syncthing, ChronoSync)
+- **WHEN** packages are personal productivity tools
 - **THEN** they SHALL be placed in the `personal` tag category
 
 #### Scenario: Data science packages
@@ -496,7 +496,7 @@ This table shows which tags control package installation across all three packag
 | `dev` | ✅ Optional | ✅ Optional | ✅ **Required** | Development tools, IDEs, language toolchains |
 | `ai` | ✅ Optional | ✅ Optional | ❌ | AI/ML tools (Claude, Ollama, LM Studio) |
 | `work` | ✅ Optional | ✅ Optional | ❌ | Enterprise/work tools (Teams, Workspaces) |
-| `personal` | ✅ Optional | ✅ Optional | ❌ | Personal productivity (Syncthing, ChronoSync) |
+| `personal` | ✅ Optional | ✅ Optional | ❌ | Personal productivity |
 | `datascience` | ✅ Optional | ✅ Optional | ❌ | Data analysis tools (R, RStudio, csvkit) |
 | `mobile` | ✅ Optional | ✅ Optional | ❌ | VPN and network tools (Tunnelblick, WireGuard) |
 

@@ -31,7 +31,7 @@ This is a personal dotfiles repository managed by chezmoi, designed to bootstrap
 - **.NET**: Multiple SDK versions (3.1, 6.0, 8.0) via Homebrew casks
 
 ### Key Dependencies & Tools
-- **CLI Essentials**: bat, gh, jq, mas, rclone, speedtest-cli, tree, fzf, zoxide, atuin, lsd, neovim
+- **CLI Essentials**: bat, gh, jq, mas, rclone, tree, fzf, zoxide, atuin, lsd, neovim
 - **Development Tools**: git-delta, direnv, act, docker-desktop, localstack, dagger
 - **Cloud SDKs**: AWS CLI, AWS SAM CLI, Azure CLI
 - **Security**: Microsoft Defender, Lulu, KeePassXC, Syncthing

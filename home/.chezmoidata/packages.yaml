@@ -21,7 +21,6 @@ packages:
       - 'neovim'
       - 'pwgen'
       - 'rclone'
-      - 'speedtest-cli'
       - 'tree'
       - 'zoxide'
       casks:

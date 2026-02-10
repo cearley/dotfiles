@@ -104,7 +104,7 @@ This is a personal configuration reflecting specific workflows and preferences. 
 - **KeePassXC database** - Set up your own with required entries
 - **Machine configurations** - Update `home/.chezmoidata/config.yaml` for your machines
 - **Package selections** - Review `home/.chezmoidata/packages.yaml` and machine-specific Brewfiles
-- **Personal tools** - Remove ChronoSync, Syncthing, custom hosts management, etc.
+- **Personal tools** - Remove ChronoSync, custom hosts management, etc.
 - **SSH/Git settings** - Update for your accounts and preferences
 
 **Initial setup prompts:**
