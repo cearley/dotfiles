@@ -2,6 +2,7 @@
 //{{ .gh_npm_registry }}/:_authToken={{ keepassxcAttribute "GitHub" "Access Token" }}
 @{{ .gh_packages_owner }}:registry=https://{{ .gh_npm_registry }}
 {{- end }}
+registry=https://registry.npmjs.org/
 {{- if and .has_keepassxc_db (ne .gh_packages_owner "") (ne .gh_npm_registry "") }}
 
 # To add additional GitHub orgs (e.g., @{{ .gh_username }}), add lines like:
