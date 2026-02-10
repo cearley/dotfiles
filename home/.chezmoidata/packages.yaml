@@ -8,33 +8,33 @@ packages:
     core:
       taps:
       brews:
-      - 'aria2'
-      - 'atuin'
-      - 'awscli'
-      - 'bat'
-      - 'chezmoi'
-      - 'fzf'
-      - 'git'
-      - 'jq'
-      - 'lsd'
-      - 'mas'
-      - 'neovim'
-      - 'pwgen'
-      - 'rclone'
-      - 'tree'
-      - 'zoxide'
+      - 'aria2'                    # Download with resuming and segmented downloading
+      - 'atuin'                    # Improved shell history for zsh, bash, fish and nushell
+      - 'awscli'                   # Official Amazon AWS command-line interface
+      - 'bat'                      # Clone of cat(1) with syntax highlighting and Git integration
+      - 'chezmoi'                  # Manage your dotfiles across multiple diverse machines, securely
+      - 'fzf'                      # Command-line fuzzy finder written in Go
+      - 'git'                      # Distributed revision control system
+      - 'jq'                       # Lightweight and flexible command-line JSON processor
+      - 'lsd'                      # Clone of ls with colorful output, file type icons, and more
+      - 'mas'                      # Mac App Store command-line interface
+      - 'neovim'                   # Ambitious Vim-fork focused on extensibility and agility
+      - 'pwgen'                    # Password generator
+      - 'rclone'                   # Rsync for cloud storage
+      - 'tree'                     # Display directories as trees (with optional color/HTML output)
+      - 'zoxide'                   # Shell extension to navigate your filesystem faster
       casks:
-      - 'appcleaner'
-      - 'dropbox'
-      - 'font-hack-nerd-font'
-      - 'font-meslo-lg-nerd-font'
-      - 'fuse-t'
-      - 'google-drive'
-      - 'grandperspective'
-      - 'iterm2'
-      - 'keepassxc'
-      - 'lulu'
-      - 'zoom'
+      - 'appcleaner'               # Application uninstaller
+      - 'dropbox'                  # Client for the Dropbox cloud storage service
+      - 'font-hack-nerd-font'      # Hack Nerd Font (Hack) - [no description]
+      - 'font-meslo-lg-nerd-font'  # MesloLG Nerd Font families (Meslo LG) - [no description]
+      - 'fuse-t'                   # Kext-less implementation of FUSE
+      - 'google-drive'             # Client for the Google Drive storage service
+      - 'grandperspective'         # Graphically shows disk usage within a file system
+      - 'iterm2'                   # Terminal emulator as alternative to Apple's Terminal app
+      - 'keepassxc'                # Password manager app
+      - 'lulu'                     # Open-source firewall to block unknown outgoing connections
+      - 'zoom'                     # Video communication and virtual meeting platform
       mas:
       - '"The Unarchiver", id: 425424353'
 
