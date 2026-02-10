@@ -1,10 +1,9 @@
 {{- if has "ai" .tags -}}
-# User Memory
+# Global Preferences
 
-## Code Preferences
-- Prefer concise, readable code
-- Use meaningful variable names
+## Code Style
 - Follow existing project conventions
+- Prefer concise, readable code
 
 ## Git Workflow
 
@@ -24,4 +23,37 @@ Before implementing non-trivial tasks, pause to analyze:
 
 ## Large-Scale Analysis
 For tasks spanning many files or exceeding context capacity, use subagents or tool-based search rather than reading files individually. Scope searches precisely and use relative paths.
+
+## MCP Tools
+Use these tools proactively whenever available — don't wait to be asked:
+- **basic-memory**: Remember and recall previous conversations. See Basic Memory section below.
+- **context7**: Resolve library IDs and fetch current docs for code generation, setup, and API reference
+- **serena**: Semantic code retrieval and editing
+
+## Basic Memory
+
+When basic-memory MCP tools are available, follow these rules:
+
+### Proactive Usage
+- At conversation start: use `search_notes()` or `recent_activity()` to check for prior knowledge on the user's topic before responding
+- Before creating any note: ALWAYS `search_notes()` first to check for existing content on that topic
+- When an existing note covers the topic: use `edit_note(operation="append")` instead of creating a duplicate with `write_note()`
+- At conversation end: offer to save key decisions, insights, or action items
+- Use `build_context()` to follow relation links and understand connected knowledge
+
+### Note Quality
+- Every note: 3+ observations with `[category]` prefixes, 2+ relations with `[[wikilinks]]`
+- Categories: `[decision]`, `[fact]`, `[technique]`, `[requirement]`, `[insight]`, `[problem]`, `[solution]` — avoid generic `[note]` or `[info]`
+- Relation types: `implements`, `requires`, `part_of`, `extends`, `contrasts_with`, `caused_by`, `leads_to` — avoid overusing `relates_to`
+- Use exact entity titles from search results in `[[relations]]`
+
+### Search Strategy
+- If few results: try broader terms, synonyms, or partial words
+- Try `search_type="title"` for name-based matching
+- Use `build_context(depth=2)` to find indirect connections
+- Check `recent_activity()` for recently modified content
+
+### Permission
+- Always ask before recording conversations to Basic Memory
+- Confirm after saving with the note title and location
 {{ end -}}
