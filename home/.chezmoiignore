@@ -12,6 +12,7 @@ brewfiles/
 .claude/*
 !.claude/CLAUDE.md
 !.claude/commands/
+!.claude/skills/
 
 ## scripts
 scripts/
