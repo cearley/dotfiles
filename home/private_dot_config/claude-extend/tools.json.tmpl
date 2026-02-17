@@ -28,12 +28,13 @@
         "@modelcontextprotocol/server-sequential-thinking"
       ]
     },
-    "serena": {
+    "serena-claude-LSP": {
       "description": "Semantic code analysis and intelligent IDE assistant",
       "command": "uvx",
       "args": [
         "--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server",
-        "--context", "ide", "--project-from-cwd"
+        "--context", "claude-code", "--project-from-cwd",
+        "--language-backend", "LSP"
       ]
     },
     "serena-claude-jetbrains": {
