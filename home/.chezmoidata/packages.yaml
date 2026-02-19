@@ -62,12 +62,14 @@ packages:
     # Optional development packages (dev tag)
     dev:
       taps:
+      - 'azure/functions'
       - 'localstack/tap'
       brews:
       - 'ack'
       - 'act'
       - 'aws-sam-cli'
       - 'azure-cli'
+      - 'azure/functions/azure-functions-core-tools@4'
       - 'bats-core'
       - 'cfn-lint'
       - 'checkmake'
@@ -86,6 +88,7 @@ packages:
       - 'localstack/tap/localstack-cli'
       - 'lynis'
       - 'nuget'
+      - 'pipx'
       - 'pkgconf'
       - 'snyk-cli'
       - 'sqlite'
