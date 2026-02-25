@@ -8,5 +8,5 @@
 if [[ -d "$HOME/.local/share/zsh-functions" ]]; then
   export ZSH_FUNCTIONS_DIR="$HOME/.local/share/zsh-functions"
   fpath=( "$ZSH_FUNCTIONS_DIR/autoload" "${fpath[@]}" )
-  autoload -Uz brew-list-formulas gemini openspec
+  autoload -Uz brew-list-formulas {{- if (has "ai" .tags) }} gemini openspec {{- end }}
 fi

@@ -201,6 +201,13 @@ nvm() {
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 {{ if has "ai" .tags -}}
+# OPENSPEC:START
+# OpenSpec shell completions configuration
+fpath=("/Users/craig/.oh-my-zsh/custom/completions" $fpath)
+autoload -Uz compinit
+compinit
+# OPENSPEC:END
+
 # LLM-based command suggestions for zsh
 source {{ .chezmoi.homeDir }}/.local/share/zsh-llm-suggestions/zsh-llm-suggestions.zsh
 # zsh-llm-suggestions key bindings
@@ -226,6 +233,13 @@ export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 
 # zoxide - A smarter cd command (lightweight, safe to load immediately)
 eval "$(zoxide init zsh)"
+
+# bun completions
+[ -s "{{- .chezmoi.homeDir -}}/.bun/_bun" ] && source "{{- .chezmoi.homeDir -}}/.bun/_bun"
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
 
 # ------------------------------------------------------------------------------
 # Performance-optimized deferred initialization

@@ -1,0 +1,25 @@
+{{ if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools bun; then
+    exit 1
+fi
+
+print_message "info" "Installing global packages using bun..."
+
+{{- $categories := prepend .tag_choices "core" }}
+{{- range $category := $categories }}
+  {{- $categoryData := index $.packages.darwin $category }}
+  {{- if or (eq $category "core") (has $category $.tags) }}
+    {{- if and (hasKey $categoryData "bun") $categoryData.bun }}
+# Install {{ $category }} bun packages
+{{ range $categoryData.bun -}}
+bun install -g {{ . }}
+{{ end -}}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+{{ end -}}

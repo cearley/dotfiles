@@ -20,6 +20,7 @@ packages:
       - 'lsd'                      # Clone of ls with colorful output, file type icons, and more
       - 'mas'                      # Mac App Store command-line interface
       - 'neovim'                   # Ambitious Vim-fork focused on extensibility and agility
+      - 'oven-sh/bun/bun'          # Fast all-in-one JavaScript runtime, bundler, transpiler and package manager
       - 'pwgen'                    # Password generator
       - 'rclone'                   # Rsync for cloud storage
       - 'tree'                     # Display directories as trees (with optional color/HTML output)
@@ -52,6 +53,7 @@ packages:
       - 'etrecheckpro'
       - 'grammarly-desktop'
       - 'logi-options+'
+      - 'slack'
       mas:
       - '"ASUS Device Discovery", id: 995124504'
       - '"ASUS Firmware Restoration", id: 1020519014'
@@ -117,10 +119,13 @@ packages:
       taps:
       - 'specstoryai/tap'
       brews:
+      - 'beads'
       - 'block-goose-cli'
       - 'github-mcp-server'
       - 'qwen-code'
       - 'specstoryai/tap/specstory'
+      bun:
+      - 'ralph-tui'
       casks:
       - 'block-goose'
       - 'claude'

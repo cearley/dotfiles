@@ -43,7 +43,7 @@ Created `run_once_after_darwin-84-refresh-font-cache.sh.tmpl` to restart the fon
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
-source "{{ .chezmoi.sourceDir -}}/scripts/script-utils.sh"
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 print_message "info" "Refreshing font cache to register newly installed fonts..."
 

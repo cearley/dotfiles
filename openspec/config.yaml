@@ -1,0 +1,47 @@
+schema: spec-driven
+
+context: |
+  Domain: Personal dotfiles repository managed by chezmoi for macOS development environments.
+
+  Tech stack:
+  - Configuration management: chezmoi (Go templates, dotfiles management)
+  - Package management: Homebrew (primary), SDKMAN (Java/JVM), uv (Python), nvm (Node.js), Bun
+  - Shell: zsh with Powerlevel10k theme
+  - Secret management: KeePassXC integration via chezmoi functions
+  - Scripting: Bash with shared utility functions (scripts/shared-utils.sh)
+
+  Architecture:
+  - Target OS: macOS 11.0+ (Big Sur or later)
+  - Primary arch: ARM64 (Apple Silicon), secondary: x64 (Intel)
+  - Custom source directory layout with home/ as root (defined in .chezmoiroot)
+  - Tag-based installation profiles: core, dev, ai, work, personal, datascience, mobile
+  - Machine-specific config via pattern-based substring matching in config.yaml
+  - All packages defined in home/.chezmoidata/packages.yaml
+
+  Key conventions:
+  - Script naming: {frequency}_{timing}_{os}-{order}-{description}.sh.tmpl
+  - Script ordering: 00-09 System Foundation, 10-19 Toolchains, 20-29 Package Mgmt, 30-39 Env Managers, 40-49 Env Setup, 80-99 System Config
+  - All scripts source shared-utils.sh for print_message(), command_exists(), require_tools()
+  - Platform wrapping: all darwin scripts wrapped in {{- if eq .chezmoi.os "darwin" -}} conditionals
+  - Command validation: use lookPath (never output "command" "-v")
+  - Data files in .chezmoidata/ are static — cannot be templates
+  - No hardcoded secrets — all credentials via KeePassXC
+  - All operations must be idempotent (safe to re-run)
+
+rules:
+  proposal:
+    - Reference CLAUDE.md and openspec/specs/ for architecture and conventions
+    - Consider impact on existing scripts, templates, and machine configurations
+    - Identify which tags (core, dev, ai, work, personal, datascience, mobile) are affected
+    - Always include a "Non-goals" section
+    - Call out security implications (secrets, permissions, SIP restrictions)
+  spec:
+    - Follow chezmoi naming conventions for any new files or scripts
+    - Use shared-utils.sh functions for all script output
+    - Ensure idempotency — all operations safe to re-run
+    - Validate templates with chezmoi execute-template
+  tasks:
+    - Break tasks into chunks that can be independently tested
+    - Include template testing steps (chezmoi execute-template, chezmoi diff)
+    - Order tasks respecting script execution order (00-99 ranges)
+    - Specify which files in home/.chezmoidata/ or home/.chezmoitemplates/ are affected

@@ -4,6 +4,7 @@
 The package management system provides a unified approach for installing packages across different ecosystems, all defined in a single `packages.yaml` file:
 - **Homebrew**: System packages, applications, and CLI tools (essential tag-based + machine-specific)
 - **UV Tools**: Python-based CLI tools and utilities (tag-based, within `packages.yaml`)
+- **Bun Global Packages**: JavaScript/TypeScript CLI tools and utilities (tag-based, within `packages.yaml`)
 - **SDKMAN SDKs**: JVM ecosystem SDKs and build tools (tag-based, within `packages.yaml`, requires `dev` tag)
 
 ## Requirements
@@ -16,7 +17,7 @@ All packages SHALL be defined in `home/.chezmoidata/packages.yaml` organized by 
 
 #### Scenario: Tag-based package categories
 - **WHEN** packages are categorized by tags (core, dev, ai, work, personal, datascience, mobile)
-- **THEN** each tag SHALL contain separate lists for `taps`, `brews`, `casks`, `mas`, `sdkman`, and `uv` packages
+- **THEN** each tag SHALL contain separate lists for `taps`, `brews`, `casks`, `mas`, `sdkman`, `uv`, and `bun` packages
 
 ### Requirement: Tag-Based Package Selection
 Package installation SHALL be controlled by user-selected tags during chezmoi initialization.
@@ -312,6 +313,64 @@ UV tools SHALL be organized within the same tag categories as Homebrew packages 
 - **WHEN** a tool is essential for basic operations
 - **THEN** it SHALL be placed under the `core` tag's `uv` list in `packages.yaml`
 
+## Bun Global Package Management
+
+### Requirement: Bun Global Package Definition
+Bun global packages SHALL be defined within tag categories in `home/.chezmoidata/packages.yaml` using the `bun` key.
+
+#### Scenario: Package organization structure
+- **WHEN** bun packages are defined in `packages.yaml`
+- **THEN** the YAML structure SHALL include `packages.darwin.<tag>.bun` with lists of package names
+
+#### Scenario: Package specification format
+- **WHEN** a bun package is defined
+- **THEN** it SHALL use a simple package name format: `"package-name"`
+
+### Requirement: Tag-Based Bun Package Selection
+Bun global package installation SHALL be controlled by user-selected tags.
+
+#### Scenario: Tag-conditional packages
+- **WHEN** a user selects the `ai` tag
+- **THEN** packages in the `ai` tag's `bun` list SHALL be installed
+- **AND** packages in unselected tag categories SHALL be skipped
+
+#### Scenario: Multiple package categories
+- **WHEN** a user selects tags `core,dev,ai`
+- **THEN** bun packages from all three tag categories SHALL be installed via `bun install -g`
+
+### Requirement: Bun Global Package Installation Script
+Bun global packages SHALL be installed via a `run_onchange_before` script at position 26.
+
+#### Scenario: Package installation execution
+- **WHEN** the bun package installation script runs
+- **THEN** it SHALL execute `bun install -g <package>` for each selected package
+- **AND** SHALL re-run whenever the script content or `packages.yaml` changes
+
+#### Scenario: Package installation idempotency
+- **WHEN** a package is already installed globally
+- **THEN** `bun install -g` SHALL skip reinstallation or upgrade the package
+- **AND** SHALL continue with remaining packages
+
+#### Scenario: Bun availability
+- **WHEN** the bun package installation script runs
+- **THEN** bun SHALL already be available via Homebrew (installed at position 23 as a core brew)
+- **AND** the script SHALL validate bun is present using `require_tools`
+
+### Requirement: Bun Package Categories
+Bun packages SHALL be organized within the same tag categories as other package types in `packages.yaml`.
+
+#### Scenario: AI package category
+- **WHEN** a package is AI-related (ralph-tui)
+- **THEN** it SHALL be placed under the `ai` tag's `bun` list in `packages.yaml`
+
+#### Scenario: Development package category
+- **WHEN** a package is development-related
+- **THEN** it SHALL be placed under the `dev` tag's `bun` list in `packages.yaml`
+
+#### Scenario: Core package category
+- **WHEN** a package is essential for basic operations
+- **THEN** it SHALL be placed under the `core` tag's `bun` list in `packages.yaml`
+
 ## SDKMAN SDK Management
 
 ### Requirement: SDKMAN Installation
@@ -409,6 +468,15 @@ Package managers SHALL be installed before their respective packages, following 
 - **THEN** UV tool installation (position 25) runs before UV installation (position 30)
 - **NOTE**: This assumes UV is available through another mechanism (e.g., Homebrew in packages.yaml)
 
+#### Scenario: Bun global package installation timing
+- **WHEN** scripts execute in order
+- **THEN** Bun global package installation (position 26) SHALL run after Homebrew package installation (position 23)
+- **NOTE**: Bun is installed via Homebrew as a core brew (`oven-sh/bun/bun`)
+
+#### Scenario: Machine-specific Brewfile always last
+- **WHEN** scripts execute in order
+- **THEN** machine-specific Brewfile installation (position 28) SHALL be the last script in the package management group (20-29)
+
 ### Requirement: Complete Installation Sequence
 The complete package installation sequence SHALL follow this order:
 
@@ -419,13 +487,14 @@ The complete package installation sequence SHALL follow this order:
   2. Position 23: Install Homebrew packages from packages.yaml
   3. Position 24: Install SDKs via SDKMAN (if `dev` tag)
   4. Position 25: Install tools via UV
-  5. Position 26: Install additional machine-specific Homebrew packages
-  6. Position 30: Install UV itself
+  5. Position 26: Install global packages via Bun
+  6. Position 28: Install additional machine-specific Homebrew packages
+  7. Position 30: Install UV itself
 
 ## Design Decisions
 
-### Three-Layer Package Management Rationale
-Using three complementary package management systems provides ecosystem-specific optimization:
+### Four-Layer Package Management Rationale
+Using four complementary package management systems provides ecosystem-specific optimization:
 
 #### Homebrew (System Layer)
 - **Purpose**: System packages, GUI applications, fonts, CLI utilities
@@ -438,6 +507,12 @@ Using three complementary package management systems provides ecosystem-specific
 - **Strengths**: Fast, modern Python package manager; isolated tool installations
 - **Pattern**: Tag-based selection with `core` always installed
 - **Use cases**: AI tools (claude-monitor), shell utilities (zsh-llm-suggestions), Python dev tools
+
+#### Bun (JavaScript/TypeScript Ecosystem)
+- **Purpose**: JavaScript/TypeScript CLI tools and utilities
+- **Strengths**: Fast runtime, global package management via `bun install -g`
+- **Pattern**: Tag-based selection with `core` always installed
+- **Use cases**: AI tools (ralph-tui), development utilities
 
 #### SDKMAN (JVM Ecosystem)
 - **Purpose**: Java SDKs, build tools, and JVM-related packages
@@ -475,9 +550,9 @@ Making the package data file (`packages.yaml`) static ensures:
 - Single source of truth for all package definitions
 
 ### Script Execution Order Design
-The numbered script execution order (20, 23, 24, 25, 26, 30) uses 10-point range grouping:
+The numbered script execution order (20, 23, 24, 25, 26, 28, 30) uses 10-point range grouping:
 - **Categorical grouping**: Scripts in 20-29 range handle package management, 30-39 handle environment managers
-- **Flexible spacing**: Within each range, scripts use 1-5 point spacing as needed (20, 23, 24, 25, 26)
+- **Flexible spacing**: Within each range, scripts use 1-5 point spacing as needed (20, 23, 24, 25, 26, 28)
 - **Future expansion**: Gaps within ranges allow inserting new scripts without renumbering
 - **Dependency management**: Package managers install before their packages
 - **Predictable order**: Clear, documented sequence for troubleshooting
@@ -490,31 +565,34 @@ The numbered script execution order (20, 23, 24, 25, 26, 30) uses 10-point range
 
 This table shows which tags control package installation across all three package management systems:
 
-| Tag | Homebrew | UV Tools | SDKMAN | Description |
-|-----|----------|----------|--------|-------------|
-| `core` | ✅ Always | ✅ Always | ❌ | Essential packages for basic system operation |
-| `dev` | ✅ Optional | ✅ Optional | ✅ **Required** | Development tools, IDEs, language toolchains |
-| `ai` | ✅ Optional | ✅ Optional | ❌ | AI/ML tools (Claude, Ollama, LM Studio) |
-| `work` | ✅ Optional | ✅ Optional | ❌ | Enterprise/work tools (Teams, Workspaces) |
-| `personal` | ✅ Optional | ✅ Optional | ❌ | Personal productivity |
-| `datascience` | ✅ Optional | ✅ Optional | ❌ | Data analysis tools (R, RStudio, csvkit) |
-| `mobile` | ✅ Optional | ✅ Optional | ❌ | VPN and network tools (Tunnelblick, WireGuard) |
+| Tag | Homebrew | UV Tools | Bun | SDKMAN | Description |
+|-----|----------|----------|-----|--------|-------------|
+| `core` | ✅ Always | ✅ Always | ✅ Always | ❌ | Essential packages for basic system operation |
+| `dev` | ✅ Optional | ✅ Optional | ✅ Optional | ✅ **Required** | Development tools, IDEs, language toolchains |
+| `ai` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | AI/ML tools (Claude, Ollama, LM Studio) |
+| `work` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | Enterprise/work tools (Teams, Workspaces) |
+| `personal` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | Personal productivity |
+| `datascience` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | Data analysis tools (R, RStudio, csvkit) |
+| `mobile` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | VPN and network tools (Tunnelblick, WireGuard) |
 
 ### Tag Selection Behavior
 
 #### Core Tag (Always Active)
 - **Homebrew**: Core packages always installed
 - **UV Tools**: Core tools always installed
+- **Bun**: Core packages always installed
 - **SDKMAN**: Not applicable (requires `dev` tag)
 
 #### Development Tag (dev)
 - **Homebrew**: Installs development packages (Docker, IDEs, etc.)
 - **UV Tools**: Installs development tools
+- **Bun**: Installs development packages
 - **SDKMAN**: **Required** - SDKMAN itself and all SDKs only install with `dev` tag
 
 #### Other Tags (ai, work, personal, datascience, mobile)
 - **Homebrew**: Each tag installs corresponding category packages
 - **UV Tools**: Each tag installs corresponding category tools
+- **Bun**: Each tag installs corresponding category packages
 - **SDKMAN**: Not used (only `dev` category exists)
 
 ### Data File Structure
@@ -551,6 +629,8 @@ packages:
       - "basic-memory"
       - "claude-monitor"
       - "git+https://github.com/org/repo@latest"
+      bun:          # Bun global packages (can be in any tag)
+      - "ralph-tui"
 
     # ... other tags (work, personal, datascience, mobile)
 ```
@@ -563,5 +643,6 @@ packages:
 | `run_onchange_before_darwin-23-install-packages.sh.tmpl` | 23 | On change | Install Homebrew packages from packages.yaml |
 | `run_onchange_before_darwin-24-install-sdks.sh.tmpl` | 24 | On change | Install SDKs via SDKMAN from packages.yaml (requires `dev` tag) |
 | `run_onchange_before_darwin-25-install-tools.sh.tmpl` | 25 | On change | Install UV tools from packages.yaml |
-| `run_onchange_before_darwin-26-brew-bundle-install.sh.tmpl` | 26 | On change | Install machine-specific Homebrew packages |
+| `run_onchange_before_darwin-26-install-bun-packages.sh.tmpl` | 26 | On change | Install Bun global packages from packages.yaml |
+| `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl` | 28 | On change | Install machine-specific Homebrew packages |
 | `run_once_before_darwin-30-install-uv.sh.tmpl` | 30 | Once | Install UV package manager |

@@ -1,37 +1,16 @@
-<!-- OPENSPEC:START -->
-# OpenSpec Instructions
-
-These instructions are for AI assistants working in this project.
-
-Always open `@/openspec/AGENTS.md` when the request:
-- Mentions planning or proposals (words like proposal, spec, change, plan)
-- Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
-- Sounds ambiguous and you need the authoritative spec before coding
-
-Use `@/openspec/AGENTS.md` to learn:
-- How to create and apply change proposals
-- Spec format and conventions
-- Project structure and guidelines
-
-Keep this managed block so 'openspec update' can refresh the instructions.
-
-<!-- OPENSPEC:END -->
 
 # Chezmoi Dotfiles
 
 Quick reference guide for AI assistants working with this chezmoi dotfiles repository.
 
-**📚 Source of Truth**: For comprehensive architecture, design decisions, and requirements, see [`openspec/project.md`](openspec/project.md).
-
 ## Quick Navigation
 
 ### Essential Files
-- **Complete specs**: `openspec/project.md` - Authoritative project documentation
-- **Daily commands**: `docs/command-reference.md` - Common chezmoi operations
-- **Quick reference**: `.serena/memories/chezmoi-dotfiles-quick-reference.md` - Fast lookup
+- **OpenSpec specs**: `openspec/specs/` - Capability specifications and design
+- **Code style examples**: `.serena/memories/code-style-quick-reference.md` - Extended cookbook
 
 ### Key Directories
-- `home/.chezmoiscripts/` - Numbered setup scripts (see openspec/project.md for execution order)
+- `home/.chezmoiscripts/` - Numbered setup scripts (execution order: 00-99)
 - `home/.chezmoidata/` - Static data files (packages.yaml, config.yaml)
 - `home/.chezmoitemplates/` - Reusable template components
 - `home/scripts/shared-utils.sh` - Common script functions
@@ -50,6 +29,32 @@ chezmoi managed                # List all managed files
 chezmoi cat ~/path/to/file     # Preview generated file content (verify templates/modify_ scripts)
 ```
 
+## Chezmoi File Attributes
+
+Prefixes in source filenames control how chezmoi processes them:
+- **`private_`** - Sensitive/machine-specific files (restricted permissions)
+- **`dot_`** - Creates dotfiles (hidden files starting with `.`)
+- **`executable_`** - Creates executable files (chmod +x)
+- **`symlink_`** - Creates symbolic links
+- **`.tmpl` suffix** - Template files processed by Go template engine
+
+## Source Directory Structure
+
+```
+.local/share/chezmoi/
+├── home/                           # Root for all managed files (.chezmoiroot)
+│   ├── .chezmoidata/              # Static data files (YAML/JSON/TOML)
+│   ├── .chezmoitemplates/         # Reusable template snippets
+│   ├── .chezmoiscripts/           # Automated setup scripts
+│   ├── .chezmoiexternal.toml.tmpl # External dependency definitions
+│   ├── .chezmoi.toml.tmpl         # User configuration prompts
+│   └── [dotfiles with chezmoi prefixes]
+├── scripts/                        # Shared utility scripts
+├── hooks/                          # Pre/post operation hooks
+├── brewfiles/                      # Machine-specific Homebrew bundles
+└── remote_install.sh              # One-command bootstrap script
+```
+
 ## Practical Quick Reference
 
 ### Script Naming Pattern
@@ -61,7 +66,10 @@ chezmoi cat ~/path/to/file     # Preview generated file content (verify template
 - `run_once_before_darwin-20-install-sdkman.sh.tmpl` - One-time installation
 - `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl` - Re-runs on changes
 
-**Execution order**: See `openspec/project.md` for complete script execution order and categories.
+**Script execution order:**
+- **05**: Rosetta 2 | **10**: Rust | **20**: SDKMAN | **23**: Homebrew packages | **24**: SDKMAN SDKs | **25**: UV tools | **26**: Bun packages | **28**: Machine-specific Brewfile
+- **30**: UV manager | **35**: nvm | **36**: Claude Code (`ai` tag)
+- **45**: GitHub auth | **80**: Microsoft Defender | **82**: Global Protect VPN | **83**: Atuin | **85**: System defaults | **90**: Hosts file | **95**: Syncthing | **97**: SSH test
 
 ### Shared Utilities
 
@@ -74,8 +82,11 @@ source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 - `print_message "info|success|warning|error|skip|tip" "message"` - Consistent output
 - `command_exists "command"` - Check availability
 - `require_tools "tool1" "tool2"` - Validate dependencies
+- `wait_for_app_installation "/path/to/App.app" "App Name"` - Interactive install wait
+- `ensure_directory "path" ["sudo"]` - Create directory if missing
+- `prompt_ready ["message"]` - User prompt helper
 
-See `.serena/memories/code-style-quick-reference.md` for complete function list and usage examples.
+See `.serena/memories/code-style-quick-reference.md` for extended examples and patterns.
 
 ### Template Testing
 ```bash
@@ -117,7 +128,13 @@ Use `modify_` prefix for files where you only manage specific keys (e.g., JSON c
 {{ end -}}
 ```
 
-### Machine-Specific Settings
+### Reusable Templates
+
+Available in `home/.chezmoitemplates/`:
+- `machine-name` - Cross-platform machine name detection
+- `machine-config` - Machine-specific setting lookup (single property)
+- `machine-settings` - All machine settings as JSON dict (preferred for multiple lookups)
+- `icloud-account-id` - Returns iCloud account ID if signed in (macOS)
 
 **Access machine config:**
 ```go-template
@@ -131,9 +148,21 @@ See `openspec/specs/machine-config/` for complete machine configuration system d
 
 1. **No hardcoded secrets** - All credentials via KeePassXC
 2. **Data files are static** - Files in `.chezmoidata/` cannot be templates
-3. **Three-layer package management** - See `openspec/specs/package-management/` for architecture
+3. **Four-layer package management** (Homebrew, UV, Bun, SDKMAN) - See `openspec/specs/package-management/`
 4. **Consistent messaging** - Always use shared utilities for script output
 5. **Platform wrapping** - Darwin scripts must use conditional templates
+6. **Script ordering** - Machine-specific Brewfile (position 28) must always be last in the package management group (20-29)
+
+### Platform Requirements
+- **Target OS**: macOS 11.0+ (Big Sur or later)
+- **Architectures**: ARM64 (Apple Silicon) primary, x64 (Intel) secondary
+- **Bootstrap dependencies**: Xcode CLI Tools, KeePassXC (secrets), Homebrew (packages)
+
+### Tag Combinations
+- **Minimal**: `core`
+- **Developer**: `core,dev,ai`
+- **Work machine**: `core,dev,work`
+- **Personal machine**: `core,dev,ai,personal,datascience`
 
 ## Claude Code Automations
 
@@ -155,10 +184,7 @@ See `openspec/specs/machine-config/` for complete machine configuration system d
 
 ## When to Reference openspec/
 
-- **Architecture questions** → `openspec/project.md`
 - **Package management** → `openspec/specs/package-management/`
 - **Machine config** → `openspec/specs/machine-config/`
-- **Script execution order** → `openspec/project.md` section "Code Style"
+- **Secret management** → `openspec/specs/secret-management/`
 - **Major changes** → See archived proposals in `openspec/changes/archive/`
-
-For comprehensive documentation, conventions, and design rationale, **always consult `openspec/project.md` first**.

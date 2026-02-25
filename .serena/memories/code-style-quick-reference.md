@@ -1,8 +1,8 @@
 # Code Style Quick Reference
 
 > **For complete coding standards and conventions**, see:
-> - [`openspec/project.md`](../../openspec/project.md) - Section "Project Conventions"
-> - Subsections: Code Style, Architecture Patterns, Testing Strategy
+> - [`CLAUDE.md`](../../CLAUDE.md) - Project conventions and quick reference
+> - [`openspec/specs/`](../../openspec/specs/) - Capability specifications
 
 ---
 
@@ -186,4 +186,4 @@ fi
 
 ## Memory Note
 
-This is a practical quick reference for applying coding conventions. For the complete, authoritative standards, rationale, and patterns, see [`openspec/project.md`](../../openspec/project.md).
+This is a practical quick reference for applying coding conventions. For the complete, authoritative standards and conventions, see [`CLAUDE.md`](../../CLAUDE.md) and [`openspec/specs/`](../../openspec/specs/).
