@@ -53,7 +53,7 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 **Execution order** (10-point range grouping for logical categorization):
 - **00-09**: System Foundation (Rosetta 2)
 - **10-19**: Development Toolchains (Rust)
-- **20-29**: Package Management (SDKMAN, Homebrew bundles, SDKs, UV tools, machine-specific Brewfiles)
+- **20-29**: Package Management (SDKMAN, Homebrew packages, SDKs, UV tools, Bun packages, machine-specific Brewfiles)
 - **30-39**: Environment Managers (uv, nvm)
 - **40-49**: Environment Setup (GitHub auth, shell plugins)
 - **80-99**: System Configuration (security, VPN, sync services, defaults, validation)
@@ -68,8 +68,9 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 **Unified package management** (all in `packages.yaml`):
 1. **Homebrew packages** - System packages, apps, CLI tools (`taps`, `brews`, `casks`, `mas`)
 2. **UV tools** - Python CLI tools and utilities (`uv` key within tags)
-3. **SDKMAN SDKs** - JVM ecosystem (Java, Gradle, Maven) (`sdkman` key in `dev` tag)
-4. **Machine-specific Brewfiles** - Additional packages requiring confirmation
+3. **Bun packages** - JavaScript/TypeScript global tools (`bun` key within tags)
+4. **SDKMAN SDKs** - JVM ecosystem (Java, Gradle, Maven) (`sdkman` key in `dev` tag)
+5. **Machine-specific Brewfiles** - Additional packages requiring confirmation
 
 **Environment managers:**
 - **SDKMAN**: Java/JVM toolchain management (requires `dev` tag)
@@ -104,7 +105,7 @@ This is a personal configuration reflecting specific workflows and preferences. 
 - **KeePassXC database** - Set up your own with required entries
 - **Machine configurations** - Update `home/.chezmoidata/config.yaml` for your machines
 - **Package selections** - Review `home/.chezmoidata/packages.yaml` and machine-specific Brewfiles
-- **Personal tools** - Remove ChronoSync, custom hosts management, etc.
+- **Personal tools** - Remove custom hosts management, etc.
 - **SSH/Git settings** - Update for your accounts and preferences
 
 **Initial setup prompts:**
