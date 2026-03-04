@@ -140,6 +140,8 @@ packages:
       - "claude-monitor"
       - "git+https://github.com/cearley/claude-extend@latest"
       - "git+https://github.com/cearley/zsh-llm-suggestions"
+      cargo:
+      - '--git https://github.com/Dicklesworthstone/beads_rust.git' # beads_rust
 
     # Optional data science packages (datascience tag)
     datascience:

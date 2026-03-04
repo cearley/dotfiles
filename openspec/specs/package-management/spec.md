@@ -371,6 +371,80 @@ Bun packages SHALL be organized within the same tag categories as other package 
 - **WHEN** a package is essential for basic operations
 - **THEN** it SHALL be placed under the `core` tag's `bun` list in `packages.yaml`
 
+## Cargo Package Management
+
+### Requirement: Cargo Package Definition
+Cargo packages SHALL be defined within tag categories in `home/.chezmoidata/packages.yaml` using the `cargo` key.
+
+#### Scenario: Package organization structure
+- **WHEN** cargo packages are defined in `packages.yaml`
+- **THEN** the YAML structure SHALL include `packages.darwin.<tag>.cargo` with lists of install specifications
+
+#### Scenario: Package specification format — crates.io
+- **WHEN** a cargo package from crates.io is defined
+- **THEN** it SHALL use a bare package name: `"ripgrep"`
+
+#### Scenario: Package specification format — git source
+- **WHEN** a cargo package is sourced from a git repository
+- **THEN** it SHALL use the full flag string: `"--git https://github.com/org/repo.git"`
+
+### Requirement: Tag-Based Cargo Package Selection
+Cargo package installation SHALL be controlled by user-selected tags, with `dev` as a hard prerequisite.
+
+#### Scenario: Dev tag required for any cargo installation
+- **WHEN** the `dev` tag is NOT selected
+- **THEN** the cargo package installation script SHALL skip execution entirely
+- **AND** no `cargo install` commands SHALL run
+
+#### Scenario: Tag-conditional packages
+- **WHEN** the `dev` tag is selected and the `ai` tag is also selected
+- **THEN** packages in the `ai` tag's `cargo` list SHALL be installed
+- **AND** packages in unselected tag categories SHALL be skipped
+
+#### Scenario: Multiple cargo package categories
+- **WHEN** a user selects tags `dev,ai,work`
+- **THEN** cargo packages from both `ai` and `work` tag categories SHALL be installed
+- **AND** packages from unselected categories SHALL be skipped
+
+### Requirement: Cargo Package Installation Script
+Cargo packages SHALL be installed via a `run_onchange_after` script at position 27.
+
+#### Scenario: Script execution timing
+- **WHEN** chezmoi applies configuration
+- **THEN** cargo package installation SHALL run AFTER dotfiles are applied (`run_onchange_after`)
+- **AND** SHALL execute at position 27, between Bun packages (26) and machine-specific Brewfile (28)
+
+#### Scenario: Cargo environment initialization
+- **WHEN** the cargo installation script runs
+- **THEN** it SHALL source `~/.cargo/env` before invoking any `cargo` commands
+- **AND** SHALL ensure the `cargo` binary is on PATH
+
+#### Scenario: Package installation execution
+- **WHEN** the cargo installation script runs with eligible packages
+- **THEN** it SHALL execute `cargo install <spec>` for each selected package
+- **AND** SHALL re-run whenever the script content or `packages.yaml` changes
+
+#### Scenario: Cargo availability check
+- **WHEN** the cargo installation script runs
+- **THEN** it SHALL validate `cargo` is available using `require_tools cargo`
+- **AND** SHALL exit cleanly with an error message if `cargo` is not found
+
+#### Scenario: Package installation idempotency
+- **WHEN** a cargo package is already installed at the current version
+- **THEN** `cargo install` SHALL report already-installed status
+- **AND** SHALL continue with remaining packages without error
+
+### Requirement: Cargo Package Categories
+Cargo packages SHALL be organized within the same tag categories as other package types in `packages.yaml`.
+
+#### Scenario: AI package category
+- **WHEN** a package is AI-workflow-related (e.g., beads_rust)
+- **THEN** it SHALL be placed under the `ai` tag's `cargo` list in `packages.yaml`
+
+#### Scenario: Development package category
+- **WHEN** a package is a Rust development tool
+- **THEN** it SHALL be placed under the `dev` tag's `cargo` list in `packages.yaml`
+
 ## SDKMAN SDK Management
 
 ### Requirement: SDKMAN Installation
@@ -473,9 +547,14 @@ Package managers SHALL be installed before their respective packages, following 
 - **THEN** Bun global package installation (position 26) SHALL run after Homebrew package installation (position 23)
 - **NOTE**: Bun is installed via Homebrew as a core brew (`oven-sh/bun/bun`)
 
-#### Scenario: Machine-specific Brewfile always last
+#### Scenario: Machine-specific Brewfile always last in before-phase
 - **WHEN** scripts execute in order
-- **THEN** machine-specific Brewfile installation (position 28) SHALL be the last script in the package management group (20-29)
+- **THEN** machine-specific Brewfile installation (position 28) SHALL be the last `run_onchange_before` script in the package management group (20-29)
+
+#### Scenario: Cargo packages run after apply
+- **WHEN** scripts execute in order
+- **THEN** cargo package installation (position 27, `run_onchange_after`) SHALL run after chezmoi applies dotfiles
+- **AND** SHALL run only when the `dev` tag is selected
 
 ### Requirement: Complete Installation Sequence
 The complete package installation sequence SHALL follow this order:
@@ -490,11 +569,12 @@ The complete package installation sequence SHALL follow this order:
   5. Position 26: Install global packages via Bun
   6. Position 28: Install additional machine-specific Homebrew packages
   7. Position 30: Install UV itself
+  8. Position 27 (after apply): Install Rust crates via Cargo (if `dev` tag)
 
 ## Design Decisions
 
-### Four-Layer Package Management Rationale
-Using four complementary package management systems provides ecosystem-specific optimization:
+### Five-Layer Package Management Rationale
+Using five complementary package management systems provides ecosystem-specific optimization:
 
 #### Homebrew (System Layer)
 - **Purpose**: System packages, GUI applications, fonts, CLI utilities
@@ -519,6 +599,12 @@ Using four complementary package management systems provides ecosystem-specific 
 - **Strengths**: Version management for multiple Java installations, JVM ecosystem focus
 - **Pattern**: Requires `dev` tag, platform-specific definitions
 - **Use cases**: Multiple Java versions, Gradle, Maven, Liquibase, other JVM tools
+
+#### Cargo (Rust Ecosystem)
+- **Purpose**: Rust-based CLI tools and utilities installed via `cargo install`
+- **Strengths**: Access to crates.io and git-hosted Rust crates; tools compile natively
+- **Pattern**: Requires `dev` tag (Rust toolchain prerequisite); runs after dotfile apply
+- **Use cases**: AI workflow tools (beads_rust), high-performance CLI utilities
 
 ### Ecosystem Separation Benefits
 Separating package management by ecosystem provides:
@@ -563,17 +649,17 @@ The numbered script execution order (20, 23, 24, 25, 26, 28, 30) uses 10-point r
 
 ### Tag Usage Across Package Managers
 
-This table shows which tags control package installation across all three package management systems:
+This table shows which tags control package installation across all package management systems:
 
-| Tag | Homebrew | UV Tools | Bun | SDKMAN | Description |
-|-----|----------|----------|-----|--------|-------------|
-| `core` | ✅ Always | ✅ Always | ✅ Always | ❌ | Essential packages for basic system operation |
-| `dev` | ✅ Optional | ✅ Optional | ✅ Optional | ✅ **Required** | Development tools, IDEs, language toolchains |
-| `ai` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | AI/ML tools (Claude, Ollama, LM Studio) |
-| `work` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | Enterprise/work tools (Teams, Workspaces) |
-| `personal` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | Personal productivity |
-| `datascience` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | Data analysis tools (R, RStudio, csvkit) |
-| `mobile` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | VPN and network tools (Tunnelblick, WireGuard) |
+| Tag | Homebrew | UV Tools | Bun | SDKMAN | Cargo | Description |
+|-----|----------|----------|-----|--------|-------|-------------|
+| `core` | ✅ Always | ✅ Always | ✅ Always | ❌ | ❌ | Essential packages for basic system operation |
+| `dev` | ✅ Optional | ✅ Optional | ✅ Optional | ✅ **Required** | ✅ **Required** | Development tools, IDEs, language toolchains |
+| `ai` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | ✅ Optional (needs `dev`) | AI/ML tools (Claude, Ollama, LM Studio) |
+| `work` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | ✅ Optional (needs `dev`) | Enterprise/work tools (Teams, Workspaces) |
+| `personal` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | ✅ Optional (needs `dev`) | Personal productivity |
+| `datascience` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | ✅ Optional (needs `dev`) | Data analysis tools (R, RStudio, csvkit) |
+| `mobile` | ✅ Optional | ✅ Optional | ✅ Optional | ❌ | ✅ Optional (needs `dev`) | VPN and network tools (Tunnelblick, WireGuard) |
 
 ### Tag Selection Behavior
 
@@ -582,18 +668,21 @@ This table shows which tags control package installation across all three packag
 - **UV Tools**: Core tools always installed
 - **Bun**: Core packages always installed
 - **SDKMAN**: Not applicable (requires `dev` tag)
+- **Cargo**: Not applicable (requires `dev` tag)
 
 #### Development Tag (dev)
 - **Homebrew**: Installs development packages (Docker, IDEs, etc.)
 - **UV Tools**: Installs development tools
 - **Bun**: Installs development packages
 - **SDKMAN**: **Required** - SDKMAN itself and all SDKs only install with `dev` tag
+- **Cargo**: **Required** - enables the cargo installation script to run; also installs any packages listed under `dev.cargo`
 
 #### Other Tags (ai, work, personal, datascience, mobile)
 - **Homebrew**: Each tag installs corresponding category packages
 - **UV Tools**: Each tag installs corresponding category tools
 - **Bun**: Each tag installs corresponding category packages
 - **SDKMAN**: Not used (only `dev` category exists)
+- **Cargo**: Each tag installs corresponding category crates (only when `dev` tag is also selected)
 
 ### Data File Structure
 
@@ -631,6 +720,8 @@ packages:
       - "git+https://github.com/org/repo@latest"
       bun:          # Bun global packages (can be in any tag)
       - "ralph-tui"
+      cargo:        # Rust crates via cargo install (can be in any tag; requires dev tag)
+      - "--git https://github.com/org/repo.git"
 
     # ... other tags (work, personal, datascience, mobile)
 ```
@@ -644,5 +735,6 @@ packages:
 | `run_onchange_before_darwin-24-install-sdks.sh.tmpl` | 24 | On change | Install SDKs via SDKMAN from packages.yaml (requires `dev` tag) |
 | `run_onchange_before_darwin-25-install-tools.sh.tmpl` | 25 | On change | Install UV tools from packages.yaml |
 | `run_onchange_before_darwin-26-install-bun-packages.sh.tmpl` | 26 | On change | Install Bun global packages from packages.yaml |
+| `run_onchange_after_darwin-27-install-cargo-packages.sh.tmpl` | 27 (after) | On change | Install Rust crates via Cargo from packages.yaml (requires `dev` tag) |
 | `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl` | 28 | On change | Install machine-specific Homebrew packages |
 | `run_once_before_darwin-30-install-uv.sh.tmpl` | 30 | Once | Install UV package manager |

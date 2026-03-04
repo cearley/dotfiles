@@ -67,7 +67,7 @@ Prefixes in source filenames control how chezmoi processes them:
 - `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl` - Re-runs on changes
 
 **Script execution order:**
-- **05**: Rosetta 2 | **10**: Rust | **20**: SDKMAN | **23**: Homebrew packages | **24**: SDKMAN SDKs | **25**: UV tools | **26**: Bun packages | **28**: Machine-specific Brewfile
+- **05**: Rosetta 2 | **10**: Rust | **20**: SDKMAN | **23**: Homebrew packages | **24**: SDKMAN SDKs | **25**: UV tools | **26**: Bun packages | **27** (`run_onchange_after`, `dev` tag): Cargo crates | **28**: Machine-specific Brewfile
 - **30**: UV manager | **35**: nvm | **36**: Claude Code (`ai` tag)
 - **45**: GitHub auth | **80**: Microsoft Defender | **82**: Global Protect VPN | **83**: Atuin | **85**: System defaults | **90**: Hosts file | **95**: Syncthing | **97**: SSH test
 
@@ -148,7 +148,7 @@ See `openspec/specs/machine-config/` for complete machine configuration system d
 
 1. **No hardcoded secrets** - All credentials via KeePassXC
 2. **Data files are static** - Files in `.chezmoidata/` cannot be templates
-3. **Four-layer package management** (Homebrew, UV, Bun, SDKMAN) - See `openspec/specs/package-management/`
+3. **Five-layer package management** (Homebrew, UV, Bun, SDKMAN, Cargo) - See `openspec/specs/package-management/`
 4. **Consistent messaging** - Always use shared utilities for script output
 5. **Platform wrapping** - Darwin scripts must use conditional templates
 6. **Script ordering** - Machine-specific Brewfile (position 28) must always be last in the package management group (20-29)
@@ -163,6 +163,11 @@ See `openspec/specs/machine-config/` for complete machine configuration system d
 - **Developer**: `core,dev,ai`
 - **Work machine**: `core,dev,work`
 - **Personal machine**: `core,dev,ai,personal,datascience`
+
+## Non-Interactive Limitations
+- `chezmoi diff` fails without a TTY (KeePassXC requires interactive prompt); use `chezmoi status` or `chezmoi managed` instead
+- `chezmoi apply --exclude=templates` also skips `.tmpl` scripts — don't use this flag when scripts need to run
+- shellcheck false positives on `.tmpl` files are expected (Go template syntax misread as shell errors; safely ignored)
 
 ## Claude Code Automations
 

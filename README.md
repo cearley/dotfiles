@@ -53,7 +53,7 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 **Execution order** (10-point range grouping for logical categorization):
 - **00-09**: System Foundation (Rosetta 2)
 - **10-19**: Development Toolchains (Rust)
-- **20-29**: Package Management (SDKMAN, Homebrew packages, SDKs, UV tools, Bun packages, machine-specific Brewfiles)
+- **20-29**: Package Management (SDKMAN, Homebrew packages, SDKs, UV tools, Bun packages, Cargo crates [after-apply], machine-specific Brewfiles)
 - **30-39**: Environment Managers (uv, nvm)
 - **40-49**: Environment Setup (GitHub auth, shell plugins)
 - **80-99**: System Configuration (security, VPN, sync services, defaults, validation)
@@ -70,7 +70,8 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 2. **UV tools** - Python CLI tools and utilities (`uv` key within tags)
 3. **Bun packages** - JavaScript/TypeScript global tools (`bun` key within tags)
 4. **SDKMAN SDKs** - JVM ecosystem (Java, Gradle, Maven) (`sdkman` key in `dev` tag)
-5. **Machine-specific Brewfiles** - Additional packages requiring confirmation
+5. **Cargo crates** - Rust CLI tools (`cargo` key within tags; requires `dev` tag)
+6. **Machine-specific Brewfiles** - Additional packages requiring confirmation
 
 **Environment managers:**
 - **SDKMAN**: Java/JVM toolchain management (requires `dev` tag)
