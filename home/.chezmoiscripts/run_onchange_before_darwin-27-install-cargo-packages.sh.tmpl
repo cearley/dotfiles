@@ -7,9 +7,12 @@ source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 source "$HOME/.cargo/env"
 
-if ! require_tools cargo; then
+if ! require_tools cargo rustup; then
     exit 1
 fi
+
+print_message "info" "Updating Rust toolchain..."
+rustup update
 
 print_message "info" "Installing cargo packages..."
 
