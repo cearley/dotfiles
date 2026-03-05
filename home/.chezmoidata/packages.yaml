@@ -130,6 +130,7 @@ packages:
       - 'block-goose'
       - 'claude'
       - 'codex'
+      - 'codex-app'
       #- 'copilot-cli'
       - 'copilot-cli@prerelease'
       - 'jan'
