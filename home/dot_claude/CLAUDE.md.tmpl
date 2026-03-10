@@ -30,6 +30,15 @@ Use these tools proactively whenever available — don't wait to be asked:
 - **context7**: Resolve library IDs and fetch current docs for code generation, setup, and API reference
 - **serena**: Semantic code retrieval and editing
 
+## Local Skills
+
+These skills are installed and should be used proactively:
+- **parallel-worktrees** — Set up sibling worktrees (`../project-feature`) for parallel feature development; use when user mentions developing multiple features simultaneously
+- **integrate-worktrees** — Safely merge parallel feature branches via an integration branch before touching main; use when user is ready to combine parallel work
+
+## Environment Notes
+- Background subagents (via Agent tool) do not have Bash access; use foreground agents or inline evaluation for shell-dependent tasks
+
 ## Basic Memory
 
 When basic-memory MCP tools are available, follow these rules:
