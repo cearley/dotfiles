@@ -28,7 +28,7 @@ For tasks spanning many files or exceeding context capacity, use subagents or to
 Use these tools proactively whenever available — don't wait to be asked:
 - **basic-memory**: Remember and recall previous conversations. See Basic Memory section below.
 - **context7**: Resolve library IDs and fetch current docs for code generation, setup, and API reference
-- **serena**: Semantic code retrieval and editing
+- **serena**: Semantic code retrieval and editing. **Always start code exploration with `get_symbols_overview`**, then use `find_symbol` with `include_body=True` for specific methods. Only escalate to `Read` (full file) when symbolic tools can't provide what you need.
 
 ## Local Skills
 
