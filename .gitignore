@@ -20,3 +20,4 @@ PROJECT_REVIEW.md
 !.vscode/settings.json
 .idea/
 *.code-workspace
+.specstory/
