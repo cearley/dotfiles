@@ -30,6 +30,10 @@ Use these tools proactively whenever available — don't wait to be asked:
 - **context7**: Resolve library IDs and fetch current docs for code generation, setup, and API reference
 - **serena**: Semantic code retrieval and editing. **Always start code exploration with `get_symbols_overview`**, then use `find_symbol` with `include_body=True` for specific methods. Only escalate to `Read` (full file) when symbolic tools can't provide what you need.
 
+## Skill Workflow Discipline
+
+When executing a named skill workflow, mandatory steps must not be silently skipped — even when the outcome seems obvious. If skipping a step, explicitly state the rationale before proceeding (e.g., "Skipping month-calendar — week header already present and date confirmed as 2026-03-20"). This makes deviations visible and auditable in retrospectives.
+
 ## Local Skills
 
 These skills are installed and should be used proactively:
