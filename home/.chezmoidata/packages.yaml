@@ -117,6 +117,7 @@ packages:
     # Optional AI packages (ai tag)
     ai:
       taps:
+      - 'manaflow-ai/cmux'
       - 'specstoryai/tap'
       brews:
       - 'beads'
@@ -129,6 +130,7 @@ packages:
       casks:
       - 'block-goose'
       - 'claude'
+      - 'cmux'
       - 'codex'
       - 'codex-app'
       #- 'copilot-cli'
