@@ -53,6 +53,7 @@ packages:
       - 'etrecheckpro'
       - 'grammarly-desktop'
       - 'logi-options+'
+      - 'onyx'
       - 'slack'
       mas:
       - '"ASUS Device Discovery", id: 995124504'
@@ -97,7 +98,7 @@ packages:
       casks:
       - 'db-browser-for-sqlite'
       - 'docker-desktop'
-      - 'dotnet-sdk10-0-100'
+      - 'dotnet-sdk10-0-200'
       - 'dotnet-sdk10'
       - 'google-chrome'
       - 'gitbutler'
@@ -105,7 +106,6 @@ packages:
       - 'miniforge'
       - 'nosql-workbench'
       - 'postman'
-      - 'smlnj' # Standard ML of New Jersey - See https://www.smlnj.org/dist/working/110.99.9/macos.html
       - 'visual-studio-code'
       mas:
       - '"JWT Inspector", id: 1559670160'
