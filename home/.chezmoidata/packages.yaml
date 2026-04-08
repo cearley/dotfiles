@@ -141,6 +141,7 @@ packages:
       uv:
       - "basic-memory"
       - "claude-monitor"
+      - "sniffly@latest"
       - "git+https://github.com/cearley/claude-extend@latest"
       - "git+https://github.com/cearley/zsh-llm-suggestions"
       cargo:
