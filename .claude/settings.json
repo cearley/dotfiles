@@ -1,29 +1,51 @@
 {
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./.claude/hooks/protect-data-files.sh",
-            "timeout": 5,
-            "statusMessage": "Checking data file constraints..."
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
         "hooks": [
           {
-            "type": "command",
             "command": "./.claude/hooks/validate-template.sh",
+            "statusMessage": "Validating template...",
             "timeout": 10,
-            "statusMessage": "Validating template..."
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "Edit|Write"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "./.claude/hooks/protect-data-files.sh",
+            "statusMessage": "Checking data file constraints...",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Edit|Write"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
       }
     ]
   }

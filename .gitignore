@@ -21,3 +21,8 @@ PROJECT_REVIEW.md
 .idea/
 *.code-workspace
 .specstory/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
