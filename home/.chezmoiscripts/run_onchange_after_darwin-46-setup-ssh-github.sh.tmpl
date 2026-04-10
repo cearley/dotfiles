@@ -1,0 +1,379 @@
+{{- if and (eq .chezmoi.os "darwin") .has_keepassxc_db -}}
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $keepassxcEntries := default dict (index $settings "keepassxc_entries") -}}
+{{- $sshEntryName := default "" (index $keepassxcEntries "ssh") -}}
+{{- $machineName := includeTemplate "machine-name" . | trim -}}
+{{- $sshPassphrase := "" -}}
+{{- if $sshEntryName -}}
+{{- $sshPassphrase = (keepassxc $sshEntryName).Password -}}
+{{- end -}}
+{{- $pubKeyPath := joinPath .chezmoi.homeDir ".ssh" "id_ed25519.pub" -}}
+{{- $pubKeyMatches := glob $pubKeyPath -}}
+#!/bin/bash
+
+# Chezmoi script for end-to-end SSH key setup for GitHub.
+# Handles key generation, SSH agent loading with macOS Keychain,
+# authentication and signing key registration on GitHub, and connectivity verification.
+# Runs after GitHub auth setup (45) on macOS.
+#
+{{- if $pubKeyMatches }}
+# run_onchange trigger - id_ed25519.pub hash: {{ include $pubKeyPath | sha256sum }}
+{{- else }}
+# run_onchange trigger - id_ed25519.pub hash: no-key-present
+{{- end }}
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools gh ssh-keygen ssh-add; then
+    exit 1
+fi
+
+# Template-baked constants
+MACHINE_NAME={{ $machineName | quote }}
+SSH_ENTRY_NAME={{ $sshEntryName | quote }}
+{{- if $sshEntryName }}
+SSH_PASSPHRASE={{ $sshPassphrase | quote }}
+{{- else }}
+SSH_PASSPHRASE=""
+{{- end }}
+
+# Temp file for SSH_ASKPASS helper script
+ASKPASS_SCRIPT=""
+
+# Cleanup temp files on exit
+cleanup() {
+    if [ -n "${ASKPASS_SCRIPT:-}" ] && [ -f "$ASKPASS_SCRIPT" ]; then
+        rm -f "$ASKPASS_SCRIPT"
+    fi
+}
+trap cleanup EXIT INT TERM
+
+# Create a temp SSH_ASKPASS script that echoes SSH_PASSPHRASE
+setup_askpass_script() {
+    ASKPASS_SCRIPT=$(mktemp)
+    chmod 700 "$ASKPASS_SCRIPT"
+    cat > "$ASKPASS_SCRIPT" << 'ASKPASS_EOF'
+#!/bin/bash
+printf '%s' "$SSH_PASSPHRASE"
+ASKPASS_EOF
+    export SSH_PASSPHRASE
+}
+
+# --- Phase 1: Key check and generation ---
+check_or_generate_key() {
+    local key_file="$HOME/.ssh/id_ed25519"
+
+    if [ -f "$key_file" ]; then
+        print_message "skip" "SSH key already exists: $key_file"
+        return 0
+    fi
+
+    print_message "info" "Generating new SSH ed25519 key (comment: $MACHINE_NAME)..."
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+
+    if [ -n "$SSH_ENTRY_NAME" ]; then
+        setup_askpass_script
+        DISPLAY="${DISPLAY:-}" SSH_ASKPASS="$ASKPASS_SCRIPT" SSH_ASKPASS_REQUIRE="force" \
+            ssh-keygen -t ed25519 -C "$MACHINE_NAME" -f "$key_file" < /dev/null
+        rm -f "$ASKPASS_SCRIPT"
+        ASKPASS_SCRIPT=""
+    else
+        # No KeePassXC entry configured — run ssh-keygen interactively
+        ssh-keygen -t ed25519 -C "$MACHINE_NAME" -f "$key_file"
+    fi
+
+    print_message "success" "SSH key generated: $key_file"
+    if [ -n "$SSH_ENTRY_NAME" ]; then
+        print_message "tip" "Store the passphrase in KeePassXC under: $SSH_ENTRY_NAME"
+    else
+        print_message "tip" "Remember to store the SSH key passphrase in KeePassXC"
+    fi
+}
+
+check_key_permissions() {
+    local key_file="$HOME/.ssh/id_ed25519"
+
+    if [ ! -f "$key_file" ]; then
+        return 0
+    fi
+
+    local perms
+    perms=$(stat -f "%Lp" "$key_file" 2>/dev/null || stat -c "%a" "$key_file" 2>/dev/null || echo "unknown")
+
+    if [ "$perms" != "600" ] && [ "$perms" != "unknown" ]; then
+        print_message "warning" "SSH private key has permissions $perms (expected 600)"
+        echo "  Fix with: chmod 600 '$key_file'"
+    fi
+}
+
+# --- Phase 2: SSH agent loading ---
+load_ssh_agent() {
+    local key_file="$HOME/.ssh/id_ed25519"
+    local pub_key_file="${key_file}.pub"
+
+    if [ ! -f "$key_file" ]; then
+        print_message "skip" "No SSH key to load (key file not found)"
+        return 0
+    fi
+
+    # Check if key is already loaded in the agent
+    local local_fp
+    local_fp=$(ssh-keygen -lf "$pub_key_file" 2>/dev/null | awk '{print $2}')
+
+    if [ -n "$local_fp" ] && ssh-add -l 2>/dev/null | grep -qF "$local_fp"; then
+        print_message "skip" "SSH key already loaded in agent"
+        return 0
+    fi
+
+    print_message "info" "Loading SSH key into agent..."
+
+    if [ -n "$SSH_ENTRY_NAME" ]; then
+        # Passphrase available via KeePassXC — use SSH_ASKPASS for non-interactive loading
+        setup_askpass_script
+
+        local add_output
+        local add_exit_code=0
+        add_output=$(
+            SSH_ASKPASS="$ASKPASS_SCRIPT" \
+            SSH_ASKPASS_REQUIRE="force" \
+            DISPLAY="${DISPLAY:-}" \
+            ssh-add --apple-use-keychain "$key_file" < /dev/null 2>&1
+        ) || add_exit_code=$?
+
+        if echo "$add_output" | grep -qi "illegal option"; then
+            # --apple-use-keychain not supported; retry with plain ssh-add
+            print_message "info" "macOS Keychain flag unsupported, using plain ssh-add..."
+            SSH_ASKPASS="$ASKPASS_SCRIPT" \
+            SSH_ASKPASS_REQUIRE="force" \
+            DISPLAY="${DISPLAY:-}" \
+            ssh-add "$key_file" < /dev/null
+        elif [ "$add_exit_code" -ne 0 ]; then
+            echo "$add_output" >&2
+            rm -f "$ASKPASS_SCRIPT"
+            ASKPASS_SCRIPT=""
+            return 1
+        fi
+
+        rm -f "$ASKPASS_SCRIPT"
+        ASKPASS_SCRIPT=""
+    else
+        # No passphrase configured — let macOS Keychain dialog handle prompting
+        local stderr_tmp
+        stderr_tmp=$(mktemp)
+        local add_exit_code=0
+        ssh-add --apple-use-keychain "$key_file" 2>"$stderr_tmp" || add_exit_code=$?
+
+        if grep -qi "illegal option" "$stderr_tmp"; then
+            rm -f "$stderr_tmp"
+            ssh-add "$key_file"
+        elif [ "$add_exit_code" -ne 0 ]; then
+            cat "$stderr_tmp" >&2
+            rm -f "$stderr_tmp"
+            return 1
+        else
+            rm -f "$stderr_tmp"
+        fi
+    fi
+
+    print_message "success" "SSH key loaded into agent"
+}
+
+# --- Phases 3 & 4: GitHub key registration ---
+get_local_fingerprint() {
+    ssh-keygen -lf "$HOME/.ssh/id_ed25519.pub" 2>/dev/null | awk '{print $2}'
+}
+
+is_key_registered() {
+    local key_type="$1"
+    local local_fp
+    local_fp=$(get_local_fingerprint)
+
+    if [ -z "$local_fp" ]; then
+        return 1
+    fi
+
+    local gh_keys
+    gh_keys=$(gh ssh-key list --json key,type 2>/dev/null) || return 1
+
+    local key_tmp
+    key_tmp=$(mktemp)
+    local found=1
+
+    while IFS= read -r key_value; do
+        [ -z "$key_value" ] && continue
+        printf '%s\n' "$key_value" > "$key_tmp"
+        local remote_fp
+        remote_fp=$(ssh-keygen -lf "$key_tmp" 2>/dev/null | awk '{print $2}')
+        if [ "$remote_fp" = "$local_fp" ]; then
+            found=0
+            break
+        fi
+    done < <(echo "$gh_keys" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for item in data:
+    if item.get('type') == '${key_type}':
+        print(item.get('key', ''))
+")
+
+    rm -f "$key_tmp"
+    return $found
+}
+
+register_github_key() {
+    local key_type="$1"
+    local pub_key_file="$HOME/.ssh/id_ed25519.pub"
+
+    if [ ! -f "$pub_key_file" ]; then
+        print_message "warning" "No public key found at $pub_key_file; skipping $key_type registration"
+        return 0
+    fi
+
+    if is_key_registered "$key_type"; then
+        print_message "skip" "SSH $key_type key already registered on GitHub"
+        return 0
+    fi
+
+    print_message "info" "Registering SSH $key_type key on GitHub..."
+    gh ssh-key add "$pub_key_file" --type "$key_type" --title "$MACHINE_NAME"
+    print_message "success" "SSH $key_type key registered on GitHub"
+}
+
+# --- Phase 5: Connectivity test ---
+readonly SSH_TIMEOUT=10
+readonly SSH_CONNECT_TIMEOUT=5
+
+print_permission_denied_help() {
+    local output="$1"
+    print_message "error" "SSH connection failed: Permission denied"
+    echo
+    echo "Common solutions (try in order):"
+    echo
+    echo "1. Add your SSH key to GitHub:"
+    echo "   • Copy your public key:"
+    echo "     pbcopy < ~/.ssh/id_ed25519.pub"
+    echo "   • Add it at: https://github.com/settings/ssh/new"
+    echo
+    echo "2. Start SSH agent and add your key:"
+    echo "   • eval \"\$(ssh-agent -s)\""
+    echo "   • ssh-add ~/.ssh/id_ed25519"
+    echo
+    echo "3. Check SSH key permissions:"
+    echo "   • chmod 600 ~/.ssh/id_ed25519"
+    echo "   • chmod 644 ~/.ssh/id_ed25519.pub"
+    echo
+    echo "4. Test SSH key format:"
+    echo "   • ssh-keygen -l -f ~/.ssh/id_ed25519"
+    echo
+    echo "Troubleshooting guide:"
+    echo "   https://docs.github.com/en/authentication/troubleshooting-ssh/error-permission-denied-publickey"
+    echo
+    echo "Full SSH output:"
+    echo "$output"
+}
+
+print_network_error_help() {
+    local output="$1"
+    print_message "error" "SSH connection failed: Network issue"
+    echo
+    echo "Possible causes:"
+    echo "• No internet connection"
+    echo "• DNS resolution issues"
+    echo "• Corporate firewall blocking SSH (port 22)"
+    echo "• VPN interfering with connections"
+    echo
+    echo "Try these steps:"
+    echo "1. Check internet: ping -c 3 github.com"
+    echo "2. Check DNS: nslookup github.com"
+    echo "3. Try HTTPS instead of SSH for git operations"
+    echo
+    echo "Full SSH output:"
+    echo "$output"
+}
+
+print_unknown_error_help() {
+    local output="$1"
+    print_message "error" "SSH connection failed with unexpected error"
+    echo
+    echo "This might be a temporary issue. Try:"
+    echo "• Waiting a few minutes and running again"
+    echo "• Checking GitHub status: https://www.githubstatus.com/"
+    echo "• Running the test manually: ssh -T git@github.com"
+    echo
+    echo "Full SSH output:"
+    echo "$output"
+}
+
+analyze_ssh_output() {
+    local output="$1"
+    local exit_code="$2"
+
+    # GitHub returns exit code 1 for successful authentication (no shell access)
+    if [ "$exit_code" -eq 1 ] && echo "$output" | grep -q "successfully authenticated"; then
+        print_message "success" "SSH connection to GitHub successful!"
+        echo "$output"
+        return 0
+    fi
+
+    # Check for specific error patterns
+    if echo "$output" | grep -q "Permission denied"; then
+        print_permission_denied_help "$output"
+    elif echo "$output" | grep -q "Could not resolve hostname\|Name or service not known"; then
+        print_network_error_help "$output"
+    elif echo "$output" | grep -q "Connection timed out\|Connection refused"; then
+        print_network_error_help "$output"
+    else
+        print_unknown_error_help "$output"
+    fi
+
+    return 1
+}
+
+test_ssh_connection() {
+    print_message "info" "Testing SSH connection to GitHub..."
+
+    local ssh_cmd="ssh -T -o ConnectTimeout=$SSH_CONNECT_TIMEOUT -o BatchMode=yes git@github.com"
+    local ssh_output
+    local ssh_exit_code=0
+
+    # Prefer gtimeout (macOS coreutils) → timeout → no timeout
+    if command_exists gtimeout; then
+        ssh_output=$(gtimeout "$SSH_TIMEOUT" $ssh_cmd 2>&1) || ssh_exit_code=$?
+    elif command_exists timeout; then
+        ssh_output=$(timeout "$SSH_TIMEOUT" $ssh_cmd 2>&1) || ssh_exit_code=$?
+    else
+        print_message "warning" "timeout command not available, SSH may hang"
+        ssh_output=$($ssh_cmd 2>&1) || ssh_exit_code=$?
+    fi
+
+    # Handle timeout exit codes
+    if [ "$ssh_exit_code" -eq 124 ] || [ "$ssh_exit_code" -eq 142 ]; then
+        print_message "error" "SSH connection timed out after ${SSH_TIMEOUT}s"
+        echo "This usually indicates network connectivity issues."
+        return 1
+    fi
+
+    analyze_ssh_output "$ssh_output" "$ssh_exit_code"
+}
+
+main() {
+    print_message "info" "Setting up SSH key for GitHub..."
+
+    check_or_generate_key
+    check_key_permissions
+    load_ssh_agent
+    register_github_key authentication
+    register_github_key signing
+
+    if test_ssh_connection; then
+        print_message "success" "SSH GitHub setup completed"
+    else
+        exit 1
+    fi
+}
+
+main "$@"
+{{ end -}}
