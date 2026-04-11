@@ -20,9 +20,17 @@ fi
 
 print_message "info" "Installing sdkman (Software Development Kit Manager)..."
 
+# SDKMAN's installer requires Bash 4+; macOS ships Bash 3.2 (GPL restriction).
+# Ensure a modern Bash is available before invoking the installer.
+MODERN_BASH="/opt/homebrew/bin/bash"
+if [[ ! -x "$MODERN_BASH" ]]; then
+    print_message "info" "Installing modern bash (required by SDKMAN installer)..."
+    brew install bash
+fi
+
 # Install sdkman using the official installation script from sdkman.io
 export SDKMAN_DIR="$HOME/.sdkman"
-curl -s "https://get.sdkman.io" | bash
+curl -s "https://get.sdkman.io" | "$MODERN_BASH"
 
 print_message "success" "sdkman installed successfully!"
 print_message "info" "sdkman installed to: $SDKMAN_DIR. You may need to restart your terminal to start using it."

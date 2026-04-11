@@ -23,7 +23,7 @@ case "$(uname -s)" in
         fi
         
         # Install Homebrew if not already installed
-        if ! command -v brew >/dev/null 2>&1; then
+        if ! test -x "$HOMEBREW_PREFIX/bin/brew"; then
             echo "Installing Homebrew..."
             /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
             (
@@ -35,13 +35,13 @@ case "$(uname -s)" in
         fi
         
         # Install chezmoi via Homebrew if not already installed
-        if ! command -v chezmoi >/dev/null 2>&1; then
+        if ! test -x "$HOMEBREW_PREFIX/bin/chezmoi"; then
             echo "Installing chezmoi via Homebrew..."
             brew install chezmoi
             echo "chezmoi installed successfully!"
         fi
         
-        chezmoi=chezmoi
+        chezmoi="$HOMEBREW_PREFIX/bin/chezmoi"
     ;;
     Linux)
         echo "Bootstrap for Linux is not implemented"
