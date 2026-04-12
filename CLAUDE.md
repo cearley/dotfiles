@@ -67,8 +67,8 @@ Prefixes in source filenames control how chezmoi processes them:
 - `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl` - Re-runs on changes
 
 **Script execution order:**
-- **05**: Rosetta 2 | **10**: Rust | **20**: SDKMAN | **23**: Homebrew packages | **24**: SDKMAN SDKs | **25**: UV tools | **26**: Bun packages | **27** (`run_onchange_before`, `dev` tag): Cargo crates | **28**: Machine-specific Brewfile
-- **30**: UV manager | **35**: nvm | **36**: Claude Code (`ai` tag)
+- **05**: Rosetta 2 | **10**: Rust | **20**: SDKMAN | **21**: UV manager | **23**: Homebrew packages | **24**: SDKMAN SDKs | **25**: UV tools | **26**: Bun packages | **27** (`run_onchange_before`, `dev` tag): Cargo crates | **28**: Machine-specific Brewfile
+- **35**: nvm | **36**: Claude Code (`ai` tag)
 - **45**: GitHub auth | **46**: SSH GitHub setup | **80**: Microsoft Defender | **82**: Global Protect VPN | **83**: Atuin | **85**: System defaults | **90**: Hosts file | **95**: Syncthing
 
 ### Shared Utilities

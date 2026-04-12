@@ -17,16 +17,16 @@ Automated macOS development environment setup - dotfiles, packages, toolchains, 
 
 ## Quick Start
 
-Bootstrap a new macOS machine with a single command (replace `<your-github-username>`):
+Bootstrap a new macOS machine with a single command (replace `YOUR_GITHUB_USERNAME`):
 
 ```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/main/remote_install.sh)" -- init --apply <your-github-username>
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/main/remote_install.sh)" -- init --apply YOUR_GITHUB_USERNAME
 ```
 
 You can also pass arguments to chezmoi by appending them:
 
 ```sh
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/main/remote_install.sh)" -- init --apply <your-github-username> --keep-going --verbose
+sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/main/remote_install.sh)" -- init --apply YOUR_GITHUB_USERNAME --keep-going --verbose
 ```
 
 This automatically installs all dependencies (chezmoi, Git, Homebrew, KeePassXC, etc.) and applies your dotfiles.
