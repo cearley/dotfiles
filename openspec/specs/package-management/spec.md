@@ -115,15 +115,22 @@ The Homebrew package installation script SHALL continue installing successfully-
 - **AND** behavior is identical to the previous implementation
 
 ### Requirement: Homebrew Bootstrap
-Homebrew itself SHALL be installed via a pre-hook if not already present.
+Homebrew itself SHALL be installed via `remote_install.sh` if not already present. Detection SHALL use the absolute path `$HOMEBREW_PREFIX/bin/brew` rather than `command -v brew`, so the check is PATH-independent. The final `exec` to chezmoi SHALL also use an absolute path.
 
-#### Scenario: Homebrew missing
-- **WHEN** chezmoi's pre-hook runs and Homebrew is not installed
-- **THEN** the hook SHALL install Homebrew before proceeding
+#### Scenario: Homebrew missing — first run
+- **WHEN** `remote_install.sh` runs and `/opt/homebrew/bin/brew` (ARM) or `/usr/local/bin/brew` (Intel) does not exist
+- **THEN** the script SHALL install Homebrew via the official installer
+- **AND** SHALL add `eval "$(brew shellenv)"` to `~/.zprofile`
 
-#### Scenario: Homebrew exists
-- **WHEN** Homebrew is already installed
-- **THEN** the pre-hook SHALL skip installation and continue
+#### Scenario: Homebrew exists — repeated run
+- **WHEN** `remote_install.sh` is invoked again in the same terminal session (before restarting the shell)
+- **THEN** `test -x "$HOMEBREW_PREFIX/bin/brew"` SHALL succeed
+- **AND** the script SHALL skip Homebrew installation entirely without re-running the installer
+
+#### Scenario: chezmoi invocation uses absolute path
+- **WHEN** `remote_install.sh` reaches the final exec
+- **THEN** it SHALL exec `$HOMEBREW_PREFIX/bin/chezmoi` rather than relying on PATH resolution
+- **AND** SHALL pass all arguments through unmodified
 
 ### Requirement: Package Categories
 Packages SHALL be organized into logical categories based on their purpose.
@@ -468,12 +475,23 @@ Cargo packages SHALL be organized within the same tag categories as other packag
 ## SDKMAN SDK Management
 
 ### Requirement: SDKMAN Installation
-SDKMAN SHALL be installed before SDKs are installed, and only on machines with the `dev` tag.
+SDKMAN SHALL be installed before SDKs are installed, and only on machines with the `dev` tag. Because macOS ships Bash 3.2 and SDKMAN's installer requires Bash 4+, a modern Bash SHALL be provisioned inline before invoking the SDKMAN installer.
 
 #### Scenario: SDKMAN installation with dev tag
 - **WHEN** chezmoi applies configuration with the `dev` tag selected
 - **THEN** the system SHALL install SDKMAN via the official installer
 - **AND** SHALL run at position 20 in the script execution order
+
+#### Scenario: Modern bash provisioned before SDKMAN installer
+- **WHEN** the SDKMAN install script runs on a fresh macOS machine
+- **AND** `/opt/homebrew/bin/bash` does not exist
+- **THEN** the script SHALL run `brew install bash` before invoking the SDKMAN installer
+- **AND** SHALL pipe the SDKMAN installer to `/opt/homebrew/bin/bash`
+
+#### Scenario: Modern bash already present
+- **WHEN** `/opt/homebrew/bin/bash` already exists
+- **THEN** the script SHALL skip `brew install bash`
+- **AND** SHALL pipe the SDKMAN installer to `/opt/homebrew/bin/bash`
 
 #### Scenario: SDKMAN skipped without dev tag
 - **WHEN** the `dev` tag is not selected
