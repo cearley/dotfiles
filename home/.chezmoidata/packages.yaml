@@ -98,6 +98,7 @@ packages:
       casks:
       - 'db-browser-for-sqlite'
       - 'docker-desktop'
+      - 'dotnet-sdk10-0-200'
       - 'dotnet-sdk10'
       - 'google-chrome'
       - 'gitbutler'

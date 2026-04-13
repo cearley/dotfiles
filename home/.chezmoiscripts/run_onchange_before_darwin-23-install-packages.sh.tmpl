@@ -11,11 +11,31 @@ fi
 
 print_message "info" "Installing packages using Homebrew..."
 
-{{- $icloudAccountId := includeTemplate "icloud-account-id" . | trim -}}
-{{- $icloudSignedIn := ne $icloudAccountId "" -}}
+{{ $icloudAccountId := includeTemplate "icloud-account-id" . | trim -}}
+{{ $icloudSignedIn := ne $icloudAccountId "" -}}
 {{ if not $icloudSignedIn -}}
 print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
 {{ end -}}
+
+# Pre-tap all required sources before brew bundle runs.
+# brew bundle's fetch/validation phase checks casks before tap declarations
+# in the Brewfile are processed, which fails on fresh machines where the
+# tap is not yet registered.
+print_message "info" "Adding Homebrew taps..."
+{{- range .packages.darwin.taps }}
+brew tap {{ . | quote }}
+{{- end }}
+{{- $categories := prepend .tag_choices "core" }}
+{{- range $category := $categories }}
+  {{- $categoryData := index $.packages.darwin $category }}
+  {{- if or (eq $category "core") (has $category $.tags) }}
+    {{- if and (hasKey $categoryData "taps") $categoryData.taps }}
+{{- range $categoryData.taps }}
+brew tap {{ . | quote }}
+{{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
 
 brew update && brew bundle --file=/dev/stdin <<EOF
 {{- range .packages.darwin.taps }}
