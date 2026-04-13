@@ -37,7 +37,9 @@ brew tap {{ . | quote }}
   {{- end }}
 {{- end }}
 
-brew update && brew bundle --file=/dev/stdin <<EOF
+brew update
+brew_exit=0
+brew bundle --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
 {{- range .packages.darwin.taps }}
 tap {{ . | quote }}
 {{- end }}
@@ -73,7 +75,12 @@ mas {{ . }}
     {{- end }}
   {{- end }}
 {{- end }}
-EOF
+BUNDLE_EOF
+
+if [ "$brew_exit" -ne 0 ]; then
+    print_message "warning" "brew bundle completed with errors — some packages may not be installed."
+    print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
+fi
 
 {{ if not $icloudSignedIn -}}
 print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
