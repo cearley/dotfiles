@@ -77,10 +77,12 @@ Scripts SHALL use 10-point range grouping (00-09, 10-19, 20-29, etc.) for logica
 #### Scenario: Package management stage (20-29)
 - **WHEN** scripts are numbered 20-29
 - **THEN** they SHALL handle package manager installations and Homebrew bundles
+- **AND** SHALL include the uv package manager installer at position 21
 
 #### Scenario: Environment managers stage (30-39)
 - **WHEN** scripts are numbered 30-39
-- **THEN** they SHALL handle language-specific environment managers (uv, nvm)
+- **THEN** they SHALL handle language-specific environment managers (nvm)
+- **NOTE**: uv is NOT in this range; it moved to position 21 (package management stage)
 
 #### Scenario: Environment setup stage (40-49)
 - **WHEN** scripts are numbered 40-49
@@ -136,6 +138,14 @@ Scripts SHALL be safe to re-run without causing unintended side effects.
 - **WHEN** a run_once script is executed multiple times (after state reset)
 - **THEN** the script SHALL produce the same result without breaking the system
 
+### Requirement: Bootstrap Documentation Clarity
+The bootstrap command example in README SHALL use placeholder text that does not conflict with shell metacharacters.
+
+#### Scenario: Safe placeholder format
+- **WHEN** the README shows the bootstrap command with a username placeholder
+- **THEN** the placeholder SHALL use uppercase-no-brackets format (e.g., `YOUR_GITHUB_USERNAME`)
+- **AND** SHALL NOT use angle-bracket format (`<your-github-username>`) which zsh interprets as a redirect operator
+
 ## Design Decisions
 
 ### 10-Point Range Grouping Rationale
@@ -160,7 +170,9 @@ The following scripts are currently implemented (as of baseline):
 - `23`: Brew bundle install essential packages from packages.yaml
 - `24`: Install SDKs via SDKMAN from packages.yaml
 - `25`: Install UV tools from packages.yaml
-- `26`: Brew bundle install machine-specific packages
+- `26`: Install Bun global packages from packages.yaml
+- `27` (after apply): Install Rust crates via Cargo from packages.yaml (requires `dev` tag)
+- `28`: Install machine-specific Homebrew packages (Brewfile)
 
 **Environment Managers (30-39):**
 - `35`: Install nvm (Node Version Manager)

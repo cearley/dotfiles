@@ -114,6 +114,32 @@ The Homebrew package installation script SHALL continue installing successfully-
 - **AND** no warning is emitted
 - **AND** behavior is identical to the previous implementation
 
+### Requirement: Brew Bundle Failure Propagation
+The Homebrew package installation script SHALL exit with a non-zero status when `brew bundle` fails, so chezmoi treats the script as failed and does not mark it as successfully completed.
+
+#### Scenario: brew bundle exits non-zero
+- **WHEN** `brew bundle` fails due to an invalid or unavailable package
+- **THEN** the install-packages script SHALL exit with the same non-zero exit code
+- **AND** chezmoi SHALL NOT mark the script as successfully run
+- **AND** the failure SHALL be visible to the user via `print_message "error"`
+
+#### Scenario: brew bundle succeeds
+- **WHEN** `brew bundle` exits with code 0
+- **THEN** the script SHALL continue normally and exit 0
+
+### Requirement: Valid Cask References
+All cask identifiers in `packages.yaml` SHALL reference casks that exist in the configured taps.
+
+#### Scenario: Invalid cask removed
+- **WHEN** a cask identifier does not exist in any configured Homebrew tap
+- **THEN** it SHALL be removed from `packages.yaml`
+- **AND** a valid alternative identifier SHALL be substituted if one exists
+
+#### Scenario: dotnet-sdk10 replaces dotnet-sdk10-0-200
+- **WHEN** the `dev` tag packages are installed
+- **THEN** `dotnet-sdk10` SHALL be the only .NET 10 cask installed
+- **AND** `dotnet-sdk10-0-200` SHALL NOT appear in the cask list
+
 ### Requirement: Homebrew Bootstrap
 Homebrew itself SHALL be installed via `remote_install.sh` if not already present. Detection SHALL use the absolute path `$HOMEBREW_PREFIX/bin/brew` rather than `command -v brew`, so the check is PATH-independent. The final `exec` to chezmoi SHALL also use an absolute path.
 
@@ -280,11 +306,12 @@ The `uv` package manager SHALL be installed before UV tools are installed.
 #### Scenario: UV not present
 - **WHEN** chezmoi applies configuration and `uv` is not installed
 - **THEN** the system SHALL install `uv` via the official Astral.sh installer
-- **AND** SHALL run at position 30 in the script execution order
+- **AND** SHALL run at position 21 in the script execution order
+- **AND** SHALL run before Homebrew package installation (position 23) and UV tool installation (position 25)
 
 #### Scenario: UV already installed
 - **WHEN** `uv` is already present on the system
-- **THEN** the installation script SHALL skip reinstallation
+- **THEN** the installation script SHALL skip reinstallation and self-update instead
 
 ### Requirement: UV Tool Definition
 UV tools SHALL be defined within tag categories in `home/.chezmoidata/packages.yaml` using the `uv` key.
@@ -575,10 +602,9 @@ Package managers SHALL be installed before their respective packages, following 
 - **WHEN** scripts execute in order
 - **THEN** Homebrew installation (pre-hook) SHALL run before package installation (position 23)
 
-#### Scenario: UV tool installation timing
+#### Scenario: UV before UV tools
 - **WHEN** scripts execute in order
-- **THEN** UV tool installation (position 25) runs before UV installation (position 30)
-- **NOTE**: This assumes UV is available through another mechanism (e.g., Homebrew in packages.yaml)
+- **THEN** UV installation (position 21) SHALL run before UV tool installation (position 25)
 
 #### Scenario: Bun global package installation timing
 - **WHEN** scripts execute in order
@@ -601,12 +627,12 @@ The complete package installation sequence SHALL follow this order:
 - **WHEN** chezmoi applies configuration
 - **THEN** the installation sequence SHALL be:
   1. Position 20: Install SDKMAN (if `dev` tag)
-  2. Position 23: Install Homebrew packages from packages.yaml
-  3. Position 24: Install SDKs via SDKMAN (if `dev` tag)
-  4. Position 25: Install tools via UV
-  5. Position 26: Install global packages via Bun
-  6. Position 28: Install additional machine-specific Homebrew packages
-  7. Position 30: Install UV itself
+  2. Position 21: Install UV package manager
+  3. Position 23: Install Homebrew packages from packages.yaml
+  4. Position 24: Install SDKs via SDKMAN (if `dev` tag)
+  5. Position 25: Install tools via UV
+  6. Position 26: Install global packages via Bun
+  7. Position 28: Install additional machine-specific Homebrew packages
   8. Position 27 (after apply): Install Rust crates via Cargo (if `dev` tag)
 
 ## Design Decisions
@@ -674,14 +700,12 @@ Making the package data file (`packages.yaml`) static ensures:
 - Single source of truth for all package definitions
 
 ### Script Execution Order Design
-The numbered script execution order (20, 23, 24, 25, 26, 28, 30) uses 10-point range grouping:
+The numbered script execution order (20, 21, 23, 24, 25, 26, 28) uses 10-point range grouping:
 - **Categorical grouping**: Scripts in 20-29 range handle package management, 30-39 handle environment managers
-- **Flexible spacing**: Within each range, scripts use 1-5 point spacing as needed (20, 23, 24, 25, 26, 28)
+- **Flexible spacing**: Within each range, scripts use 1-5 point spacing as needed (20, 21, 23, 24, 25, 26, 28)
 - **Future expansion**: Gaps within ranges allow inserting new scripts without renumbering
 - **Dependency management**: Package managers install before their packages
 - **Predictable order**: Clear, documented sequence for troubleshooting
-
-**Note on UV timing**: Position 25 (UV tools) runs before position 30 (UV installation). This implies UV must be available through another mechanism (e.g., installed via Homebrew in packages.yaml).
 
 ## Tag Reference
 
@@ -769,10 +793,10 @@ packages:
 | Script | Position | Frequency | Purpose |
 |--------|----------|-----------|---------|
 | `run_once_before_darwin-20-install-sdkman.sh.tmpl` | 20 | Once | Install SDKMAN (requires `dev` tag) |
+| `run_once_before_darwin-21-install-uv.sh.tmpl` | 21 | Once | Install UV package manager |
 | `run_onchange_before_darwin-23-install-packages.sh.tmpl` | 23 | On change | Install Homebrew packages from packages.yaml |
 | `run_onchange_before_darwin-24-install-sdks.sh.tmpl` | 24 | On change | Install SDKs via SDKMAN from packages.yaml (requires `dev` tag) |
 | `run_onchange_before_darwin-25-install-tools.sh.tmpl` | 25 | On change | Install UV tools from packages.yaml |
 | `run_onchange_before_darwin-26-install-bun-packages.sh.tmpl` | 26 | On change | Install Bun global packages from packages.yaml |
 | `run_onchange_after_darwin-27-install-cargo-packages.sh.tmpl` | 27 (after) | On change | Install Rust crates via Cargo from packages.yaml (requires `dev` tag) |
 | `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl` | 28 | On change | Install machine-specific Homebrew packages |
-| `run_once_before_darwin-30-install-uv.sh.tmpl` | 30 | Once | Install UV package manager |
