@@ -105,7 +105,6 @@ packages:
       - 'jetbrains-toolbox'
       - 'miniforge'
       - 'nosql-workbench'
-      - 'postman'
       - 'visual-studio-code'
       mas:
       - '"JWT Inspector", id: 1559670160'
