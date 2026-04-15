@@ -143,6 +143,7 @@ packages:
       - "sniffly@latest"
       - "git+https://github.com/cearley/claude-extend@latest"
       - "git+https://github.com/cearley/zsh-llm-suggestions"
+      - "-p 3.13 serena-agent@latest --prerelease=allow"
       cargo:
       - '--git https://github.com/Dicklesworthstone/beads_rust.git' # beads_rust
 
