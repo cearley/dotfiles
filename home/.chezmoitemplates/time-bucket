@@ -1,0 +1,25 @@
+{{- /* Rolling epoch time bucket - integer that increments every N days.
+
+     Intended for use as a re-run trigger inside `run_onchange_*` scripts:
+     embed the returned value in a comment near the top of the script so
+     chezmoi's rendered-script hash changes whenever a new bucket begins,
+     causing the script to re-execute on the next `chezmoi apply`/`update`.
+
+     Parameter (pass as a dict):
+     - days (required): bucket width in days, positive integer or numeric string
+
+     Examples:
+       # re-run every 7 days:  {{ includeTemplate "time-bucket" (dict "days" 7) }}
+       # re-run every 30 days: {{ includeTemplate "time-bucket" (dict "days" 30) }}
+
+     Returns:
+     - Integer floor(now_unix / (days * 86400)), aligned to the Unix epoch.
+       Bucket boundaries land at 00:00 UTC; across a fleet, all machines
+       cross a boundary simultaneously, but each only re-runs on its next
+       `chezmoi apply`.
+*/ -}}
+{{- $days := .days | int -}}
+{{- if le $days 0 -}}
+{{-   fail "time-bucket: 'days' parameter must be a positive integer" -}}
+{{- end -}}
+{{- div (now | unixEpoch | atoi) (mul $days 86400) -}}
