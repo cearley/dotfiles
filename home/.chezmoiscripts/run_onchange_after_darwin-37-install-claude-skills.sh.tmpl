@@ -1,0 +1,34 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+#!/bin/bash
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+# Load nvm so npx is available (installed at position 35)
+export NVM_DIR="$HOME/.nvm"
+# shellcheck disable=SC1091
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+if ! require_tools npx; then
+    exit 1
+fi
+
+print_message "info" "Installing Claude Code skills via npx..."
+
+{{- $categories := prepend .tag_choices "core" }}
+{{- range $category := $categories }}
+  {{- $categoryData := index $.packages.darwin $category }}
+  {{- if or (eq $category "core") (has $category $.tags) }}
+    {{- if and (hasKey $categoryData "skills") $categoryData.skills }}
+# Install {{ $category }} skills
+{{ range $categoryData.skills -}}
+npx --yes skills add {{ . }}
+{{ end -}}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+print_message "success" "Claude Code skills installed."
+
+{{ end -}}

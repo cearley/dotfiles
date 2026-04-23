@@ -147,6 +147,10 @@ packages:
       - "-p 3.13 serena-agent@latest --prerelease=allow"
       cargo:
       - '--git https://github.com/Dicklesworthstone/beads_rust.git' # beads_rust
+      skills: # Installed via `npx skills add <args>`
+      - 'specstoryai/agent-skills'
+      # Install specific skills with arguments
+      #- 'specstoryai/agent-skills --skill specstory-yak specstory-session-summary'
 
     # Optional data science packages (datascience tag)
     datascience:
