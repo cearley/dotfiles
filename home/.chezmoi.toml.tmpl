@@ -55,6 +55,7 @@ region = {{ $aws_secrets_manager_region | quote }}
 
 [keepassxc]
 database = {{ $keepassxc_db | quote }}
+mode = "open"
 
 [hooks.read-source-state.pre]
 command = ".local/share/chezmoi/hooks/pre/bootstrap"
