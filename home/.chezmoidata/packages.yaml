@@ -52,6 +52,7 @@ packages:
       - 'discord'
       - 'etrecheckpro'
       - 'grammarly-desktop'
+      - 'jump-desktop-connect'
       - 'logi-options+'
       - 'onyx'
       - 'slack'
