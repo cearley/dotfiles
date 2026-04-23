@@ -21,9 +21,9 @@ print_message "info" "Installing Claude Code skills via npx..."
   {{- $categoryData := index $.packages.darwin $category }}
   {{- if or (eq $category "core") (has $category $.tags) }}
     {{- if and (hasKey $categoryData "skills") $categoryData.skills }}
-# Install {{ $category }} skills
+# Install {{ $category }} skills globally
 {{ range $categoryData.skills -}}
-npx --yes skills add {{ . }}
+npx --yes skills add {{ . }} --agent claude-code -g
 {{ end -}}
     {{- end }}
   {{- end }}
