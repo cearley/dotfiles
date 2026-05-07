@@ -1,27 +1,13 @@
 {{- if eq .chezmoi.os "darwin" -}}
+{{- $nvmVersion := output "curl" "-s" "https://api.github.com/repos/nvm-sh/nvm/releases/latest" | mustFromJson | dig "tag_name" "" -}}
 #!/bin/bash
 
 set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-if ! require_tools curl jq; then
-    exit 1
-fi
-
-# nvm installs to $HOME/.nvm by default.
-# If this directory exists, we assume nvm is installed.
-# Note that `command -v nvm` doesn't find it in a fresh
-# shell context because it's a shell function, not a binary.
-if [ -d "$HOME/.nvm" ]; then
-    print_message "skip" "Skipping nvm installation: nvm is already installed"
-    exit 0
-fi
-
-print_message "info" "Getting latest nvm version..."
-
-# Get the latest nvm version from GitHub API
-NVM_VERSION=$(curl -s https://api.github.com/repos/nvm-sh/nvm/releases/latest | jq -r '.tag_name')
+# The latest nvm version is: {{ $nvmVersion }}
+NVM_VERSION="{{ $nvmVersion }}"
 
 if [ -z "$NVM_VERSION" ]; then
     print_message "error" "Failed to fetch latest nvm version"
@@ -30,7 +16,8 @@ fi
 
 print_message "info" "Installing nvm $NVM_VERSION..."
 
-# Install nvm using the official installation script
+# Install or update nvm using the official installation script
+# (The script will overwrite the existing version without deleting your installed Node.js versions)
 curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/$NVM_VERSION/install.sh" | bash
 
 if [ ! -d "$HOME/.nvm" ]; then
