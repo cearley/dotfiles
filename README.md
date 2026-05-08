@@ -52,7 +52,7 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 - **00-09**: System Foundation (Rosetta 2)
 - **10-19**: Development Toolchains (Rust)
 - **20-29**: Package Management (SDKMAN, Homebrew packages, SDKs, UV tools, Bun packages, Cargo crates, machine-specific Brewfiles)
-- **30-39**: Environment Managers (uv, nvm)
+- **30-39**: Environment Managers & AI Tooling (nvm, Claude Code, Claude Code skills)
 - **40-49**: Environment Setup (GitHub auth, shell plugins)
 - **80-99**: System Configuration (security, VPN, sync services, defaults, validation)
 
@@ -69,7 +69,8 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 3. **Bun packages** - JavaScript/TypeScript global tools (`bun` key within tags)
 4. **SDKMAN SDKs** - JVM ecosystem (Java, Gradle, Maven) (`sdkman` key in `dev` tag)
 5. **Cargo crates** - Rust CLI tools (`cargo` key within tags; requires `dev` tag)
-6. **Machine-specific Brewfiles** - Additional packages requiring confirmation
+6. **Claude Code skills** - AI assistant skills via `npx skills add` (`skills` key within tags; requires `ai` tag)
+7. **Machine-specific Brewfiles** - Additional packages requiring confirmation
 
 **Environment managers:**
 - **SDKMAN**: Java/JVM toolchain management (requires `dev` tag)
