@@ -11,24 +11,22 @@ if ! require_tools curl zip unzip; then
     exit 1
 fi
 
+# SDKMAN requires Bash 4+; macOS ships Bash 3.2 (GPL restriction).
+# Ensure a modern Bash is available before invoking sdkman scripts.
+MODERN_BASH="/opt/homebrew/bin/bash"
+if [[ ! -x "$MODERN_BASH" ]]; then
+    print_message "info" "Installing modern bash (required by SDKMAN)..."
+    brew install bash
+fi
+
 if [[ -d "$HOME/.sdkman" ]] && [[ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
     print_message "info" "sdkman is already installed. Updating..."
-    set +u  # disable nounset; sdkman scripts reference unbound variables (e.g., ZSH_VERSION)
-    source "$HOME/.sdkman/bin/sdkman-init.sh"
-    sdk selfupdate
-    set -u  # re-enable nounset
+    # Run under modern bash; sdkman-init sources helpers that use bash 4+ syntax.
+    "$MODERN_BASH" -c 'set +u; source "$HOME/.sdkman/bin/sdkman-init.sh"; sdk selfupdate'
     exit 0
 fi
 
 print_message "info" "Installing sdkman (Software Development Kit Manager)..."
-
-# SDKMAN's installer requires Bash 4+; macOS ships Bash 3.2 (GPL restriction).
-# Ensure a modern Bash is available before invoking the installer.
-MODERN_BASH="/opt/homebrew/bin/bash"
-if [[ ! -x "$MODERN_BASH" ]]; then
-    print_message "info" "Installing modern bash (required by SDKMAN installer)..."
-    brew install bash
-fi
 
 # Install sdkman using the official installation script from sdkman.io
 export SDKMAN_DIR="$HOME/.sdkman"
