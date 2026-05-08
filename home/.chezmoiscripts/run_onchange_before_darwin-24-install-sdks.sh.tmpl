@@ -15,7 +15,8 @@ if ! require_tools sdk; then
 fi
 
 print_message "info" "Installing packages using SDKMAN!..."
-
+# Get the latest list of available SDKs
+sdk update
 {{- $categories := prepend .tag_choices "core" }}
 {{- range $category := $categories }}
   {{- $categoryData := index $.packages.darwin $category }}

@@ -1,6 +1,8 @@
 {{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
 #!/bin/bash
 
+# run_onchange trigger - packages.yaml changes or every 30 days:  {{ includeTemplate "time-bucket" (dict "days" 30) }}
+
 set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
@@ -15,7 +17,9 @@ print_message "info" "Updating Rust toolchain..."
 rustup update
 
 print_message "info" "Installing cargo packages..."
-
+# Bulk update all installed cargo packages first
+cargo install cargo-update
+cargo install-update -a
 {{- $categories := .tag_choices }}
 {{- range $category := $categories }}
   {{- $categoryData := index $.packages.darwin $category }}

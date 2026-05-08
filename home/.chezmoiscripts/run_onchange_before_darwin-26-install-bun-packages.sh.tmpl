@@ -1,6 +1,8 @@
 {{ if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+# run_onchange trigger - packages.yaml changes or every 7 days:  {{ includeTemplate "time-bucket" (dict "days" 7) }}
+
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 if ! require_tools bun; then
@@ -8,7 +10,8 @@ if ! require_tools bun; then
 fi
 
 print_message "info" "Installing global packages using bun..."
-
+# Update outdated dependencies first
+bun update -g
 {{- $categories := prepend .tag_choices "core" }}
 {{- range $category := $categories }}
   {{- $categoryData := index $.packages.darwin $category }}

@@ -1,6 +1,8 @@
 {{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
 #!/bin/bash
 
+# run_onchange trigger - Every 30 days:  {{ includeTemplate "time-bucket" (dict "days" 30) }}
+
 set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
@@ -13,7 +15,7 @@ if [[ -d "$HOME/.sdkman" ]] && [[ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
     print_message "info" "sdkman is already installed. Updating..."
     set +u  # disable nounset; sdkman scripts reference unbound variables (e.g., ZSH_VERSION)
     source "$HOME/.sdkman/bin/sdkman-init.sh"
-    sdk update
+    sdk selfupdate
     set -u  # re-enable nounset
     exit 0
 fi

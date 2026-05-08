@@ -1,6 +1,8 @@
 {{ if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+# run_onchange trigger - packages.yaml changes or every 7 days:  {{ includeTemplate "time-bucket" (dict "days" 7) }}
+
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 if ! require_tools uv; then
@@ -8,7 +10,8 @@ if ! require_tools uv; then
 fi
 
 print_message "info" "Installing tools using uv..."
-
+# Upgrade all existing tools first
+uv tool update --all
 {{- $categories := prepend .tag_choices "core" }}
 {{- range $category := $categories }}
   {{- $categoryData := index $.packages.darwin $category }}

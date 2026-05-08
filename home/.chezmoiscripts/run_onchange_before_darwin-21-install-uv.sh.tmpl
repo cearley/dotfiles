@@ -1,6 +1,8 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+# run_onchange trigger - Every 30 days:  {{ includeTemplate "time-bucket" (dict "days" 30) }}
+
 set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
