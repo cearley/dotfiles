@@ -13,9 +13,14 @@ export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || pr
 
 {{ if (has "ai" .tags) -}}
 # SpecStory https://specstory.com/specstory-cli
-alias claudespec='specstory run claude --no-cloud-sync'
-alias codexspec='specstory run codex --no-cloud-sync'
-alias geminispec='specstory run gemini --no-cloud-sync'
+alias claude-spec='specstory run claude --no-cloud-sync'
+alias codex-spec='specstory run codex --no-cloud-sync'
+alias gemini-spec='specstory run gemini --no-cloud-sync'
+alias openspecui='npx openspecui@latest'
+
+# Claude Code with Bedrock (side-by-side)
+alias claude-bedrock='CLAUDE_CONFIG_DIR=$HOME/.claude-bedrock claude'
+alias claude-bedrock-spec='CLAUDE_CONFIG_DIR=$HOME/.claude-bedrock specstory run claude --no-cloud-sync'
 
 # Added by LM Studio CLI (lms)
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"

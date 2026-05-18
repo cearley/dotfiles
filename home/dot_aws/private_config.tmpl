@@ -27,3 +27,7 @@ output = json
 region = us-east-1
 output = json
 {{- end }}
+
+[profile claudecode-dev-us-east-1]
+credential_process = {{- .chezmoi.homeDir -}}/claude-code-with-bedrock/credential-process --profile claudecode-dev-us-east-1
+region = us-east-1

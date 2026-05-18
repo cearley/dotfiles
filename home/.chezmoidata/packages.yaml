@@ -85,6 +85,7 @@ packages:
       - 'git-gui'
       - 'github-markdown-toc'
       - 'go'
+      - 'golangci-lint'
       - 'gopls'
       - 'graphviz'
       - 'http-server'
@@ -124,7 +125,7 @@ packages:
       - 'block-goose-cli'
       - 'github-mcp-server'
       - 'qwen-code'
-      - 'specstoryai/tap/specstory'
+      #- 'specstoryai/tap/specstory'
       bun:
       - 'ralph-tui'
       casks:
