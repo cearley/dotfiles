@@ -1,0 +1,69 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+#!/bin/bash
+
+# run_onchange trigger - packages.yaml changes or every 7 days: {{ includeTemplate "time-bucket" (dict "days" 7) }}
+
+set -uo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools claude; then
+    exit 1
+fi
+
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $claudeEnvs := default (list "~/.claude") (index $settings "claude_envs") }}
+
+# ---------------------------------------------------------------------------
+# Collect marketplaces and plugins from active tags
+# ---------------------------------------------------------------------------
+
+{{- $categories := prepend .tag_choices "core" }}
+
+declare -a MARKETPLACES=()
+declare -a PLUGINS=()
+
+{{- range $category := $categories }}
+  {{- $categoryData := index $.packages.darwin $category }}
+  {{- if or (eq $category "core") (has $category $.tags) }}
+    {{- if and (hasKey $categoryData "plugin_marketplaces") $categoryData.plugin_marketplaces }}
+      {{- range $categoryData.plugin_marketplaces }}
+MARKETPLACES+=('{{ . }}')
+      {{- end }}
+    {{- end }}
+    {{- if and (hasKey $categoryData "plugins") $categoryData.plugins }}
+      {{- range $categoryData.plugins }}
+PLUGINS+=('{{ . }}')
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+# ---------------------------------------------------------------------------
+# Main loop over each Claude Code environment
+# ---------------------------------------------------------------------------
+for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
+    env_dir="${env_dir/#\~/$HOME}"
+    if [[ ! -d "$env_dir" ]]; then
+        print_message "skip" "Skipping plugin setup for $(basename "$env_dir") — directory not found"
+        continue
+    fi
+
+    print_message "info" "Configuring Claude Code plugins for $(basename "$env_dir")..."
+
+    for source in "${MARKETPLACES[@]}"; do
+        if ! CLAUDE_CONFIG_DIR="$env_dir" claude plugins marketplace add "$source" --scope user 2>&1; then
+            print_message "warning" "Could not add marketplace '$source' to $(basename "$env_dir") — skipping"
+        fi
+    done
+
+    for plugin in "${PLUGINS[@]}"; do
+        if ! CLAUDE_CONFIG_DIR="$env_dir" claude plugins install "$plugin" --scope user 2>&1; then
+            print_message "warning" "Could not install plugin '$plugin' in $(basename "$env_dir") — skipping"
+        fi
+    done
+
+    print_message "success" "Plugin setup complete for $(basename "$env_dir")"
+done
+
+{{ end -}}

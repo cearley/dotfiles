@@ -2,51 +2,54 @@
   "hooks": {
     "PostToolUse": [
       {
+        "matcher": "Edit|Write",
         "hooks": [
           {
+            "type": "command",
             "command": "./.claude/hooks/validate-template.sh",
-            "statusMessage": "Validating template...",
             "timeout": 10,
-            "type": "command"
+            "statusMessage": "Validating template..."
           }
-        ],
-        "matcher": "Edit|Write"
+        ]
       }
     ],
     "PreCompact": [
       {
+        "matcher": "",
         "hooks": [
           {
-            "command": "bd prime",
-            "type": "command"
+            "type": "command",
+            "command": "bd prime"
           }
-        ],
-        "matcher": ""
+        ]
       }
     ],
     "PreToolUse": [
       {
+        "matcher": "Edit|Write",
         "hooks": [
           {
+            "type": "command",
             "command": "./.claude/hooks/protect-data-files.sh",
-            "statusMessage": "Checking data file constraints...",
             "timeout": 5,
-            "type": "command"
+            "statusMessage": "Checking data file constraints..."
           }
-        ],
-        "matcher": "Edit|Write"
+        ]
       }
     ],
     "SessionStart": [
       {
+        "matcher": "",
         "hooks": [
           {
-            "command": "bd prime",
-            "type": "command"
+            "type": "command",
+            "command": "bd prime"
           }
-        ],
-        "matcher": ""
+        ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "narsil@narsil-mcp": true
   }
 }

@@ -28,6 +28,9 @@
 #
 MacBook Pro:
   brewfile: mbp-brewfile
+  claude_envs:
+    - '~/.claude'
+    - '~/.claude-bedrock'
   keepassxc_entries:
     ssh: SSH (MacBook Pro)
 Mac Studio:

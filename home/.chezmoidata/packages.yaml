@@ -152,6 +152,15 @@ packages:
       - 'specstoryai/agent-skills -all'
       # Install specific skills with arguments
       #- 'specstoryai/agent-skills --skill specstory-yak specstory-session-summary'
+      plugin_marketplaces: # Claude Code marketplaces (registered via `claude plugins marketplace add`)
+      - 'anthropics/claude-plugins-official'
+      - 'anthropics/skills'
+      plugins: # Claude Code plugins (installed via `claude plugins install`)
+      - 'example-skills@anthropic-agent-skills'
+      - 'atlassian@claude-plugins-official'
+      - 'claude-md-management@claude-plugins-official'
+      - 'ralph-loop@claude-plugins-official'
+      - 'superpowers@claude-plugins-official'
 
     # Optional data science packages (datascience tag)
     datascience:
@@ -191,6 +200,10 @@ packages:
       - '"Microsoft Word", id: 462054704'
       - '"Numbers", id: 361304891'
       - '"OneDrive", id: 823766827'
+      plugin_marketplaces: # Claude Code marketplaces for work environments
+      - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev'
+      plugins: # Claude Code plugins for work environments
+      - 'fulcrum-skills@viewpoint-tools'
 
     # Optional mobile packages (mobile tag)
     mobile:
