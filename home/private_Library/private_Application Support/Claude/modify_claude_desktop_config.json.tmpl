@@ -16,18 +16,15 @@ existing=$(cat)
 # Define chezmoi-managed MCP servers
 managed_servers='
 {
-  "aws-api": {
+  "aws-mcp": {
     "command": "{{ .chezmoi.homeDir }}/.local/bin/uvx",
-    "args": ["awslabs.aws-api-mcp-server@latest"],
-    "env": { "AWS_REGION": "us-west-2" }
-  },
-  "aws-diagram": {
-    "command": "{{ .chezmoi.homeDir }}/.local/bin/uvx",
-    "args": ["--with", "sarif-om,jschema_to_python", "awslabs.aws-diagram-mcp-server@latest"]
-  },
-  "aws-knowledge": {
-    "command": "{{ .chezmoi.homeDir }}/.local/bin/uvx",
-    "args": ["fastmcp", "run", "https://knowledge-mcp.global.api.aws"]
+    "timeout": 100000,
+    "transport": "stdio",
+    "args": [
+      "mcp-proxy-for-aws@latest",
+      "https://aws-mcp.us-east-1.api.aws/mcp",
+      "--metadata", "AWS_REGION=us-west-2"
+    ]
   },
   "basic-memory": {
     "command": "{{ .chezmoi.homeDir }}/.local/bin/uvx",
@@ -49,11 +46,6 @@ managed_servers='
   "jetbrains": {
     "command": "npx",
     "args": ["-y", "@jetbrains/mcp-proxy"]
-  },
-  "strands-agents": {
-    "command": "{{ .chezmoi.homeDir }}/.local/bin/uvx",
-    "args": ["strands-agents-mcp-server"],
-    "env": { "FASTMCP_LOG_LEVEL": "INFO" }
   }
 }'
 
