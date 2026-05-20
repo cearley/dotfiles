@@ -46,6 +46,12 @@ managed_servers='
   "jetbrains": {
     "command": "npx",
     "args": ["-y", "@jetbrains/mcp-proxy"]
+  },
+  "playwright": {
+    "command": "npx",
+    "args": [
+      "@playwright/mcp@latest"
+    ]
   }
 }'
 
@@ -64,19 +70,6 @@ managed_servers=$(echo "$managed_servers" | jq '. + {
     "command": "/usr/local/share/dotnet/dotnet",
     "args": ["{{ .chezmoi.homeDir }}/work/FulcrumMcpServer/FulcrumMcpServer.Console/bin/Debug/net8.0/FulcrumMcpServer.Console.dll", "mcp"],
     "env": { "DOTNET_ENVIRONMENT": "Development" }
-  }
-}')
-{{- end }}
-
-{{- if and (has "school" .tags) .has_keepassxc_db }}
-managed_servers=$(echo "$managed_servers" | jq '. + {
-  "coursera": {
-    "command": "npx",
-    "args": ["-y", "@striderlabs/mcp-coursera"],
-    "env": {
-      "COURSERA_EMAIL": {{ keepassxcAttribute "Coursera" "UserName" | quote }},
-      "COURSERA_PASSWORD": {{ keepassxcAttribute "Coursera" "Password" | quote }}
-    }
   }
 }')
 {{- end }}

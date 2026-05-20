@@ -115,6 +115,8 @@ packages:
       - "java 8.0.462-zulu"
       - "liquibase"
       skills: # Installed via `npx skills add <args>`
+      mcp: # claude mcp add
+      - 'playwright npx @playwright/mcp@latest'
       plugin_marketplaces: # Claude Code marketplaces (registered via `claude plugins marketplace add`)
       - 'aws/agent-toolkit-for-aws'
       plugins: # Claude Code plugins (installed via `claude plugins install`)
