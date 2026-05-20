@@ -26,15 +26,25 @@
 #                     share the same keepassxc database but have different
 #                     entries for the same purpose.)
 #
+# claude_default    - Which claude-* function the `claude` alias should point to
+#                     on this machine (e.g., "claude-work", "claude-personal").
+#                     If omitted, no alias is created and `claude` invokes the binary directly.
+#
 MacBook Pro:
   brewfile: mbp-brewfile
+  claude_default: claude-work
   claude_envs:
-    - '~/.claude'
     - '~/.claude-bedrock'
+    - '~/.claude-personal'
+    - '~/.claude-work'
   keepassxc_entries:
     ssh: SSH (MacBook Pro)
 Mac Studio:
   brewfile: studio-brewfile
+  claude_default: claude-personal
+  claude_envs:
+    - '~/.claude-personal'
+    - '~/.claude-work'
   keepassxc_entries:
     ssh: SSH (Mac Studio)
 Mac mini:
