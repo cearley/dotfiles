@@ -68,6 +68,19 @@ managed_servers=$(echo "$managed_servers" | jq '. + {
 }')
 {{- end }}
 
+{{- if and (has "school" .tags) .has_keepassxc_db }}
+managed_servers=$(echo "$managed_servers" | jq '. + {
+  "coursera": {
+    "command": "npx",
+    "args": ["-y", "@striderlabs/mcp-coursera"],
+    "env": {
+      "COURSERA_EMAIL": {{ keepassxcAttribute "Coursera" "UserName" | quote }},
+      "COURSERA_PASSWORD": {{ keepassxcAttribute "Coursera" "Password" | quote }}
+    }
+  }
+}')
+{{- end }}
+
 # Merge: replace mcpServers, preserve everything else
 echo "$existing" | jq --argjson servers "$managed_servers" '.mcpServers = $servers'
 {{- end }}
