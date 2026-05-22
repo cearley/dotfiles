@@ -1,0 +1,18 @@
+{{- $claudeDefault := includeTemplate "machine-config" (merge (dict "setting" "claude_default") .) -}}
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{{ .reverse_dns }}.claude-config-dir</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/launchctl</string>
+        <string>setenv</string>
+        <string>CLAUDE_CONFIG_DIR</string>
+        <string>{{ .chezmoi.homeDir }}/.{{ $claudeDefault }}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>

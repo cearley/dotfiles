@@ -1,0 +1,50 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+# Sets CLAUDE_CONFIG_DIR in the GUI session (launchd) so apps launched from
+# Spotlight, Dock, or Finder (e.g. JetBrains Rider) inherit the same Claude
+# config directory as terminal-launched processes.
+#
+# BREAKING: bare `claude` no longer routes through a shell alias/function.
+# The binary runs directly and inherits CLAUDE_CONFIG_DIR from the environment.
+#
+# Rollback:
+#   launchctl bootout gui/$(id -u)/{{ .reverse_dns }}.claude-config-dir
+#   launchctl unsetenv CLAUDE_CONFIG_DIR
+#   rm ~/Library/LaunchAgents/{{ .reverse_dns }}.claude-config-dir.plist
+#
+# run_onchange trigger - re-runs when this script changes (e.g. claude_default changes):
+# claude_default={{ includeTemplate "machine-config" (merge (dict "setting" "claude_default") .) }}
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+{{- $claudeDefault := includeTemplate "machine-config" (merge (dict "setting" "claude_default") .) }}
+{{- if not $claudeDefault }}
+
+print_message "skip" "No claude_default configured for this machine — skipping LaunchAgent setup"
+exit 0
+{{- end }}
+
+PLIST="$HOME/Library/LaunchAgents/{{ .reverse_dns }}.claude-config-dir.plist"
+LABEL="{{ .reverse_dns }}.claude-config-dir"
+CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
+
+print_message "info" "Bootstrapping Claude config LaunchAgent ($LABEL)..."
+
+# Unload any prior instance (ignore failure if not loaded)
+launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+
+# Load the agent
+if ! launchctl bootstrap "gui/$(id -u)" "$PLIST"; then
+    print_message "error" "Failed to bootstrap LaunchAgent — check $PLIST"
+    exit 1
+fi
+
+# Update the live GUI session immediately (no logout needed)
+launchctl setenv CLAUDE_CONFIG_DIR "$CONFIG_DIR"
+
+print_message "success" "CLAUDE_CONFIG_DIR set to $CONFIG_DIR in GUI session"
+print_message "tip" "Restart any already-running GUI apps (e.g. JetBrains Rider, VS Code) to inherit the new CLAUDE_CONFIG_DIR"
+
+{{ end -}}

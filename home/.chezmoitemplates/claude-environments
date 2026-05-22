@@ -1,0 +1,25 @@
+{{- if has "ai" .tags -}}
+# Claude Code with Bedrock
+claude-bedrock() {
+    CLAUDE_CONFIG_DIR="$HOME/.claude-bedrock" command claude "$@"
+}
+claude-personal() {
+    CLAUDE_CONFIG_DIR="$HOME/.claude-personal" command claude "$@"
+}
+claude-work() {
+    CLAUDE_CONFIG_DIR="$HOME/.claude-work" command claude "$@"
+}
+{{- $claudeDefault := includeTemplate "machine-config" (merge (dict "setting" "claude_default") .) }}
+{{- if $claudeDefault }}
+export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
+{{- end }}
+# SpecStory https://specstory.com/specstory-cli
+alias claude-spec='specstory run claude --no-cloud-sync'
+alias claude-bedrock-spec='CLAUDE_CONFIG_DIR=$HOME/.claude-bedrock specstory run claude --no-cloud-sync'
+alias claude-personal-spec='CLAUDE_CONFIG_DIR=$HOME/.claude-personal specstory run claude --no-cloud-sync'
+alias claude-work-spec='CLAUDE_CONFIG_DIR=$HOME/.claude-work specstory run claude --no-cloud-sync'
+alias codex-spec='specstory run codex --no-cloud-sync'
+alias gemini-spec='specstory run gemini --no-cloud-sync'
+# OpenSpecUI
+alias openspecui='npx openspecui@latest'
+{{- end -}}

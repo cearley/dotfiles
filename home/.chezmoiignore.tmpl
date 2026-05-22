@@ -34,3 +34,9 @@ Movies
 Music
 Pictures
 Public
+
+## Claude LaunchAgent - skip on machines with no claude_default
+{{- $claudeDefault := includeTemplate "machine-config" (merge (dict "setting" "claude_default") .) }}
+{{- if not $claudeDefault }}
+Library/LaunchAgents/{{ .reverse_dns }}.claude-config-dir.plist
+{{- end }}

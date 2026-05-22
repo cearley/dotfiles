@@ -68,7 +68,7 @@ Prefixes in source filenames control how chezmoi processes them:
 
 **Script execution order:**
 - **05**: Rosetta 2 | **10**: Rust | **20**: SDKMAN | **21**: UV manager | **23**: Homebrew packages | **24**: SDKMAN SDKs | **25**: UV tools | **26**: Bun packages | **27** (`run_onchange_before`, `dev` tag): Cargo crates | **28**: Machine-specific Brewfile
-- **35**: nvm | **36**: Claude Code (`ai` tag) | **37**: Claude Code skills (`ai` tag, `run_onchange_after`)
+- **35**: nvm | **36**: Claude Code (`ai` tag) | **37**: Claude Code skills (`ai` tag, `run_onchange_after`) | **38**: Claude Code plugins (`ai` tag) | **39**: Claude LaunchAgent (`ai` tag, Darwin)
 - **45**: GitHub auth | **46**: SSH GitHub setup | **80**: Microsoft Defender | **82**: Global Protect VPN | **83**: Atuin | **85**: System defaults | **90**: Hosts file | **95**: Syncthing
 
 ### Shared Utilities
@@ -136,6 +136,7 @@ Available in `home/.chezmoitemplates/`:
 - `machine-settings` - All machine settings as JSON dict (preferred for multiple lookups)
 - `icloud-account-id` - Returns iCloud account ID if signed in (macOS)
 - `time-bucket` - Rolling epoch bucket for periodic `run_onchange_*` re-execution; embed in comment near script top
+- `claude-environments` - **Source of truth for Claude environment wiring**: per-env shell functions (`claude-bedrock`, `claude-personal`, `claude-work`), `export CLAUDE_CONFIG_DIR` (when `claude_default` is set), and all `*-spec` SpecStory aliases. Gated internally on `ai` tag. Used by both `dot_zshrc.tmpl` and `dot_bashrc.tmpl`.
 
 **Periodic re-execution with time-bucket:**
 ```go-template
