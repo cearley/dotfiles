@@ -99,6 +99,8 @@ cat script-name.tmpl | chezmoi execute-template
 
 ### Template Best Practices
 
+The `claude-environments` partial defines the `prompt_claude_env` p10k segment. Its registration in `dot_p10k.zsh` is wrapped in `# === BEGIN/END claude-env segment registration ===` markers — preserve these if regenerating p10k config.
+
 **Partial file management (modify_ scripts):**
 Use `modify_` prefix for files where you only manage specific keys (e.g., JSON configs modified by applications at runtime).
 - `modify_<filename>.tmpl` — bash script receiving current file on stdin, outputs merged result

@@ -9,6 +9,31 @@ claude-personal() {
 claude-work() {
     CLAUDE_CONFIG_DIR="$HOME/.claude-work" command claude "$@"
 }
+# Switch the active Claude environment for this shell session.
+# Usage: claude-env [work|personal|bedrock]  (no args = show current)
+claude-env() {
+    case "$1" in
+        work|personal|bedrock)
+            export CLAUDE_CONFIG_DIR="$HOME/.claude-$1"
+            if [ -n "$ZSH_VERSION" ]; then
+                command -v p10k >/dev/null 2>&1 && p10k reload
+            fi
+            ;;
+        "")
+            if [ -n "$CLAUDE_CONFIG_DIR" ]; then
+                local _s="${CLAUDE_CONFIG_DIR##*/}"
+                _s="${_s#.}"
+                echo "${_s#claude-}"
+            else
+                echo "(none)"
+            fi
+            ;;
+        *)
+            echo "Usage: claude-env [work|personal|bedrock]" >&2
+            return 1
+            ;;
+    esac
+}
 {{- $claudeDefault := includeTemplate "machine-config" (merge (dict "setting" "claude_default") .) }}
 {{- if $claudeDefault }}
 export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
@@ -22,4 +47,46 @@ alias codex-spec='specstory run codex --no-cloud-sync'
 alias gemini-spec='specstory run gemini --no-cloud-sync'
 # OpenSpecUI
 alias openspecui='npx openspecui@latest'
+
+# Sets the terminal window/tab title (OSC-2) to the active Claude env suffix.
+# See openspec/specs/claude-environments/spec.md for requirements.
+_claude_env_set_title() {
+    if [ -n "${CLAUDE_CONFIG_DIR}" ]; then
+        local suffix="${CLAUDE_CONFIG_DIR##*/}"
+        suffix="${suffix#.}"
+        local label="${suffix#claude-}"
+        printf '\033]2;%s\007' "$label"
+    else
+        printf '\033]2;\007'
+    fi
+}
+
+if [ -n "$ZSH_VERSION" ]; then
+    # p10k user-defined segment — see openspec/specs/claude-environments/spec.md
+    prompt_claude_env() {
+        [ -z "${CLAUDE_CONFIG_DIR}" ] && return
+        local suffix="${CLAUDE_CONFIG_DIR##*/}"
+        suffix="${suffix#.}"
+        local label="${suffix#claude-}"
+        local color
+        case "$label" in
+            work)     color=33  ;;
+            personal) color=76  ;;
+            bedrock)  color=208 ;;
+            *)        color=244 ;;
+        esac
+        p10k segment -f $color -t "$label"
+    }
+
+    instant_prompt_claude_env() {
+        prompt_claude_env
+    }
+
+    autoload -Uz add-zsh-hook
+    add-zsh-hook precmd _claude_env_set_title
+fi
+
+if [ -n "$BASH_VERSION" ]; then
+    PROMPT_COMMAND="_claude_env_set_title${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
+fi
 {{- end -}}
