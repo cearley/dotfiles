@@ -19,7 +19,7 @@ bun update -g
     {{- if and (hasKey $categoryData "bun") $categoryData.bun }}
 # Install {{ $category }} bun packages
 {{ range $categoryData.bun -}}
-bun install -g {{ . }}
+bun add -g {{ . }}
 {{ end -}}
     {{- end }}
   {{- end }}

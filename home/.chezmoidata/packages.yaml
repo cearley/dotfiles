@@ -134,6 +134,7 @@ packages:
       - 'qwen-code'
       #- 'specstoryai/tap/specstory'
       bun:
+      - '@fission-ai/openspec@latest'
       - 'ralph-tui'
       casks:
       - 'block-goose'
