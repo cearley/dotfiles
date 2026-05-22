@@ -47,6 +47,9 @@ export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 # End of LM Studio CLI section
 {{- end }}
 
+# direnv - Load/unload environment variables based on $PWD
+eval "$(direnv hook bash)"
+
 # Astral.sh uv - Python package manager
 . "$HOME/.local/bin/env"
 eval "$(uv generate-shell-completion bash)"

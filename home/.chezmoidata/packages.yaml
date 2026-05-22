@@ -13,6 +13,7 @@ packages:
       - 'awscli'                   # Official Amazon AWS command-line interface
       - 'bat'                      # Clone of cat(1) with syntax highlighting and Git integration
       - 'chezmoi'                  # Manage your dotfiles across multiple diverse machines, securely
+      - 'direnv'                   # Load/unload environment variables based on $PWD
       - 'fd'                       # Simple, fast and user-friendly alternative to find
       - 'fzf'                      # Command-line fuzzy finder written in Go
       - 'git'                      # Distributed revision control system
@@ -78,7 +79,6 @@ packages:
       - 'cfn-lint'
       - 'checkmake'
       - 'dagger'
-      - 'direnv'
       - 'frum'
       - 'gh'
       - 'git-delta'

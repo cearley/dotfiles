@@ -84,6 +84,7 @@ zstyle ':omz:update' mode disabled  # disable automatic updates
 # Add wisely, as too many plugins slow down shell startup.
 plugins=(
     aws
+    direnv
     fast-syntax-highlighting
     fzf
     git
@@ -272,14 +273,6 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 # Heavy shell integrations are deferred to improve startup time by 100-300ms
 # This function runs after the prompt is displayed using zsh-defer plugin
 _defer_shell_integrations() {
-{{- if has "dev" .tags }}
-    # asdf - Manage multiple runtime versions with a single CLI tool
-    #. /opt/homebrew/opt/asdf/libexec/asdf.sh
-
-    # direnv - Load and unload environment variables depending on the current directory
-    eval "$(direnv hook zsh)" 2>/dev/null
-{{- end }}
-
     # atuin - Magical shell history (can be slow to initialize)
     eval "$(atuin init zsh)" 2>/dev/null
 
