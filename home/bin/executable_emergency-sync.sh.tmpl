@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# Push all work-in-progress repos to GitHub via isolated emergency branches.
+# Run before switching machines or before an anticipated power event.
+
+GITHUB_USERNAME="{{ .gh_username }}"
+DRY_RUN=false
+SUCCESSES=()
+SKIPPED=()
+FAILURES=()
+
+{{- if hasKey . "emergency_sync_dirs" }}
+REPO_DIRS=({{- range .emergency_sync_dirs }} "{{ . }}"{{- end }})
+{{- else }}
+REPO_DIRS=("$HOME/work")
+{{- end }}
+
+usage() {
+    cat <<EOF
+Usage: emergency-sync [--dry-run] [--help]
+
+Discovers repos recursively under: ${REPO_DIRS[*]}
+Emergency branch format: ${GITHUB_USERNAME}-dev/emergency/YYYY-MM-DD-HHMM
+
+Options:
+  --dry-run   Preview what would be synced without making changes
+  --help      Show this help
+EOF
+}
+
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run) DRY_RUN=true ;;
+        --help) usage; exit 0 ;;
+        *) echo "Unknown option: $arg" >&2; usage >&2; exit 1 ;;
+    esac
+done
+
+EMERGENCY_BRANCH="${GITHUB_USERNAME}-dev/emergency/$(date +%Y-%m-%d-%H%M)"
+
+sync_repo() {
+    local repo_path="$1"
+    local repo_name
+    repo_name=$(basename "$repo_path")
+
+    if ! git -C "$repo_path" rev-parse --git-dir >/dev/null 2>&1; then
+        return 0
+    fi
+
+    if [[ -z "$(git -C "$repo_path" status --porcelain 2>/dev/null)" ]]; then
+        SKIPPED+=("$repo_name")
+        return 0
+    fi
+
+    if [[ -z "$(git -C "$repo_path" remote 2>/dev/null)" ]]; then
+        echo "  ⚠️  $repo_name: no remote configured"
+        FAILURES+=("$repo_name (no remote)")
+        return 0
+    fi
+
+    local current_branch
+    current_branch=$(git -C "$repo_path" branch --show-current 2>/dev/null || echo "HEAD")
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "  [dry run] $repo_name ($current_branch) → $EMERGENCY_BRANCH"
+        SUCCESSES+=("$repo_name")
+        return 0
+    fi
+
+    echo "  🔵 $repo_name ($current_branch)"
+
+    if ! git -C "$repo_path" checkout -b "$EMERGENCY_BRANCH" >/dev/null 2>&1; then
+        echo "     ❌ could not create emergency branch"
+        FAILURES+=("$repo_name (branch failed)")
+        return 0
+    fi
+
+    git -C "$repo_path" add -A
+    if ! git -C "$repo_path" commit -m "WIP: Emergency sync from $current_branch on $(hostname) - $(date '+%Y-%m-%d %H:%M:%S')" >/dev/null 2>&1; then
+        git -C "$repo_path" checkout "$current_branch" >/dev/null 2>&1 || git -C "$repo_path" checkout - >/dev/null 2>&1
+        SKIPPED+=("$repo_name (nothing to commit after branch)")
+        return 0
+    fi
+
+    if git -C "$repo_path" push -u origin "$EMERGENCY_BRANCH" >/dev/null 2>&1; then
+        echo "     ✅ pushed → $EMERGENCY_BRANCH"
+        SUCCESSES+=("$repo_name")
+    else
+        echo "     ❌ push failed"
+        FAILURES+=("$repo_name (push failed)")
+    fi
+
+    git -C "$repo_path" checkout "$current_branch" >/dev/null 2>&1 || git -C "$repo_path" checkout - >/dev/null 2>&1
+}
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    echo "🔍 Dry run — no changes will be made"
+    echo ""
+fi
+
+echo "📂 Scanning: ${REPO_DIRS[*]}"
+echo ""
+
+found=0
+for repo_dir in "${REPO_DIRS[@]}"; do
+    expanded_dir="${repo_dir/#\~/$HOME}"
+    if [[ ! -d "$expanded_dir" ]]; then
+        echo "  ⚠️  Not found: $expanded_dir"
+        continue
+    fi
+    while IFS= read -r git_entry; do
+        sync_repo "$(dirname "$git_entry")"
+        found=$((found + 1))
+    done < <(fd --hidden --glob '.git' "$expanded_dir" 2>/dev/null)
+done
+
+if [[ "$found" -eq 0 ]]; then
+    echo "No repositories found."
+    exit 0
+fi
+
+echo ""
+echo "Done: ${#SUCCESSES[@]} synced, ${#SKIPPED[@]} skipped (clean), ${#FAILURES[@]} failed"
+
+if [[ "${#FAILURES[@]}" -gt 0 ]]; then
+    printf "  Failed: %s\n" "${FAILURES[@]}"
+    exit 1
+fi
