@@ -22,26 +22,53 @@ The Claude Code multi-environment shell wiring SHALL be defined in exactly one p
 - **THEN** the call site SHALL NOT need to add a separate `if has "ai" .tags` guard
 - **AND** the partial SHALL handle internal gating
 
-### Requirement: Per-Environment Shell Functions
-The partial SHALL define shell functions that invoke `claude` with a specific `CLAUDE_CONFIG_DIR` for the duration of one invocation.
+### Requirement: Template-Render-Time Validation of Claude Environment Configuration
+The `claude-environments` partial SHALL validate the active machine's `claude_envs` and `claude_default` settings at template-render time and SHALL fail the render with a precise error when validation fails.
 
-#### Scenario: Bedrock environment function
-- **WHEN** the user runs `claude-bedrock <args>`
-- **THEN** the shell SHALL invoke `command claude <args>` with `CLAUDE_CONFIG_DIR=$HOME/.claude-bedrock`
+#### Scenario: Non-conforming claude_envs entry
+- **WHEN** any entry in `claude_envs` for the active machine does not start with `~/.claude-`
+- **THEN** rendering the partial SHALL fail
+- **AND** the failure message SHALL identify `claude_envs` and the offending entry verbatim
+
+#### Scenario: claude_default not in claude_envs
+- **WHEN** `claude_default` for the active machine is set
+- **AND** `claude_default` is not equal to `claude-<name>` for any `<name>` derived from `claude_envs`
+- **THEN** rendering the partial SHALL fail
+- **AND** the failure message SHALL identify `claude_default`, its current value, and the derived list of valid names
+
+#### Scenario: claude_default unset
+- **WHEN** the active machine has no `claude_default` set
+- **THEN** the partial SHALL NOT validate `claude_default`
+- **AND** rendering SHALL succeed regardless of `claude_envs` content
+
+#### Scenario: Validation runs in every render path
+- **WHEN** `chezmoi apply`, `chezmoi diff`, `chezmoi cat`, or `chezmoi execute-template` renders the partial
+- **THEN** the same validation SHALL run
+- **AND** any of those commands SHALL surface the same failure message on misconfiguration
+
+### Requirement: Per-Environment Shell Functions
+The partial SHALL define one shell function per Claude environment in the active machine's `claude_envs` list. Each function SHALL invoke `claude` with `CLAUDE_CONFIG_DIR` set to that environment's path for the duration of one invocation.
+
+#### Scenario: Function generated per claude_envs entry
+- **WHEN** the active machine's `claude_envs` contains `~/.claude-<name>`
+- **THEN** the partial SHALL define a shell function `claude-<name>`
+- **AND** the function SHALL invoke `command claude "$@"` with `CLAUDE_CONFIG_DIR=$HOME/.claude-<name>`
 - **AND** the assignment SHALL apply only to that invocation
 
-#### Scenario: Personal environment function
-- **WHEN** the user runs `claude-personal <args>`
-- **THEN** the shell SHALL invoke `command claude <args>` with `CLAUDE_CONFIG_DIR=$HOME/.claude-personal`
-
-#### Scenario: Work environment function
-- **WHEN** the user runs `claude-work <args>`
-- **THEN** the shell SHALL invoke `command claude <args>` with `CLAUDE_CONFIG_DIR=$HOME/.claude-work`
+#### Scenario: Function omitted for environments not in claude_envs
+- **WHEN** a name `<x>` is not present in the active machine's `claude_envs`
+- **THEN** the partial SHALL NOT define `claude-<x>`
+- **AND** typing `claude-<x>` SHALL produce a `command not found` error from the shell
 
 #### Scenario: Override exported default
 - **WHEN** `CLAUDE_CONFIG_DIR` is exported to one path and the user runs an environment function for a different env
 - **THEN** the function's inline assignment SHALL shadow the exported value for that one process
 - **AND** the parent shell's exported value SHALL remain unchanged
+
+#### Scenario: Empty claude_envs
+- **WHEN** the active machine has the `ai` tag but `claude_envs` is empty or missing
+- **THEN** the partial SHALL define no per-environment functions
+- **AND** the partial SHALL render successfully
 
 ### Requirement: Default Environment via Exported Variable
 When the active machine declares a `claude_default` in `home/.chezmoidata/config.yaml`, the partial SHALL export `CLAUDE_CONFIG_DIR` to the corresponding path.
@@ -60,22 +87,39 @@ When the active machine declares a `claude_default` in `home/.chezmoidata/config
 - **THEN** the partial SHALL NOT define an alias for `claude`
 - **AND** the bare `claude` command SHALL invoke the binary directly with the inherited environment
 
-### Requirement: SpecStory Wrapper Aliases
-The partial SHALL define `*-spec` aliases that wrap each Claude environment in `specstory run claude --no-cloud-sync`.
+### Requirement: SpecStory Wrappers
+The partial SHALL define `*-spec` shell functions (not aliases) that wrap each Claude environment, and other AI CLIs, in `specstory run <cli> --no-cloud-sync`. Per-environment functions SHALL be generated from the active machine's `claude_envs` list. All `*-spec` functions SHALL forward extra arguments via `"$@"`.
 
-#### Scenario: Default spec alias
+#### Scenario: Default spec function
 - **WHEN** the partial is rendered
-- **THEN** it SHALL define `alias claude-spec='specstory run claude --no-cloud-sync'`
-- **AND** the alias SHALL inherit any exported `CLAUDE_CONFIG_DIR` rather than re-asserting it
+- **THEN** it SHALL define a shell function `claude-spec` whose body invokes `specstory run claude --no-cloud-sync "$@"`
+- **AND** the function SHALL inherit any exported `CLAUDE_CONFIG_DIR` rather than re-asserting it
+- **AND** `type claude-spec` SHALL report it as a function
 
-#### Scenario: Per-environment spec aliases
-- **WHEN** the partial is rendered
-- **THEN** it SHALL define `claude-bedrock-spec`, `claude-personal-spec`, and `claude-work-spec` aliases
-- **AND** each SHALL inline a `CLAUDE_CONFIG_DIR=...` prefix that targets its specific environment
+#### Scenario: Per-environment spec function generated per claude_envs entry
+- **WHEN** the active machine's `claude_envs` contains `~/.claude-<name>`
+- **THEN** the partial SHALL define a shell function `claude-<name>-spec` whose body invokes `specstory run claude --no-cloud-sync "$@"` with `CLAUDE_CONFIG_DIR=$HOME/.claude-<name>` set as a single-command assignment
+- **AND** the parent shell's `CLAUDE_CONFIG_DIR` SHALL NOT be modified
+- **AND** `type claude-<name>-spec` SHALL report it as a function
 
-#### Scenario: Other tool spec aliases
+#### Scenario: Per-environment spec function omitted for environments not in claude_envs
+- **WHEN** a name `<x>` is not present in the active machine's `claude_envs`
+- **THEN** the partial SHALL NOT define `claude-<x>-spec`
+
+#### Scenario: Other tool spec functions
 - **WHEN** the partial is rendered
-- **THEN** it SHALL define `codex-spec` and `gemini-spec` aliases for SpecStory wrapping of other AI CLIs
+- **THEN** it SHALL define shell functions `codex-spec` and `gemini-spec`
+- **AND** each function body SHALL invoke `specstory run <cli> --no-cloud-sync "$@"` with `<cli>` being `codex` or `gemini` respectively
+
+#### Scenario: Argument forwarding
+- **WHEN** the user runs `claude-spec <arg1> <arg2>` (or any `*-spec` function with extra arguments)
+- **THEN** the resulting command line SHALL be `specstory run <cli> --no-cloud-sync <arg1> <arg2>`
+- **AND** quoting and word-splitting SHALL be preserved as if the function were called by a normal shell function with `"$@"`
+
+#### Scenario: Available in non-interactive shells
+- **WHEN** the partial has been sourced (e.g., via `~/.bashrc` or `~/.zshrc`) in a shell where alias expansion is disabled (such as bash without `expand_aliases` set)
+- **THEN** `*-spec` invocations SHALL still resolve and execute correctly
+- **AND** SHALL produce the same command line as in an interactive shell
 
 ### Requirement: GUI Session Inheritance via LaunchAgent
 On macOS, when the active machine declares a `claude_default`, a user LaunchAgent SHALL inject `CLAUDE_CONFIG_DIR` into the GUI session managed by `launchd` so apps launched from Spotlight, Dock, and Finder inherit the same value as terminal-launched processes.
@@ -228,10 +272,10 @@ The partial SHALL emit an OSC-2 sequence that sets the terminal window title to 
 - **AND** SHALL coexist with any static `name` configured in `cmux.json`
 
 ### Requirement: Session Environment Switcher
-The partial SHALL define a `claude-env` shell function that switches `CLAUDE_CONFIG_DIR` for the current shell session and refreshes the prompt.
+The partial SHALL define a `claude-env` shell function that switches `CLAUDE_CONFIG_DIR` for the current shell session and refreshes the prompt. The function's accepted arguments SHALL be derived from the active machine's `claude_envs` list at template-render time.
 
-#### Scenario: Switch to a known environment
-- **WHEN** the user runs `claude-env work` (or `personal` or `bedrock`)
+#### Scenario: Switch to an environment present in claude_envs
+- **WHEN** the user runs `claude-env <name>` and `~/.claude-<name>` is in the active machine's `claude_envs`
 - **THEN** `CLAUDE_CONFIG_DIR` SHALL be exported as `$HOME/.claude-<name>` in the current shell
 - **AND** in zsh, `p10k reload` SHALL be called so the prompt segment updates immediately
 
@@ -240,10 +284,17 @@ The partial SHALL define a `claude-env` shell function that switches `CLAUDE_CON
 - **THEN** the function SHALL print the active environment label (e.g., `work`) to stdout
 - **AND** SHALL print `(none)` if `CLAUDE_CONFIG_DIR` is unset
 
-#### Scenario: Invalid argument
-- **WHEN** the user runs `claude-env <unknown>`
-- **THEN** the function SHALL print a usage message to stderr
+#### Scenario: Argument not in claude_envs
+- **WHEN** the user runs `claude-env <x>` and `~/.claude-<x>` is not in the active machine's `claude_envs`
+- **THEN** the function SHALL NOT modify `CLAUDE_CONFIG_DIR`
+- **AND** the function SHALL print a usage message to stderr listing the names derived from `claude_envs`
 - **AND** SHALL return exit code 1
+
+#### Scenario: Empty claude_envs
+- **WHEN** the active machine has the `ai` tag but `claude_envs` is empty or missing
+- **THEN** the function's accepted-arguments set SHALL be empty
+- **AND** any non-empty argument SHALL fall through to the usage-message branch
+- **AND** the usage message SHALL list no valid names
 
 #### Scenario: Available in both shells
 - **WHEN** the partial is sourced by bash

@@ -26,9 +26,17 @@
 #                     share the same keepassxc database but have different
 #                     entries for the same purpose.)
 #
-# claude_default    - Which claude-* function the `claude` alias should point to
-#                     on this machine (e.g., "claude-work", "claude-personal").
-#                     If omitted, no alias is created and `claude` invokes the binary directly.
+# claude_envs       - List of Claude environment directory paths for this machine.
+#                     Each entry MUST match the pattern ~/.claude-<name> (e.g., "~/.claude-work").
+#                     Non-conforming entries cause chezmoi apply/diff/cat to fail at template-render
+#                     time with a precise error message naming the offending entry.
+#
+# claude_default    - Which claude-* environment the shell should export CLAUDE_CONFIG_DIR to by
+#                     default on this machine (e.g., "claude-work", "claude-personal").
+#                     MUST equal "claude-<name>" for some <name> derived from claude_envs.
+#                     A mismatch causes chezmoi apply/diff/cat to fail at template-render time.
+#                     If omitted, no default export is created and `claude` uses whatever
+#                     CLAUDE_CONFIG_DIR is already set in the shell.
 #
 MacBook Pro:
   brewfile: mbp-brewfile

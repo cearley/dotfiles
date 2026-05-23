@@ -1,24 +1,39 @@
 {{- if has "ai" .tags -}}
-# Claude Code with Bedrock
-claude-bedrock() {
-    CLAUDE_CONFIG_DIR="$HOME/.claude-bedrock" command claude "$@"
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $claudeDefault := default "" (index $settings "claude_default") -}}
+{{- $envNames := list -}}
+{{- range $entry := (index $settings "claude_envs") -}}
+{{- if not (hasPrefix "~/.claude-" $entry) -}}
+{{- fail (printf "claude_envs: entry %q does not match ~/.claude-<name> convention (must start with ~/.claude-)" $entry) -}}
+{{- end -}}
+{{- $envNames = append $envNames (trimPrefix "~/.claude-" $entry) -}}
+{{- end -}}
+{{- if $claudeDefault -}}
+{{- if not (hasPrefix "claude-" $claudeDefault) -}}
+{{- fail (printf "claude_default: %q must use the \"claude-<name>\" format (e.g. \"claude-work\")" $claudeDefault) -}}
+{{- end -}}
+{{- if not (has (trimPrefix "claude-" $claudeDefault) $envNames) -}}
+{{- fail (printf "claude_default: %q is not a valid environment name; derived names from claude_envs: %v" $claudeDefault $envNames) -}}
+{{- end -}}
+{{- end -}}
+# Claude Code environments
+{{- range $name := $envNames }}
+claude-{{ $name }}() {
+    CLAUDE_CONFIG_DIR="$HOME/.claude-{{ $name }}" command claude "$@"
 }
-claude-personal() {
-    CLAUDE_CONFIG_DIR="$HOME/.claude-personal" command claude "$@"
-}
-claude-work() {
-    CLAUDE_CONFIG_DIR="$HOME/.claude-work" command claude "$@"
-}
+{{- end }}
 # Switch the active Claude environment for this shell session.
-# Usage: claude-env [work|personal|bedrock]  (no args = show current)
+# Usage: claude-env [{{ join "|" $envNames }}]  (no args = show current)
 claude-env() {
     case "$1" in
-        work|personal|bedrock)
+{{- if $envNames }}
+        {{ join "|" $envNames }})
             export CLAUDE_CONFIG_DIR="$HOME/.claude-$1"
             if [ -n "$ZSH_VERSION" ]; then
                 command -v p10k >/dev/null 2>&1 && p10k reload
             fi
             ;;
+{{- end }}
         "")
             if [ -n "$CLAUDE_CONFIG_DIR" ]; then
                 local _s="${CLAUDE_CONFIG_DIR##*/}"
@@ -29,22 +44,29 @@ claude-env() {
             fi
             ;;
         *)
-            echo "Usage: claude-env [work|personal|bedrock]" >&2
+            echo "Usage: claude-env [{{ join "|" $envNames }}]" >&2
             return 1
             ;;
     esac
 }
-{{- $claudeDefault := includeTemplate "machine-config" (merge (dict "setting" "claude_default") .) }}
 {{- if $claudeDefault }}
 export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
 {{- end }}
 # SpecStory https://specstory.com/specstory-cli
-alias claude-spec='specstory run claude --no-cloud-sync'
-alias claude-bedrock-spec='CLAUDE_CONFIG_DIR=$HOME/.claude-bedrock specstory run claude --no-cloud-sync'
-alias claude-personal-spec='CLAUDE_CONFIG_DIR=$HOME/.claude-personal specstory run claude --no-cloud-sync'
-alias claude-work-spec='CLAUDE_CONFIG_DIR=$HOME/.claude-work specstory run claude --no-cloud-sync'
-alias codex-spec='specstory run codex --no-cloud-sync'
-alias gemini-spec='specstory run gemini --no-cloud-sync'
+claude-spec() {
+    specstory run claude --no-cloud-sync "$@"
+}
+{{- range $name := $envNames }}
+claude-{{ $name }}-spec() {
+    CLAUDE_CONFIG_DIR="$HOME/.claude-{{ $name }}" specstory run claude --no-cloud-sync "$@"
+}
+{{- end }}
+codex-spec() {
+    specstory run codex --no-cloud-sync "$@"
+}
+gemini-spec() {
+    specstory run gemini --no-cloud-sync "$@"
+}
 # OpenSpecUI
 alias openspecui='npx openspecui@latest'
 
