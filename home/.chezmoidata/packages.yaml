@@ -7,7 +7,7 @@ packages:
     # Core packages (always installed)
     core:
       taps:
-      - 'oven-sh/bun'                  # Required for the oven-sh/bun/bun formula
+      - 'oven-sh/bun'              # Required for the oven-sh/bun/bun formula
       brews:
       - 'aria2'                    # Download with resuming and segmented downloading
       - 'atuin'                    # Improved shell history for zsh, bash, fish and nushell
@@ -120,14 +120,6 @@ packages:
       - "liquibase"
       cargo: # Rust crates via cargo install (requires dev tag for Rust toolchain)
       - 'cargo-update'             # cargo install-update command for updating installed crates
-      skills: # Installed via `npx skills add <args>`
-      mcp: # claude mcp add
-      - 'playwright npx @playwright/mcp@latest'
-      plugin_marketplaces: # Claude Code marketplaces (registered via `claude plugins marketplace add`)
-      - 'aws/agent-toolkit-for-aws'
-      - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
-      plugins: # Claude Code plugins (installed via `claude plugins install`)
-      - 'aws-core@agent-toolkit-for-aws'
     
     # Optional AI packages (ai tag)
     ai:
@@ -162,21 +154,35 @@ packages:
       - "git+https://github.com/cearley/zsh-llm-suggestions"
       - "-p 3.13 serena-agent@latest --prerelease=allow"
       cargo:
-      - '--git https://github.com/Dicklesworthstone/beads_rust.git beads_rust'
-      skills: # Installed via `npx skills add <args>`
-      - 'specstoryai/agent-skills -all'
-      # Install specific skills with arguments
-      #- 'specstoryai/agent-skills --skill specstory-yak specstory-session-summary'
-      plugin_marketplaces: # Claude Code marketplaces (registered via `claude plugins marketplace add`)
-      - 'anthropics/claude-plugins-official'
-      - 'anthropics/skills'
-      plugins: # Claude Code plugins (installed via `claude plugins install`)
-      - 'claude-code-setup@claude-plugins-official'
-      - 'example-skills@anthropic-agent-skills'
-      - 'atlassian@claude-plugins-official'
-      - 'claude-md-management@claude-plugins-official'
-      - 'ralph-loop@claude-plugins-official'
-      - 'superpowers@claude-plugins-official'
+      #- '--git https://github.com/Dicklesworthstone/beads_rust.git beads_rust'  # Removed: requires nightly Rust (fsqlite-pager E0554); brew beads is sufficient
+      agents:
+        claude_code:
+          mcp_servers: # Registered via `claude mcp add --scope user <name> -- <command...>`
+          - 'playwright npx @playwright/mcp@latest'
+          skills: # Installed via `npx skills add <args>`
+          - 'specstoryai/agent-skills -all'
+          # Install specific skills with arguments
+          #- 'specstoryai/agent-skills --skill specstory-yak specstory-session-summary'
+          plugin_marketplaces: # Registered via `claude plugins marketplace add`
+          - 'anthropics/claude-plugins-official'
+          - 'anthropics/skills'
+          - 'aws/agent-toolkit-for-aws'
+          - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
+          plugins: # Installed via `claude plugins install`
+          - 'atlassian@claude-plugins-official'
+          - 'aws-core@agent-toolkit-for-aws'
+          - 'claude-code-setup@claude-plugins-official'
+          - 'claude-md-management@claude-plugins-official'
+          - 'example-skills@anthropic-agent-skills'
+          - 'ralph-loop@claude-plugins-official'
+          - 'superpowers@claude-plugins-official'
+        # codex:
+        #   mcp_servers: []
+        #   skills: []
+        # gemini:
+        #   mcp_servers: []
+        #   skills: []
+        #   extensions: []
 
     # Optional data science packages (datascience tag)
     datascience:

@@ -1,0 +1,52 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+#!/bin/bash
+
+# run_onchange trigger - packages.yaml changes or every 7 days: {{ includeTemplate "time-bucket" (dict "days" 7) }}
+
+set -uo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools claude; then
+    exit 1
+fi
+
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $claudeEnvs := default (list "~/.claude") (index $settings "claude_envs") }}
+{{- $claudeCode := index $.packages.darwin.ai.agents "claude_code" }}
+{{- $mcpServers := default (list) $claudeCode.mcp_servers }}
+
+{{- if not $mcpServers }}
+print_message "skip" "No MCP servers declared in ai.agents.claude_code.mcp_servers — nothing to do"
+exit 0
+{{- end }}
+
+# ---------------------------------------------------------------------------
+# Register MCP servers in each Claude Code environment
+# Entry format: "<name> <command...>"  e.g. "playwright npx @playwright/mcp@latest"
+# ---------------------------------------------------------------------------
+for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
+    env_dir="${env_dir/#\~/$HOME}"
+    if [[ ! -d "$env_dir" ]]; then
+        print_message "skip" "Skipping MCP setup for $(basename "$env_dir") — directory not found"
+        continue
+    fi
+
+    print_message "info" "Registering MCP servers for $(basename "$env_dir")..."
+
+{{- range $mcpServers }}
+    # Register: {{ . }}
+    _mcp_entry={{ . | quote }}
+    _mcp_name="${_mcp_entry%% *}"
+    _mcp_rest="${_mcp_entry#* }"
+    if CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" -- $_mcp_rest 2>&1; then
+        print_message "success" "Registered MCP server: $_mcp_name"
+    else
+        print_message "warning" "Could not register MCP server '$_mcp_name' in $(basename "$env_dir") — already registered or error; skipping"
+    fi
+{{- end }}
+
+    print_message "success" "MCP server setup complete for $(basename "$env_dir")"
+done
+
+{{ end -}}

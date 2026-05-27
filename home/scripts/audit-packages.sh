@@ -108,6 +108,14 @@ declared_for() {
 }
 
 # ---------------------------------------------------------------------------
+# Collect the declared set for a given key under a specific coding agent
+# ---------------------------------------------------------------------------
+declared_for_agent() {
+    local agent="$1" key="$2"
+    yq ".packages.darwin.ai.agents.${agent}.${key}[]?" "$PACKAGES_YAML" 2>/dev/null | sort -u
+}
+
+# ---------------------------------------------------------------------------
 # Normalisation helpers — strip version/flag suffixes before comparison
 # ---------------------------------------------------------------------------
 
@@ -407,7 +415,7 @@ audit_claude_plugins() {
             | sort > "$installed_file"
     fi
 
-    declared_for "plugins" | sort > "$declared_file"
+    declared_for_agent "claude_code" "plugins" | sort > "$declared_file"
     report_orphans "Claude Code Plugins" "$installed_file" "$declared_file"
     rm -f "$installed_file" "$declared_file"
 }
@@ -432,7 +440,7 @@ audit_claude_marketplaces() {
     fi
 
     # Declared: strip #ref from URL entries (e.g. "https://...#dev" → "https://...")
-    declared_for "plugin_marketplaces" \
+    declared_for_agent "claude_code" "plugin_marketplaces" \
         | sed 's/#[^#]*$//' \
         | sort > "$declared_file"
 
@@ -453,7 +461,7 @@ audit_claude_skills() {
     fi
 
     local declared_specs
-    declared_specs=$(declared_for "skills")
+    declared_specs=$(declared_for_agent "claude_code" "skills")
     local installed_count=0
 
     print_message "info" "Declared skill specs:"
@@ -476,6 +484,38 @@ audit_claude_skills() {
     print_message "tip" "Review the lists above manually — skill collections don't map 1:1 to skill names"
 }
 
+audit_claude_mcp_servers() {
+    local installed_file declared_file
+    installed_file=$(mktemp)
+    declared_file=$(mktemp)
+
+    # Installed: user-scope MCP servers are stored in mcpServers key of each
+    # Claude environment's settings.json.  Glob all ~/.claude*/settings.json to
+    # cover personal, work, and default environments without needing chezmoi data.
+    local found_any=false
+    for settings_file in "${HOME}"/.claude*/settings.json; do
+        [[ -f "$settings_file" ]] || continue
+        found_any=true
+        jq -r '.mcpServers // {} | keys[]' "$settings_file" 2>/dev/null >> "$installed_file" || true
+    done
+
+    if [[ "$found_any" == "false" ]]; then
+        print_message "skip" "No Claude environment settings.json files found — skipping MCP audit"
+        rm -f "$installed_file" "$declared_file"
+        return
+    fi
+
+    sort -u "$installed_file" -o "$installed_file"
+
+    # Declared: first token of each mcp_servers entry (the server name; strip command)
+    declared_for_agent "claude_code" "mcp_servers" \
+        | awk '{print $1}' \
+        | sort > "$declared_file"
+
+    report_orphans "Claude Code MCP Servers" "$installed_file" "$declared_file"
+    rm -f "$installed_file" "$declared_file"
+}
+
 audit_claude() {
     if ! command_exists claude; then
         print_message "skip" "claude not found — skipping Claude Code sections"
@@ -485,6 +525,7 @@ audit_claude() {
         print_message "skip" "ai tag not active — skipping Claude Code sections"
         return
     fi
+    audit_claude_mcp_servers
     audit_claude_plugins
     audit_claude_marketplaces
     audit_claude_skills

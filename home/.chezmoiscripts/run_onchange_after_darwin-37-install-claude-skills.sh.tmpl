@@ -18,6 +18,8 @@ fi
 
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
 {{- $claudeEnvs := default (list "~/.claude") (index $settings "claude_envs") }}
+{{- $claudeCode := index $.packages.darwin.ai.agents "claude_code" }}
+{{- $skills := default (list) $claudeCode.skills }}
 
 print_message "info" "Installing Claude Code skills via npx..."
 
@@ -31,17 +33,11 @@ for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
     print_message "info" "Installing skills into $(basename "$env_dir")..."
     # Update all existing skills first
     CLAUDE_CONFIG_DIR="$env_dir" npx skills update -g -y
-{{- $categories := prepend .tag_choices "core" }}
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if or (eq $category "core") (has $category $.tags) }}
-    {{- if and (hasKey $categoryData "skills") $categoryData.skills }}
-    # Install {{ $category }} skills globally
-    {{ range $categoryData.skills -}}
+{{- if $skills }}
+    # Install declared claude_code skills globally
+    {{ range $skills -}}
     CLAUDE_CONFIG_DIR="$env_dir" npx skills add {{ . }} -g -a claude-code -y
     {{ end -}}
-    {{- end }}
-  {{- end }}
 {{- end }}
 done
 

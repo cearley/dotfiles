@@ -15,27 +15,23 @@ fi
 {{- $claudeEnvs := default (list "~/.claude") (index $settings "claude_envs") }}
 
 # ---------------------------------------------------------------------------
-# Collect marketplaces and plugins from active tags
+# Collect marketplaces and plugins from ai.agents.claude_code
 # ---------------------------------------------------------------------------
 
-{{- $categories := prepend .tag_choices "core" }}
+{{- $claudeCode := index $.packages.darwin.ai.agents "claude_code" }}
 
 declare -a MARKETPLACES=()
 declare -a PLUGINS=()
 
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if or (eq $category "core") (has $category $.tags) }}
-    {{- if and (hasKey $categoryData "plugin_marketplaces") $categoryData.plugin_marketplaces }}
-      {{- range $categoryData.plugin_marketplaces }}
+{{- if and (hasKey $claudeCode "plugin_marketplaces") $claudeCode.plugin_marketplaces }}
+  {{- range $claudeCode.plugin_marketplaces }}
 MARKETPLACES+=('{{ . }}')
-      {{- end }}
-    {{- end }}
-    {{- if and (hasKey $categoryData "plugins") $categoryData.plugins }}
-      {{- range $categoryData.plugins }}
+  {{- end }}
+{{- end }}
+
+{{- if and (hasKey $claudeCode "plugins") $claudeCode.plugins }}
+  {{- range $claudeCode.plugins }}
 PLUGINS+=('{{ . }}')
-      {{- end }}
-    {{- end }}
   {{- end }}
 {{- end }}
 
