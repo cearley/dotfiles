@@ -25,6 +25,7 @@ packages:
       - 'pwgen'                    # Password generator
       - 'rclone'                   # Rsync for cloud storage
       - 'tree'                     # Display directories as trees (with optional color/HTML output)
+      - 'yq'                       # YAML/JSON/XML processor - like jq but for YAML
       - 'zoxide'                   # Shell extension to navigate your filesystem faster
       casks:
       - 'appcleaner'               # Application uninstaller

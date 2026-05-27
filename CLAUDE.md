@@ -27,6 +27,8 @@ chezmoi edit ~/.<file>         # Edit the source version of a file
 chezmoi cd                     # Open shell in source directory
 chezmoi managed                # List all managed files
 chezmoi cat ~/path/to/file     # Preview generated file content (verify templates/modify_ scripts)
+audit-packages                 # List packages installed but not declared in packages.yaml (read-only)
+audit-packages --strict        # Same, but exit non-zero if any orphans found (CI-friendly)
 ```
 
 ## Chezmoi File Attributes
