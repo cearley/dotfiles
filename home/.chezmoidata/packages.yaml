@@ -7,6 +7,7 @@ packages:
     # Core packages (always installed)
     core:
       taps:
+      - 'oven-sh/bun'                  # Required for the oven-sh/bun/bun formula
       brews:
       - 'aria2'                    # Download with resuming and segmented downloading
       - 'atuin'                    # Improved shell history for zsh, bash, fish and nushell
@@ -57,6 +58,7 @@ packages:
       - 'jump-desktop-connect'
       - 'logi-options+'
       - 'onyx'
+      - 'powerphotos'              # Mac app for managing duplicate photos across libraries
       - 'slack'
       mas:
       - '"ASUS Device Discovery", id: 995124504'
@@ -96,6 +98,7 @@ packages:
       - 'nuget'
       - 'pipx'
       - 'pkgconf'
+      - 'shellcheck'               # Static analysis tool for shell scripts
       - 'snyk-cli'
       - 'sqlite'
       casks:
@@ -115,11 +118,14 @@ packages:
       - "java 25-tem"
       - "java 8.0.462-zulu"
       - "liquibase"
+      cargo: # Rust crates via cargo install (requires dev tag for Rust toolchain)
+      - 'cargo-update'             # cargo install-update command for updating installed crates
       skills: # Installed via `npx skills add <args>`
       mcp: # claude mcp add
       - 'playwright npx @playwright/mcp@latest'
       plugin_marketplaces: # Claude Code marketplaces (registered via `claude plugins marketplace add`)
       - 'aws/agent-toolkit-for-aws'
+      - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
       plugins: # Claude Code plugins (installed via `claude plugins install`)
       - 'aws-core@agent-toolkit-for-aws'
     
@@ -165,6 +171,7 @@ packages:
       - 'anthropics/claude-plugins-official'
       - 'anthropics/skills'
       plugins: # Claude Code plugins (installed via `claude plugins install`)
+      - 'claude-code-setup@claude-plugins-official'
       - 'example-skills@anthropic-agent-skills'
       - 'atlassian@claude-plugins-official'
       - 'claude-md-management@claude-plugins-official'
@@ -200,6 +207,7 @@ packages:
       - 'microsoft-auto-update'
       - 'microsoft-teams'
       - 'obsidian'
+      - 'postman'                  # API testing and development platform
       - 'webex'
       - 'whimsical'
       - 'windows-app'
