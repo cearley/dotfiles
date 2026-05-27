@@ -75,6 +75,7 @@ packages:
       brews:
       - 'ack'
       - 'act'
+      - 'aws-cdk'                   # AWS Cloud Development Kit for defining cloud infrastructure in code
       - 'aws-sam-cli'
       - 'azure-cli'
       - 'azure/functions/azure-functions-core-tools@4'
@@ -120,7 +121,11 @@ packages:
       - "liquibase"
       cargo: # Rust crates via cargo install (requires dev tag for Rust toolchain)
       - 'cargo-update'             # cargo install-update command for updating installed crates
-    
+      bun: # npm-compatible packages installed globally via bun
+      - 'aws-cdk-local'            # cdklocal: wraps aws-cdk CLI to target LocalStack
+      uv: # Python tools installed via uv tool install
+      - 'aws-sam-cli-local'        # samlocal: wraps aws-sam-cli to target LocalStack
+
     # Optional AI packages (ai tag)
     ai:
       taps:
@@ -159,6 +164,7 @@ packages:
         claude_code:
           mcp_servers: # Registered via `claude mcp add --scope user <name> -- <command...>`
           - 'playwright npx @playwright/mcp@latest'
+          - 'localstack-mcp-server -e LOCALSTACK_AUTH_TOKEN -- npx -y @localstack/localstack-mcp-server'
           skills: # Installed via `npx skills add <args>`
           - 'specstoryai/agent-skills -all'
           # Install specific skills with arguments

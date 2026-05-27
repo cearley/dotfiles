@@ -11,6 +11,15 @@ if ! require_tools claude; then
     exit 1
 fi
 
+# Source shell secrets so env vars declared in private_dot_zsh_secrets.tmpl
+# (e.g. LOCALSTACK_AUTH_TOKEN) are available for MCP server registration.
+# chezmoi applies files before running after-scripts, so ~/.zsh_secrets is
+# already written on disk by the time this script executes.
+if [[ -f "$HOME/.zsh_secrets" ]]; then
+    # shellcheck source=/dev/null
+    source "$HOME/.zsh_secrets"
+fi
+
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
 {{- $claudeEnvs := default (list "~/.claude") (index $settings "claude_envs") }}
 {{- $claudeCode := index $.packages.darwin.ai.agents "claude_code" }}
@@ -23,7 +32,15 @@ exit 0
 
 # ---------------------------------------------------------------------------
 # Register MCP servers in each Claude Code environment
-# Entry format: "<name> <command...>"  e.g. "playwright npx @playwright/mcp@latest"
+#
+# Two entry formats are supported:
+#   Simple:  "<name> <command...>"
+#            e.g. "playwright npx @playwright/mcp@latest"
+#
+#   With env: "<name> -e VAR1 [-e VAR2 ...] -- <command...>"
+#            e.g. "localstack-mcp-server -e LOCALSTACK_AUTH_TOKEN -- npx -y @localstack/localstack-mcp-server"
+#            -e VAR (no '=') reads the value from the current shell environment.
+#            Registration is skipped (with a warning) if any required var is unset.
 # ---------------------------------------------------------------------------
 for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
     env_dir="${env_dir/#\~/$HOME}"
@@ -39,10 +56,43 @@ for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
     _mcp_entry={{ . | quote }}
     _mcp_name="${_mcp_entry%% *}"
     _mcp_rest="${_mcp_entry#* }"
-    if CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" -- $_mcp_rest 2>&1; then
-        print_message "success" "Registered MCP server: $_mcp_name"
-    else
-        print_message "warning" "Could not register MCP server '$_mcp_name' in $(basename "$env_dir") — already registered or error; skipping"
+
+    # Parse optional '-e VAR' flags before a ' -- ' separator
+    _claude_flags=""
+    _mcp_cmd="$_mcp_rest"
+    _skip_server=false
+    if [[ "$_mcp_rest" == *" -- "* ]]; then
+        _flags_section="${_mcp_rest%% -- *}"
+        _mcp_cmd="${_mcp_rest#* -- }"
+        _prev=""
+        for _tok in $_flags_section; do
+            if [[ "$_prev" == "-e" ]]; then
+                _val="${!_tok:-}"
+                if [[ -z "$_val" ]]; then
+                    print_message "warning" "Skipping MCP server '$_mcp_name': env var '$_tok' is unset"
+                    _skip_server=true
+                    break
+                fi
+                _claude_flags+=" -e ${_tok}=${_val}"
+            fi
+            _prev="$_tok"
+        done
+    fi
+
+    if [[ "$_skip_server" == false ]]; then
+        # shellcheck disable=SC2086  # word-splitting intentional for flags and command
+        # Note: name comes before -e flags; claude mcp add syntax is:
+        #   add --scope <scope> <name> [-e KEY=VALUE ...] -- <command>
+        _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" $_claude_flags -- $_mcp_cmd 2>&1)
+        _mcp_exit=$?
+        if [[ $_mcp_exit -eq 0 ]]; then
+            print_message "success" "Registered MCP server: $_mcp_name"
+        elif echo "$_mcp_output" | grep -q "already exists"; then
+            print_message "skip" "MCP server '$_mcp_name' already registered in $(basename "$env_dir")"
+        else
+            echo "$_mcp_output"
+            print_message "warning" "Could not register MCP server '$_mcp_name' in $(basename "$env_dir") — skipping"
+        fi
     fi
 {{- end }}
 
