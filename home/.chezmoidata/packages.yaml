@@ -173,6 +173,7 @@ packages:
           - 'anthropics/claude-plugins-official'
           - 'anthropics/skills'
           - 'aws/agent-toolkit-for-aws'
+          - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev'
           - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
           plugins: # Installed via `claude plugins install`
           - 'atlassian@claude-plugins-official'
@@ -180,6 +181,7 @@ packages:
           - 'claude-code-setup@claude-plugins-official'
           - 'claude-md-management@claude-plugins-official'
           - 'example-skills@anthropic-agent-skills'
+          - 'fulcrum-skills@viewpoint-tools'
           - 'ralph-loop@claude-plugins-official'
           - 'superpowers@claude-plugins-official'
         # codex:
@@ -229,10 +231,6 @@ packages:
       - '"Microsoft Word", id: 462054704'
       - '"Numbers", id: 361304891'
       - '"OneDrive", id: 823766827'
-      plugin_marketplaces: # Claude Code marketplaces for work environments
-      - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev'
-      plugins: # Claude Code plugins for work environments
-      - 'fulcrum-skills@viewpoint-tools'
 
     # Optional mobile packages (mobile tag)
     mobile:
