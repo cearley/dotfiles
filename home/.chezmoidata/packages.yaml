@@ -169,6 +169,15 @@ packages:
           - 'specstoryai/agent-skills -all'
           # Install specific skills with arguments
           #- 'specstoryai/agent-skills --skill specstory-yak specstory-session-summary'
+          # Wondel Skills https://skills.wondel.ai
+          - wondelai/skills/clean-code
+          - wondelai/skills/refactoring-patterns
+          - wondelai/skills/software-design-philosophy
+          - wondelai/skills/pragmatic-programmer
+          - wondelai/skills/domain-driven-design
+          - wondelai/skills/ddia-systems
+          - wondelai/skills/system-design
+          - wondelai/skills/clean-architecture
           plugin_marketplaces: # Registered via `claude plugins marketplace add`
           - 'anthropics/claude-plugins-official'
           - 'anthropics/skills'
