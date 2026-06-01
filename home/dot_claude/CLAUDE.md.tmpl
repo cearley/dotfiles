@@ -41,7 +41,7 @@ These skills are installed and should be used proactively:
 - **integrate-worktrees** — Safely merge parallel feature branches via an integration branch before touching main; use when user is ready to combine parallel work
 
 ## Environment Notes
-- Background subagents (via Agent tool) do not have Bash access; use foreground agents or inline evaluation for shell-dependent tasks
+- Background subagents (via Agent tool) cannot respond to interactive permission prompts — Bash commands already approved in settings.json work fine, but unapproved commands are silently denied. For shell tasks not yet pre-approved, use foreground agents instead.
 
 ## Basic Memory
 
