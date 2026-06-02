@@ -37,9 +37,10 @@ exit 0
 #   Simple:  "<name> <command...>"
 #            e.g. "playwright npx @playwright/mcp@latest"
 #
-#   With env: "<name> -e VAR1 [-e VAR2 ...] -- <command...>"
+#   With env: "<name> [-e VAR1] [-e KEY=VALUE ...] -- <command...>"
 #            e.g. "localstack-mcp-server -e LOCALSTACK_AUTH_TOKEN -- npx -y @localstack/localstack-mcp-server"
 #            -e VAR (no '=') reads the value from the current shell environment.
+#            -e KEY=VALUE uses the literal value (quotes are stripped).
 #            Registration is skipped (with a warning) if any required var is unset.
 # ---------------------------------------------------------------------------
 for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
@@ -67,13 +68,23 @@ for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
         _prev=""
         for _tok in $_flags_section; do
             if [[ "$_prev" == "-e" ]]; then
-                _val="${!_tok:-}"
-                if [[ -z "$_val" ]]; then
-                    print_message "warning" "Skipping MCP server '$_mcp_name': env var '$_tok' is unset"
-                    _skip_server=true
-                    break
+                if [[ "$_tok" == *"="* ]]; then
+                    # Literal KEY=VALUE — strip surrounding quotes if present
+                    _kv="${_tok#\"}"
+                    _kv="${_kv%\"}"
+                    _kv="${_kv#\'}"
+                    _kv="${_kv%\'}"
+                    _claude_flags+=" -e $_kv"
+                else
+                    # Bare VAR — read value from the environment
+                    _val="${!_tok:-}"
+                    if [[ -z "$_val" ]]; then
+                        print_message "warning" "Skipping MCP server '$_mcp_name': env var '$_tok' is unset"
+                        _skip_server=true
+                        break
+                    fi
+                    _claude_flags+=" -e ${_tok}=${_val}"
                 fi
-                _claude_flags+=" -e ${_tok}=${_val}"
             fi
             _prev="$_tok"
         done

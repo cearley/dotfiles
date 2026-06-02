@@ -164,9 +164,12 @@ packages:
       agents:
         claude_code:
           mcp_servers: # Registered via `claude mcp add --scope user <name> -- <command...>`
+          - 'basic-memory -s user -- uvx --python 3.12 basic-memory mcp'
+          - 'fast-filesystem -e CREATE_BACKUP_FILES="true" -- npx -y fast-filesystem-mcp'
           - 'playwright npx @playwright/mcp@latest'
           - 'localstack-mcp-server -e LOCALSTACK_AUTH_TOKEN -- npx -y @localstack/localstack-mcp-server'
           skills: # Installed via `npx skills add <args>`
+          - 'basicmachines-co/basic-memory-skills --skill memory-notes'
           - 'specstoryai/agent-skills -all'
           # Install specific skills with arguments
           #- 'specstoryai/agent-skills --skill specstory-yak specstory-session-summary'

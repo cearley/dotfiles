@@ -35,6 +35,13 @@ managed_servers='
     "args": ["awslabs.amazon-bedrock-agentcore-mcp-server@latest"],
     "env": { "FASTMCP_LOG_LEVEL": "ERROR" }
   },
+  "fast-filesystem": {
+    "command": "npx",
+    "args": ["-y", "fast-filesystem-mcp"],
+    "env": {
+      "CREATE_BACKUP_FILES": "true"
+    }
+  },
   "gemini-cli": {
     "command": "npx",
     "args": ["-y", "gemini-mcp-tool"]
