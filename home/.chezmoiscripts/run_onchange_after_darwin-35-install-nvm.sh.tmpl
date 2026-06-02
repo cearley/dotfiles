@@ -1,17 +1,17 @@
 {{- if eq .chezmoi.os "darwin" -}}
-{{- $nvmVersion := output "curl" "-s" "https://api.github.com/repos/nvm-sh/nvm/releases/latest" | mustFromJson | dig "tag_name" "" -}}
 #!/bin/bash
+# re-run trigger - changes or every 30 days: {{ includeTemplate "time-bucket" (dict "days" 30) }}
 
 set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-# The latest nvm version is: {{ $nvmVersion }}
-NVM_VERSION="{{ $nvmVersion }}"
+print_message "info" "Fetching latest nvm version..."
+NVM_VERSION=$(curl -s "https://api.github.com/repos/nvm-sh/nvm/releases/latest" | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])" 2>/dev/null || true)
 
 if [ -z "$NVM_VERSION" ]; then
-    print_message "error" "Failed to fetch latest nvm version"
-    exit 1
+    print_message "warning" "Failed to fetch latest nvm version — skipping nvm update"
+    exit 0
 fi
 
 print_message "info" "Installing nvm $NVM_VERSION..."
