@@ -92,11 +92,12 @@ See `.serena/memories/code-style-quick-reference.md` for extended examples and p
 
 ### Template Testing
 ```bash
-# Test template execution
-chezmoi execute-template < filename.tmpl
+# Test any template (works with or without keepassxcAttribute calls)
+tests/run-template home/private_dot_zsh_secrets.tmpl
+tests/run-template --inline '{{ keepassxcAttribute "GitHub" "Access Token" }}'
 
-# Debug template scripts
-cat script-name.tmpl | chezmoi execute-template
+# Raw chezmoi (only use for templates with no keepassxcAttribute calls)
+chezmoi execute-template < filename.tmpl
 ```
 
 ### Template Best Practices
@@ -205,6 +206,8 @@ See `openspec/specs/machine-config/` for complete machine configuration system d
 - **Machine config** → `openspec/specs/machine-config/`
 - **Secret management** → `openspec/specs/secret-management/`
 - **Major changes** → See archived proposals in `openspec/changes/archive/`
+
+> `openspec archive <name> --yes` — note: positional arg, not `--change` (that flag errors)
 
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->

@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Execute a chezmoi template using mock keepassxc-cli fixture data.
+#
+# Builds a temporary config that replaces keepassxc.command with the mock,
+# disables the TTY password prompt, and runs chezmoi execute-template.
+#
+# Usage:
+#   tests/run-template <template-file> [-- extra chezmoi args...]
+#   tests/run-template --inline '<{{ .fullname }}>'
+#
+# Examples:
+#   tests/run-template home/private_dot_ssh/id_ed25519.pub.tmpl
+#   tests/run-template home/private_dot_zsh_secrets.tmpl
+#   tests/run-template --inline '{{ keepassxcAttribute "GitHub" "Access Token" }}'
+#
+# Options:
+#   --inline <template>   Evaluate an inline template string instead of a file
+#   --fixtures <path>     Path to JSON fixtures file (default: tests/fixtures/keepassxc.json)
+#   -h, --help            Show this help
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+MOCK_CMD="$SCRIPT_DIR/bin/keepassxc-cli"
+DEFAULT_FIXTURES="$SCRIPT_DIR/fixtures/keepassxc.json"
+
+usage() {
+    sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
+    exit "${1:-0}"
+}
+
+INLINE=""
+FIXTURES="$DEFAULT_FIXTURES"
+TEMPLATE_FILE=""
+EXTRA_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -h|--help)      usage 0 ;;
+        --inline)       shift; INLINE="$1"; shift ;;
+        --fixtures)     shift; FIXTURES="$1"; shift ;;
+        --)             shift; EXTRA_ARGS=("$@"); break ;;
+        -*)             echo "Unknown option: $1" >&2; usage 1 ;;
+        *)              TEMPLATE_FILE="$1"; shift ;;
+    esac
+done
+
+if [[ -z "$INLINE" && -z "$TEMPLATE_FILE" ]]; then
+    echo "Error: provide a template file or --inline '<template>'" >&2
+    usage 1
+fi
+
+if [[ ! -x "$MOCK_CMD" ]]; then
+    echo "Error: mock not found or not executable: $MOCK_CMD" >&2
+    exit 1
+fi
+
+if [[ -n "$TEMPLATE_FILE" && ! -f "$TEMPLATE_FILE" ]]; then
+    echo "Error: template not found: $TEMPLATE_FILE" >&2
+    exit 1
+fi
+
+if [[ ! -f "$FIXTURES" ]]; then
+    echo "Error: fixtures not found: $FIXTURES" >&2
+    exit 1
+fi
+
+# Build a temporary chezmoi config from the current config, overriding the
+# keepassxc section so the mock is used instead of the real CLI.
+TEST_CONFIG=$(mktemp /tmp/chezmoi-test-XXXXXX.json)
+trap 'rm -f "$TEST_CONFIG"' EXIT
+
+chezmoi dump-config --format json | jq \
+    --arg cmd "$MOCK_CMD" \
+    --argjson keepassxc '{
+        "command":  "",
+        "database": "/dev/null",
+        "mode":     "open",
+        "args":     null,
+        "prompt":   false
+    }' \
+    '.keepassxc = ($keepassxc | .command = $cmd) |
+     .data.has_keepassxc_db = true' \
+    > "$TEST_CONFIG"
+
+export KEEPASSXC_MOCK_FIXTURES="$FIXTURES"
+
+if [[ -n "$INLINE" ]]; then
+    chezmoi execute-template \
+        --config "$TEST_CONFIG" \
+        --config-format json \
+        "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}" \
+        "$INLINE"
+else
+    chezmoi execute-template \
+        --config "$TEST_CONFIG" \
+        --config-format json \
+        --file \
+        "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}" \
+        "$TEMPLATE_FILE"
+fi

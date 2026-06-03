@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+# Mock keepassxc-cli for chezmoi template testing.
+#
+# Returns fixture values for known entries; auto-generates mock:<entry>:<attr>
+# for anything not in the fixture file. The fixture file is optional.
+#
+# Environment:
+#   KEEPASSXC_MOCK_FIXTURES  Path to JSON fixture file (default: ../fixtures/keepassxc.json)
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FIXTURES="${KEEPASSXC_MOCK_FIXTURES:-$SCRIPT_DIR/../fixtures/keepassxc.json}"
+
+lookup() {
+    local entry="$1" attr="${2:-Password}"
+    local result=""
+
+    if [[ -f "$FIXTURES" ]]; then
+        result=$(jq -r --arg e "$entry" --arg a "$attr" '.[$e][$a] // empty' "$FIXTURES")
+    fi
+
+    # Fall back to a deterministic auto-generated value so new entries never
+    # require fixture updates.
+    echo "${result:-mock:${entry}:${attr}}"
+}
+
+handle_show_args() {
+    # Parses show flags and returns the looked-up value.
+    # Supports both direct mode (database path as first positional) and open-session mode.
+    # Chezmoi sends: show "<entry>" --attributes <attr> --quiet --show-protected
+    local attr="" entry="" skip_next=""
+    for arg in "$@"; do
+        if [[ -n "$skip_next" ]]; then
+            [[ "$skip_next" == "attr" ]] && attr="$arg"
+            skip_next=""
+            continue
+        fi
+        case "$arg" in
+            --attributes|-a)               skip_next="attr" ;;
+            --key-file|-k|-y|--yubikey)    skip_next="skip" ;;
+            --quiet|-q|--show-protected|-s|--totp|-t|--all|--show-attachments) ;;
+            /*)
+                # Absolute path = database path in direct show mode; discard
+                ;;
+            *)
+                entry="$arg"
+                ;;
+        esac
+    done
+    lookup "$entry" "$attr"
+}
+
+run_open_session() {
+    # Emit the initial ready prompt that chezmoi waits for, then handle commands.
+    # chezmoi sends shell-quoted lines like:
+    #   show "SSH (Mac Studio)" --attributes id_ed25519.pub --quiet --show-protected
+    # eval correctly parses the quoted entry name with spaces.
+    printf "> "
+
+    local line tokens subcmd value
+    while IFS= read -r line; do
+        line="${line%$'\r'}"
+        [[ -z "$line" ]] && continue
+
+        eval "tokens=($line)"
+        subcmd="${tokens[0]:-}"
+
+        case "$subcmd" in
+            show)
+                value=$(handle_show_args "${tokens[@]:1}")
+                printf "%s\n> " "$value"
+                ;;
+            exit|quit)
+                return 0
+                ;;
+            *)
+                printf "Unknown command: %s\n> " "$subcmd" >&2
+                ;;
+        esac
+    done
+}
+
+cmd="${1:-}"
+[[ $# -gt 0 ]] && shift
+
+case "$cmd" in
+    open)
+        # Ignore all open args (flags + database path) — the mock needs no credentials.
+        run_open_session
+        ;;
+
+    show)
+        # Direct show mode (chezmoi keepassxc mode = "show"):
+        # keepassxc-cli show [-q] [-a attr] /path/to/db.kdbx "entry name"
+        handle_show_args "$@"
+        ;;
+
+    ls|list)
+        if [[ -f "$FIXTURES" ]]; then
+            jq -r 'keys[] | select(startswith("_") | not)' "$FIXTURES"
+        fi
+        ;;
+
+    *)
+        echo "mock keepassxc-cli: unknown command: ${cmd:-<empty>}" >&2
+        exit 1
+        ;;
+esac
