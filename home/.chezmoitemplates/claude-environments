@@ -1,5 +1,7 @@
 {{- if has "ai" .tags -}}
 {{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $defaultColors := dict "work" 33 "personal" 76 "bedrock" 208 -}}
+{{- $colors := default $defaultColors (index $settings "claude_env_colors") -}}
 {{- $claudeDefault := default "" (index $settings "claude_default") -}}
 {{- $envNames := list -}}
 {{- range $entry := (index $settings "claude_envs") -}}
@@ -92,10 +94,10 @@ if [ -n "$ZSH_VERSION" ]; then
         local label="${suffix#claude-}"
         local color
         case "$label" in
-            work)     color=33  ;;
-            personal) color=76  ;;
-            bedrock)  color=208 ;;
-            *)        color=244 ;;
+{{- range $name, $c := $colors }}
+            {{ $name }}) color={{ $c }} ;;
+{{- end }}
+            *) color=244 ;;
         esac
         p10k segment -f $color -t "$label"
     }

@@ -38,13 +38,8 @@ PLUGINS+=('{{ . }}')
 # ---------------------------------------------------------------------------
 # Main loop over each Claude Code environment
 # ---------------------------------------------------------------------------
-for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
-    env_dir="${env_dir/#\~/$HOME}"
-    if [[ ! -d "$env_dir" ]]; then
-        print_message "skip" "Skipping plugin setup for $(basename "$env_dir") — directory not found"
-        continue
-    fi
-
+_install_plugins_for_env() {
+    local env_dir="$1"
     print_message "info" "Configuring Claude Code plugins for $(basename "$env_dir")..."
 
     for source in "${MARKETPLACES[@]}"; do
@@ -60,6 +55,8 @@ for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
     done
 
     print_message "success" "Plugin setup complete for $(basename "$env_dir")"
-done
+}
+
+for_each_claude_env _install_plugins_for_env{{ range $claudeEnvs }} "{{ . }}"{{ end }}
 
 {{ end -}}

@@ -216,14 +216,14 @@ The partial SHALL define a Powerlevel10k user segment named `claude_env` that di
 - **THEN** the segment SHALL display the text `work`
 - **AND** SHALL NOT display the path or the `claude-` prefix
 
-#### Scenario: Color coding by environment
-- **WHEN** the suffix is `work`
-- **THEN** the segment SHALL render in p10k color 33 (blue)
-- **WHEN** the suffix is `personal`
-- **THEN** the segment SHALL render in p10k color 76 (green)
-- **WHEN** the suffix is `bedrock`
-- **THEN** the segment SHALL render in p10k color 208 (orange)
-- **WHEN** the suffix is anything else (custom directory)
+#### Scenario: Color coding by environment — data driven
+- **WHEN** the partial is rendered
+- **THEN** the env-to-color mapping SHALL be read from `claude_env_colors` in the active machine's config (via `machine-settings`)
+- **AND** if `claude_env_colors` is not set for the active machine, the partial SHALL use built-in defaults equivalent to: `work → 33`, `personal → 76`, `bedrock → 208`, `(any other) → 244`
+- **AND** adding a new environment to `claude_envs` SHALL NOT require editing the partial — only adding the env to `claude_env_colors` in `config.yaml` is needed
+
+#### Scenario: Unknown environment suffix
+- **WHEN** the suffix is not found in `claude_env_colors` (or the built-in defaults)
 - **THEN** the segment SHALL render in p10k color 244 (grey) and display the basename verbatim
 
 #### Scenario: Instant prompt compatibility

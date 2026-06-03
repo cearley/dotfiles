@@ -1,4 +1,5 @@
 {{- if eq .chezmoi.os "darwin" -}}
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
 #!/bin/bash
 # Sets CLAUDE_CONFIG_DIR in the GUI session (launchd) so apps launched from
 # Spotlight, Dock, or Finder (e.g. JetBrains Rider) inherit the same Claude
@@ -13,13 +14,13 @@
 #   rm ~/Library/LaunchAgents/{{ .reverse_dns }}.claude-config-dir.plist
 #
 # run_onchange trigger - re-runs when this script changes (e.g. claude_default changes):
-# claude_default={{ includeTemplate "machine-config" (merge (dict "setting" "claude_default") .) }}
+# claude_default={{ index $settings "claude_default" }}
 
 set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-{{- $claudeDefault := includeTemplate "machine-config" (merge (dict "setting" "claude_default") .) }}
+{{- $claudeDefault := index $settings "claude_default" }}
 {{- if not $claudeDefault }}
 
 print_message "skip" "No claude_default configured for this machine — skipping LaunchAgent setup"

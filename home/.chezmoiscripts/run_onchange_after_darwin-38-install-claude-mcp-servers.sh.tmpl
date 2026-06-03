@@ -43,13 +43,8 @@ exit 0
 #            -e KEY=VALUE uses the literal value (quotes are stripped).
 #            Registration is skipped (with a warning) if any required var is unset.
 # ---------------------------------------------------------------------------
-for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
-    env_dir="${env_dir/#\~/$HOME}"
-    if [[ ! -d "$env_dir" ]]; then
-        print_message "skip" "Skipping MCP setup for $(basename "$env_dir") — directory not found"
-        continue
-    fi
-
+_register_mcp_for_env() {
+    local env_dir="$1"
     print_message "info" "Registering MCP servers for $(basename "$env_dir")..."
 
 {{- range $mcpServers }}
@@ -116,6 +111,8 @@ for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
 {{- end }}
 
     print_message "success" "MCP server setup complete for $(basename "$env_dir")"
-done
+}
+
+for_each_claude_env _register_mcp_for_env{{ range $claudeEnvs }} "{{ . }}"{{ end }}
 
 {{ end -}}

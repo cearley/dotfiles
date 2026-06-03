@@ -211,3 +211,35 @@ is_icloud_signed_in() {
 
     return 1
 }
+
+# Check iCloud sign-in at runtime; print standard warning and return 1 if not signed in.
+# Returns 0 if signed in, 1 if not. Does not call the deprecated is_icloud_signed_in.
+warn_icloud_not_signed_in() {
+    local account_id=""
+    if [[ -f ~/Library/Preferences/MobileMeAccounts.plist ]]; then
+        account_id=$(defaults read MobileMeAccounts Accounts 2>/dev/null \
+            | grep -m 1 "AccountID" | sed 's/.*= "\(.*\)";/\1/')
+    fi
+    if [[ -z "$account_id" ]]; then
+        print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
+        return 1
+    fi
+    return 0
+}
+
+# Iterate over Claude environment directories, expanding ~ and skipping missing dirs.
+# Usage: for_each_claude_env <callback_fn> [<raw_dir>...]
+# The callback receives the fully-expanded directory path as $1.
+for_each_claude_env() {
+    local callback_fn="$1"
+    shift
+    local raw_dir env_dir
+    for raw_dir in "$@"; do
+        env_dir="${raw_dir/#\~/$HOME}"
+        if [[ ! -d "$env_dir" ]]; then
+            print_message "skip" "Skipping $(basename "$env_dir") — directory not found"
+            continue
+        fi
+        "$callback_fn" "$env_dir"
+    done
+}
