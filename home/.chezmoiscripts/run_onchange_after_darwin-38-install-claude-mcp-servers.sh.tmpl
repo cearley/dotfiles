@@ -3,7 +3,7 @@
 
 # run_onchange trigger - packages.yaml changes or every 7 days: {{ includeTemplate "time-bucket" (dict "days" 7) }}
 
-set -uo pipefail
+set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
@@ -89,15 +89,16 @@ _register_mcp_for_env() {
         # shellcheck disable=SC2086  # word-splitting intentional for flags and command
         # Note: name comes before -e flags; claude mcp add syntax is:
         #   add --scope <scope> <name> [-e KEY=VALUE ...] -- <command>
-        _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" $_claude_flags -- $_mcp_cmd 2>&1)
-        _mcp_exit=$?
+        _mcp_exit=0
+        _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" $_claude_flags -- $_mcp_cmd 2>&1) || _mcp_exit=$?
         if [[ $_mcp_exit -eq 0 ]]; then
             print_message "success" "Registered MCP server: $_mcp_name"
         elif echo "$_mcp_output" | grep -q "already exists"; then
             CLAUDE_CONFIG_DIR="$env_dir" claude mcp remove "$_mcp_name" --scope user 2>/dev/null || true
             # shellcheck disable=SC2086
-            _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" $_claude_flags -- $_mcp_cmd 2>&1)
-            if [[ $? -eq 0 ]]; then
+            _mcp_exit=0
+            _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" $_claude_flags -- $_mcp_cmd 2>&1) || _mcp_exit=$?
+            if [[ $_mcp_exit -eq 0 ]]; then
                 print_message "success" "Updated MCP server: $_mcp_name"
             else
                 echo "$_mcp_output"

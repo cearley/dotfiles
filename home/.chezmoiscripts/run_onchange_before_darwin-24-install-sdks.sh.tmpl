@@ -1,6 +1,8 @@
 {{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
 #!/bin/bash
 
+set -euo pipefail
+
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 {{ if stat (joinPath .chezmoi.homeDir ".sdkman/bin/sdkman-init.sh") -}}

@@ -1,6 +1,8 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+set -euo pipefail
+
 {{ if lookPath "syncthing" -}}
 # syncthing version: {{ output "syncthing" "--version" }}
 {{- else -}}

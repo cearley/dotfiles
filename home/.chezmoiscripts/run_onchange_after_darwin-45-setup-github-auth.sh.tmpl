@@ -4,13 +4,13 @@
 # Chezmoi script to configure GitHub authentication.
 # This script runs whenever the GitHub token changes, after chezmoi applies other changes on macOS.
 
+set -euo pipefail
+
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 if ! require_tools git docker gh; then
     exit 1
 fi
-
-set -e
 
 # Check if GITHUB_TOKEN is available in environment (set by .zsh_secrets)
 GITHUB_TOKEN_IN_ENV="${GITHUB_TOKEN:-}"

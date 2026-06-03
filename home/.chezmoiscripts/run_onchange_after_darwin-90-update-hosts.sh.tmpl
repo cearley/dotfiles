@@ -12,13 +12,13 @@
 # }
 # This script runs whenever the hosts data changes, after chezmoi applies other changes on macOS.
 
+set -euo pipefail
+
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 if ! require_tools mktemp grep sed cp mv; then
     exit 1
 fi
-
-set -e
 
 HOSTS_FILE="/etc/hosts"
 BACKUP_FILE="/etc/hosts.chezmoi.orig"

@@ -3,6 +3,8 @@
 
 # run_onchange trigger - packages.yaml changes or every 7 days:  {{ includeTemplate "time-bucket" (dict "days" 7) }}
 
+set -euo pipefail
+
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 if ! require_tools uv; then
