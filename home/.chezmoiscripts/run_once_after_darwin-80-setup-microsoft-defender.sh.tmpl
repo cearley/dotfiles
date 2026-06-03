@@ -32,7 +32,7 @@ if wait_for_app_installation "/Applications/Microsoft Defender.app" "Microsoft D
 else
     print_message "warning" "Microsoft Defender installation timed out or was cancelled"
     print_message "info" "Microsoft Defender can be manually installed from: https://www.microsoft.com/en-us/microsoft-365/microsoft-defender-for-individuals"
-    ech0 ""
+    echo ""
 fi
 
 prompt_ready "Press any key to continue..."

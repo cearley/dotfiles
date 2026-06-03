@@ -99,7 +99,7 @@ source "$ZSH"/oh-my-zsh.sh
 
 # User configuration
 
-export PATH="$PATH:{{- .chezmoi.homeDir -}}//bin"
+export PATH="$PATH:{{- .chezmoi.homeDir -}}/bin"
 
 {{ if stat (joinPath .chezmoi.homeDir ".zsh_secrets") -}}
 # Source your secrets file.
@@ -199,7 +199,7 @@ nvm() {
 {{ if has "ai" .tags -}}
 # OPENSPEC:START
 # OpenSpec shell completions configuration
-fpath=("/Users/craig/.oh-my-zsh/custom/completions" $fpath)
+fpath=("{{ .chezmoi.homeDir }}/.oh-my-zsh/custom/completions" $fpath)
 autoload -Uz compinit
 compinit
 # OPENSPEC:END
