@@ -99,7 +99,15 @@ for env_dir in{{ range $claudeEnvs }} "{{ . }}"{{ end }}; do
         if [[ $_mcp_exit -eq 0 ]]; then
             print_message "success" "Registered MCP server: $_mcp_name"
         elif echo "$_mcp_output" | grep -q "already exists"; then
-            print_message "skip" "MCP server '$_mcp_name' already registered in $(basename "$env_dir")"
+            CLAUDE_CONFIG_DIR="$env_dir" claude mcp remove "$_mcp_name" --scope user 2>/dev/null || true
+            # shellcheck disable=SC2086
+            _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" $_claude_flags -- $_mcp_cmd 2>&1)
+            if [[ $? -eq 0 ]]; then
+                print_message "success" "Updated MCP server: $_mcp_name"
+            else
+                echo "$_mcp_output"
+                print_message "warning" "Could not update MCP server '$_mcp_name' in $(basename "$env_dir") — skipping"
+            fi
         else
             echo "$_mcp_output"
             print_message "warning" "Could not register MCP server '$_mcp_name' in $(basename "$env_dir") — skipping"
