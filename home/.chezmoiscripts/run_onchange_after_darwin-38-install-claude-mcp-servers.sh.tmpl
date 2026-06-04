@@ -53,11 +53,14 @@ _register_mcp_for_env() {
     _mcp_name="${_mcp_entry%% *}"
     _mcp_rest="${_mcp_entry#* }"
 
-    # Parse optional '-e VAR' flags before a ' -- ' separator
+    # Parse optional '-e VAR' flags before a ' -- ' separator, or handle a bare '-- ' with no flags
     _claude_flags=""
     _mcp_cmd="$_mcp_rest"
     _skip_server=false
-    if [[ "$_mcp_rest" == *" -- "* ]]; then
+    if [[ "$_mcp_rest" == "-- "* ]]; then
+        # Bare -- separator with no -e flags; strip it and use the rest as the command
+        _mcp_cmd="${_mcp_rest#-- }"
+    elif [[ "$_mcp_rest" == *" -- "* ]]; then
         _flags_section="${_mcp_rest%% -- *}"
         _mcp_cmd="${_mcp_rest#* -- }"
         _prev=""

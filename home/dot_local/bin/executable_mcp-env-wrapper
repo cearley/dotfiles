@@ -1,0 +1,24 @@
+#!/bin/bash
+# Injects environment variables into MCP server processes regardless of how the client
+# was launched. GUI clients (e.g. Claude Desktop) never inherit the shell environment,
+# making this wrapper necessary. Terminal clients (e.g. Claude Code) usually inherit
+# the shell environment but may not when launched from an IDE or non-login shell —
+# this wrapper provides a consistent, launch-context-independent injection point for both.
+#
+# Usage: mcp-env-wrapper <server-name> <command> [args...]
+#
+# To inject environment variables for an MCP server, create a plain shell file at:
+#   ~/.config/mcp-env/<server-name>.env
+# and edit it directly — no chezmoi apply needed.
+#
+# Example: ~/.config/mcp-env/aws-mcp.env
+#   mkdir -p ~/.config/mcp-env
+#   cat > ~/.config/mcp-env/aws-mcp.env <<'EOF'
+#   export AWS_PROFILE=di-prod
+#   export AWS_REGION=us-east-1
+#   EOF
+#
+# If no env file exists for a server the command runs with no additional variables set.
+server_name="$1"; shift
+[ -f "$HOME/.config/mcp-env/${server_name}.env" ] && source "$HOME/.config/mcp-env/${server_name}.env"
+exec "$@"
