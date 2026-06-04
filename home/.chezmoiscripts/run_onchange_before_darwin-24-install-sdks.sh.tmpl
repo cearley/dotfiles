@@ -1,9 +1,13 @@
 {{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
-#!/bin/bash
+#!/opt/homebrew/bin/bash
 
 set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+# SDKMAN internals are not set -u compatible (unguarded $ZSH_VERSION, $2, etc.)
+# Suspend nounset for the entire SDKMAN section; -e and pipefail remain active.
+set +u
 
 {{ if stat (joinPath .chezmoi.homeDir ".sdkman/bin/sdkman-init.sh") -}}
 if ! command_exists sdk; then
@@ -31,5 +35,7 @@ sdk install {{ . }}
     {{- end }}
   {{- end }}
 {{- end }}
+
+set -u
 
 {{ end -}}
