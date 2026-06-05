@@ -242,6 +242,43 @@ register_github_key() {
     print_message "success" "SSH $key_type key registered on GitHub"
 }
 
+# --- Phase 4.5: Commit signing verification ---
+
+verify_commit_signing() {
+    print_message "info" "Verifying git commit signing configuration..."
+
+    local gpg_format
+    gpg_format=$(git config --global gpg.format 2>/dev/null || true)
+    if [ "$gpg_format" != "ssh" ]; then
+        print_message "warning" "Commit signing check skipped: git config gpg.format is '${gpg_format:-unset}' (expected 'ssh')"
+        return 0
+    fi
+
+    local signingkey
+    signingkey=$(git config --global user.signingkey 2>/dev/null || true)
+    # Resolve leading ~ to $HOME
+    signingkey="${signingkey/#\~/$HOME}"
+
+    if [ -z "$signingkey" ] || [ ! -f "$signingkey" ]; then
+        print_message "warning" "Commit signing check failed: signing key '${signingkey:-unset}' not found on disk"
+        echo "Run 'chezmoi apply' to ensure ~/.gitconfig is up to date."
+        return 0
+    fi
+
+    local sign_output
+    local sign_exit=0
+    sign_output=$(echo "test" | ssh-keygen -Y sign -n git -f "$signingkey" - 2>&1) || sign_exit=$?
+
+    if [ "$sign_exit" -ne 0 ]; then
+        print_message "warning" "Commit signing test failed (ssh-keygen exit $sign_exit)"
+        echo "$sign_output"
+        echo "Ensure your SSH key is loaded: ssh-add ~/.ssh/id_ed25519"
+        return 0
+    fi
+
+    print_message "success" "Commit signing verified (ssh-keygen -Y sign succeeded)"
+}
+
 # --- Phase 5: Connectivity test ---
 readonly SSH_TIMEOUT=10
 readonly SSH_CONNECT_TIMEOUT=5
@@ -367,6 +404,7 @@ main() {
     load_ssh_agent
     register_github_key authentication
     register_github_key signing
+    verify_commit_signing
 
     if test_ssh_connection; then
         print_message "success" "SSH GitHub setup completed"
