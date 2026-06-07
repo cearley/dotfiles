@@ -70,7 +70,6 @@ packages:
     # Optional development packages (dev tag)
     dev:
       taps:
-      - 'azure/functions'
       - 'localstack/tap'
       brews:
       - 'ack'
@@ -78,7 +77,6 @@ packages:
       - 'aws-cdk'                   # AWS Cloud Development Kit for defining cloud infrastructure in code
       - 'aws-sam-cli'
       - 'azure-cli'
-      - 'azure/functions/azure-functions-core-tools@4'
       - 'bats-core'
       - 'cfn-lint'
       - 'checkmake'
@@ -123,6 +121,7 @@ packages:
       - 'cargo-update'             # cargo install-update command for updating installed crates
       bun: # npm-compatible packages installed globally via bun
       - 'aws-cdk-local'            # cdklocal: wraps aws-cdk CLI to target LocalStack
+      - 'azure-functions-core-tools@4'  # func: Azure Functions CLI (Homebrew tap disabled by GitHub)
       uv: # Python tools installed via uv tool install
       - 'aws-sam-cli-local'        # samlocal: wraps aws-sam-cli to target LocalStack
 
@@ -149,6 +148,7 @@ packages:
       - 'codex-app'                  # OpenAI's Codex desktop app for managing coding agents
       #- 'copilot-cli'
       - 'copilot-cli@prerelease'     # Brings the power of Copilot coding agent directly to your terminal
+      - 'google-gemini'              # Google's Gemini AI desktop app
       - 'jan'                        # Offline AI chat tool
       - 'lm-studio'                  # Discover, download, and run local LLMs
       - 'ollama-app'                 # Get up and running with large language models locally
