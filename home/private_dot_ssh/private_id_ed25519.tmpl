@@ -2,5 +2,5 @@
 {{- $keepassxcEntries := default dict (index $settings "keepassxc_entries") -}}
 {{- $sshEntryName := index $keepassxcEntries "ssh" -}}
 {{- if and $sshEntryName .has_keepassxc_db -}}
-{{- keepassxcAttribute $sshEntryName "id_ed25519" -}}
+{{- keepassxcAttribute $sshEntryName "id_ed25519" | replace "\r" "" -}}
 {{- end }}
