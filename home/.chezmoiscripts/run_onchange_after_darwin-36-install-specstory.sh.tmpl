@@ -1,0 +1,27 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+#!/bin/bash
+# re-run trigger: bump this date when the patch changes — 2026-05-18
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+SOURCE_DIR="$HOME/work/getspecstory/specstory-cli"
+BINARY="$(brew --prefix)/bin/specstory"
+
+if [[ ! -d "$SOURCE_DIR" ]]; then
+    print_message "warning" "specstory patched source not found at $SOURCE_DIR — skipping build"
+    print_message "tip" "Clone https://github.com/specstoryai/getspecstory and apply CLAUDE_CONFIG_DIR patch"
+    exit 0
+fi
+
+if ! command_exists go; then
+    print_message "error" "go is required to build specstory but was not found in PATH"
+    exit 1
+fi
+
+print_message "info" "Building specstory from patched source..."
+(cd "$SOURCE_DIR" && go build -o "$BINARY" .)
+brew pin specstory 2>/dev/null || true
+print_message "success" "specstory installed to $BINARY and pinned (brew upgrade will not overwrite it)"
+{{ end -}}
