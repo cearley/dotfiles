@@ -663,11 +663,19 @@ The `packages.darwin.ai.agents.claude_code` mapping SHALL accept the following k
 - **THEN** they SHALL appear under `packages.darwin.ai.agents.claude_code.<key>`
 - **AND** SHALL NOT appear under `packages.darwin.dev.*` or directly under `packages.darwin.ai.*`
 
-#### Scenario: Skills installation reads agent-scoped list
+#### Scenario: Skills installation reads agent-scoped list and installs once
 - **WHEN** the Claude Code skills installation script (position 37) runs
 - **AND** the `ai` tag is selected
 - **THEN** it SHALL install every spec listed in `packages.darwin.ai.agents.claude_code.skills`
+- **AND** SHALL target `~/.claude` as the single installation environment (i.e., `CLAUDE_CONFIG_DIR=~/.claude`)
+- **AND** SHALL NOT loop over `claude_envs` entries to install skills per-environment
 - **AND** SHALL NOT iterate over other tags looking for `skills` keys
+
+#### Scenario: Skills are available in all environments without per-env installation
+- **WHEN** npm skills are installed to `~/.claude/skills/`
+- **AND** all declared Claude environment directories have `skills/` symlinked to `~/.claude/skills/`
+- **THEN** every environment SHALL have access to the same installed skills
+- **AND** no per-environment installation pass SHALL be required
 
 #### Scenario: Plugin installation reads agent-scoped lists
 - **WHEN** the Claude Code plugins installation script (position 39) runs

@@ -1,0 +1,24 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+#!/bin/bash
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+
+_transition_skills_dir() {
+    local env_dir="$1"
+    local skills_dir="$env_dir/skills"
+    if [[ -L "$skills_dir" ]]; then
+        print_message "skip" "$(basename "$env_dir")/skills is already a symlink — skipping"
+    elif [[ -d "$skills_dir" ]]; then
+        print_message "warning" "Removing real skills/ directory in $(basename "$env_dir") to allow symlink placement"
+        rm -rf "$skills_dir"
+    fi
+}
+
+for_each_claude_env _transition_skills_dir{{ range $claudeEnvs }} "{{ . }}"{{ end }}
+
+{{ end -}}

@@ -16,27 +16,17 @@ if ! require_tools npx; then
     exit 1
 fi
 
-{{- $settings := includeTemplate "machine-settings" . | fromJson }}
-{{- $claudeEnvs := default (list "~/.claude") (index $settings "claude_envs") }}
 {{- $claudeCode := index $.packages.darwin.ai.agents "claude_code" }}
 {{- $skills := default (list) $claudeCode.skills }}
 
 print_message "info" "Installing Claude Code skills via npx..."
 
-_install_skills_for_env() {
-    local env_dir="$1"
-    print_message "info" "Installing skills into $(basename "$env_dir")..."
-    # Update all existing skills first
-    CLAUDE_CONFIG_DIR="$env_dir" npx skills update -g -y
+CLAUDE_CONFIG_DIR="$HOME/.claude" npx skills update -g -y
 {{- if $skills }}
-    # Install declared claude_code skills globally
-    {{ range $skills -}}
-    CLAUDE_CONFIG_DIR="$env_dir" npx skills add {{ . }} -g -a claude-code -y
-    {{ end -}}
+{{ range $skills -}}
+CLAUDE_CONFIG_DIR="$HOME/.claude" npx skills add {{ . }} -g -a claude-code -y
+{{ end -}}
 {{- end }}
-}
-
-for_each_claude_env _install_skills_for_env{{ range $claudeEnvs }} "{{ . }}"{{ end }}
 
 print_message "success" "Claude Code skills installed."
 
