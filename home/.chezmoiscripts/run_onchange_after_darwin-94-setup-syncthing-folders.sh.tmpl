@@ -1,0 +1,80 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+{{- if not (lookPath "syncthing") }}
+print_message "skip" "Syncthing not installed — skipping folder setup"
+exit 0
+{{- end }}
+
+SYNCTHING_CONFIG="$HOME/Library/Application Support/Syncthing/config.xml"
+
+if ! syncthing cli show system > /dev/null 2>&1; then
+    print_message "warning" "Syncthing daemon is not running — skipping folder setup"
+    exit 0
+fi
+
+APIKEY=$(grep -o '<apikey>[^<]*</apikey>' "$SYNCTHING_CONFIG" | sed 's/<[^>]*>//g')
+if [ -z "$APIKEY" ]; then
+    print_message "error" "Could not extract Syncthing API key from $SYNCTHING_CONFIG"
+    exit 1
+fi
+
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $stFolders := index $settings "syncthing_folders" }}
+{{- if not $stFolders }}
+print_message "skip" "No syncthing_folders configured for this machine"
+exit 0
+{{- end }}
+{{ range $stFolders }}
+{{- $fid := index . "id" }}
+{{- $label := index . "label" }}
+{{- $path := index . "path" }}
+{{- $versioning := index . "versioning" }}
+{{- $ignores := index . "ignores" }}
+{{- $vType := "" }}
+{{- $vParams := dict }}
+{{- if $versioning }}
+{{-   $rawType := index $versioning "type" }}
+{{-   if $rawType }}{{- $vType = $rawType }}{{- end }}
+{{-   if eq $vType "none" }}{{- $vType = "" }}{{- end }}
+{{-   $rawParams := index $versioning "params" }}
+{{-   if $rawParams }}{{- $vParams = $rawParams }}{{- end }}
+{{- end }}
+{{- $versioningJson := dict "cleanupIntervalS" 3600 "fsPath" "" "fsType" "basic" "params" $vParams "type" $vType }}
+{{- $folderJson := dict "autoNormalize" true "filesystemType" "basic" "fsWatcherDelayS" 10 "fsWatcherEnabled" true "id" $fid "label" $label "path" $path "rescanIntervalS" 3600 "type" "sendreceive" "versioning" $versioningJson }}
+# ----- {{ $label }} ({{ $fid }}) -----
+mkdir -p "{{ replace "~" "$HOME" $path }}"
+
+if syncthing cli config folders list | grep -qx "{{ $fid }}"; then
+    syncthing cli config folders {{ $fid }} label set "{{ $label }}"
+{{- if $versioning }}
+    syncthing cli config folders {{ $fid }} versioning type set "{{ $vType }}"
+{{-   range $key := keys $vParams | sortAlpha }}
+    syncthing cli config folders {{ $fid }} versioning params set {{ $key }} {{ index $vParams $key }}
+{{-   end }}
+{{- end }}
+{{- if $ignores }}
+    curl -s -X POST \
+        -H "X-API-Key: $APIKEY" \
+        -H "Content-Type: application/json" \
+        "http://localhost:8384/rest/db/ignores?folder={{ $fid }}" \
+        -d '{{ dict "ignore" $ignores | toJson }}' > /dev/null
+{{- end }}
+    print_message "success" "Folder '{{ $label }}' settings reconciled"
+else
+    syncthing cli config folders add-json '{{ $folderJson | toJson }}'
+{{- if $ignores }}
+    curl -s -X POST \
+        -H "X-API-Key: $APIKEY" \
+        -H "Content-Type: application/json" \
+        "http://localhost:8384/rest/db/ignores?folder={{ $fid }}" \
+        -d '{{ dict "ignore" $ignores | toJson }}' > /dev/null
+{{- end }}
+    print_message "success" "Folder '{{ $label }}' added"
+fi
+{{ end }}
+{{ end -}}

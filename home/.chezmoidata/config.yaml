@@ -48,6 +48,25 @@
 #                         bedrock: 208
 #                         client: 155
 #
+# syncthing_folders - List of Syncthing shared folders to configure on this machine.
+#                     The setup script (position 94) adds missing folders and reconciles
+#                     versioning and ignore patterns on every `chezmoi apply`.
+#                     Device sharing is managed separately via the Syncthing Web UI.
+#
+#                     Each entry supports:
+#                       id       - Syncthing folder ID (must match across machines for the same shared folder)
+#                       label    - Human-readable folder name
+#                       path     - Local path (tilde-expanded at script runtime)
+#                       versioning (optional):
+#                         type   - Versioning strategy: simple | trashcan | staggered | external | none
+#                                  Use "none" to explicitly clear versioning. Omit the entire
+#                                  versioning key to leave existing versioning unchanged.
+#                         params - Map of versioning parameters (all values must be strings).
+#                                  Keys are Syncthing-native camelCase (e.g., keep, cleanoutDays).
+#                       ignores (optional):
+#                         List of Syncthing ignore patterns. Replaces the folder's .stignore on
+#                         each apply. Omit to leave the existing .stignore unchanged.
+#
 MacBook Pro:
   brewfile: mbp-brewfile
   claude_default: claude-work
@@ -57,6 +76,51 @@ MacBook Pro:
     - '~/.claude-work'
   keepassxc_entries:
     ssh: SSH (MacBook Pro)
+  syncthing_folders:
+    - id: default
+      label: Default Folder
+      path: ~/Sync
+      versioning:
+        type: none
+      ignores:
+        - "(?d).DS_Store"
+    - id: emmxp-fxjwr
+      label: knowledge-personal
+      path: ~/basic-memory
+      versioning:
+        type: simple
+        params:
+          cleanoutDays: "0"
+          keep: "5"
+      ignores:
+        - "(?d).DS_Store"
+    - id: gprnu-lxo9w
+      label: Confidential
+      path: ~/Confidential
+      versioning:
+        type: none
+      ignores:
+        - "(?d).DS_Store"
+    - id: onhkl-pan5k
+      label: Business
+      path: ~/Business
+      versioning:
+        type: simple
+        params:
+          cleanoutDays: "0"
+          keep: "5"
+      ignores:
+        - "(?d).DS_Store"
+    - id: uqowz-v2f3n
+      label: knowledge-work
+      path: ~/.local/share/basic-memory
+      versioning:
+        type: simple
+        params:
+          cleanoutDays: "0"
+          keep: "5"
+      ignores:
+        - "(?d).DS_Store"
 Mac Studio:
   brewfile: studio-brewfile
   claude_default: claude-personal
@@ -65,6 +129,51 @@ Mac Studio:
     - '~/.claude-work'
   keepassxc_entries:
     ssh: SSH (Mac Studio)
+  syncthing_folders:
+    - id: default
+      label: Default Folder
+      path: ~/Sync
+      versioning:
+        type: none
+      ignores:
+        - "(?d).DS_Store"
+    - id: emmxp-fxjwr
+      label: knowledge-personal
+      path: ~/basic-memory
+      versioning:
+        type: simple
+        params:
+          cleanoutDays: "0"
+          keep: "5"
+      ignores:
+        - "(?d).DS_Store"
+    - id: gprnu-lxo9w
+      label: Confidential
+      path: ~/Confidential
+      versioning:
+        type: none
+      ignores:
+        - "(?d).DS_Store"
+    - id: onhkl-pan5k
+      label: Business
+      path: ~/Business
+      versioning:
+        type: simple
+        params:
+          cleanoutDays: "0"
+          keep: "5"
+      ignores:
+        - "(?d).DS_Store"
+    - id: uqowz-v2f3n
+      label: knowledge-work
+      path: ~/.local/share/basic-memory
+      versioning:
+        type: simple
+        params:
+          cleanoutDays: "0"
+          keep: "5"
+      ignores:
+        - "(?d).DS_Store"
 Mac mini:
   brewfile: mac-mini-brewfile
   keepassxc_entries:

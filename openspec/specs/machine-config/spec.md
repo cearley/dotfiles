@@ -2,9 +2,7 @@
 
 ## Purpose
 The machine configuration system provides centralized, extensible machine-specific settings using pattern-based detection and reusable template components.
-
 ## Requirements
-
 ### Requirement: Machine Data Storage
 Machine-specific settings SHALL be stored in `home/.chezmoidata/config.yaml` as a static YAML file.
 
@@ -222,6 +220,31 @@ Personal identity values that would leak into a publicly checked-in repo (e.g., 
 - **WHEN** the user's reverse-DNS value is `software.craigearley`
 - **THEN** the value SHALL exist only in the user-local chezmoi config file
 - **AND** SHALL NOT appear as a literal string in `home/.chezmoidata/` or any other checked-in repo file
+
+### Requirement: Syncthing Folders Machine Property
+The machine configuration schema SHALL support an optional `syncthing_folders` key in each machine section of `config.yaml`, declaring Syncthing shared folders to configure on that machine.
+
+#### Scenario: syncthing_folders key is optional per machine
+- **WHEN** a machine section in `config.yaml` omits `syncthing_folders`
+- **THEN** templates and scripts SHALL treat it as an empty list
+- **AND** SHALL NOT fail or error
+
+#### Scenario: syncthing_folders list accessed in template
+- **WHEN** a chezmoi template accesses `syncthing_folders` for the current machine
+- **THEN** it SHALL return the declared list of folder objects
+- **AND** each object SHALL contain at minimum `id`, `label`, and `path`
+
+#### Scenario: Optional versioning key within folder entry
+- **WHEN** a folder entry in `syncthing_folders` includes a `versioning` map
+- **THEN** the map SHALL contain a `type` string and an optional map of string params
+- **WHEN** the folder entry omits `versioning`
+- **THEN** the script SHALL leave existing Syncthing versioning configuration unchanged
+
+#### Scenario: Optional ignores key within folder entry
+- **WHEN** a folder entry in `syncthing_folders` includes an `ignores` list
+- **THEN** each entry SHALL be a Syncthing ignore pattern string
+- **WHEN** the folder entry omits `ignores`
+- **THEN** the script SHALL leave the existing `.stignore` file unchanged
 
 ## Design Decisions
 
