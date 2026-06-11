@@ -49,7 +49,7 @@ exit 0
 # ----- {{ $label }} ({{ $fid }}) -----
 mkdir -p "{{ replace "~" "$HOME" $path }}"
 
-if syncthing cli config folders list | grep -qx "{{ $fid }}"; then
+if syncthing cli config folders "{{ $fid }}" label get > /dev/null 2>&1; then
     syncthing cli config folders {{ $fid }} label set "{{ $label }}"
 {{- if $versioning }}
     syncthing cli config folders {{ $fid }} versioning type set "{{ $vType }}"
