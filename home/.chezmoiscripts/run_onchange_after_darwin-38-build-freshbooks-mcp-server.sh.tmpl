@@ -1,0 +1,28 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) (has "dev" .tags) -}}
+#!/bin/bash
+
+# run_onchange trigger — rebuild every 30 days: {{ includeTemplate "time-bucket" (dict "days" 30) }}
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+SERVER_DIR="$HOME/.local/share/freshbooks-mcp-server"
+
+if [[ ! -d "$SERVER_DIR" ]]; then
+    print_message "warning" "freshbooks-mcp-server not found at $SERVER_DIR — skipping build"
+    exit 0
+fi
+
+export NVM_DIR="$HOME/.nvm"
+# shellcheck source=/dev/null
+[[ -s "$NVM_DIR/nvm.sh" ]] && source "$NVM_DIR/nvm.sh"
+
+if ! require_tools npm; then
+    exit 1
+fi
+
+print_message "info" "Building freshbooks-mcp-server..."
+(cd "$SERVER_DIR" && npm install && npm run build)
+print_message "success" "freshbooks-mcp-server built successfully"
+{{ end -}}
