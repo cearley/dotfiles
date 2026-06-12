@@ -1,0 +1,32 @@
+{{- if not (and (eq .chezmoi.os "darwin") (has "ai" .tags)) -}}
+#!/bin/bash
+# Not a darwin+ai machine — pass through unchanged
+cat
+{{- else -}}
+#!/bin/bash
+# Merge session-topic-capture hooks; preserve all other settings managed by Claude Code.
+set -euo pipefail
+
+existing=$(cat)
+[ -z "$existing" ] && existing='{}'
+
+managed_hooks='{
+  "UserPromptSubmit": [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture UserPromptSubmit"}]}],
+  "PreCompact":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture PreCompact"}]}],
+  "SessionEnd":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture SessionEnd"}]}]
+}'
+
+echo "$existing" | jq --argjson managed "$managed_hooks" '
+  reduce ($managed | keys[]) as $event (
+    .;
+    ((.hooks[$event] // []) | map(.hooks[]?.command)) as $existing_cmds |
+    .hooks[$event] = (
+      (.hooks[$event] // []) +
+      ($managed[$event] | map(
+        . as $entry |
+        select(($existing_cmds | index($entry.hooks[0].command)) == null)
+      ))
+    )
+  )
+'
+{{- end }}

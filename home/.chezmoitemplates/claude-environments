@@ -54,6 +54,11 @@ claude-env() {
 {{- if $claudeDefault }}
 export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
 {{- end }}
+{{- $projectPaths := list "$HOME/.claude/projects" -}}
+{{- range $name := $envNames -}}
+{{- $projectPaths = append $projectPaths (printf "$HOME/.claude-%s/projects" $name) -}}
+{{- end }}
+export SESSION_INDEX_PROJECTS="{{ join ":" $projectPaths }}"
 # SpecStory https://specstory.com/specstory-cli
 claude-spec() {
     specstory run claude --no-cloud-sync "$@"
