@@ -157,6 +157,7 @@ packages:
       - "claude-monitor"
       - "sniffly@latest"
       - "git+https://github.com/cearley/claude-extend@latest"
+      - 'git+https://github.com/cearley/claude-session-index'
       - "git+https://github.com/cearley/zsh-llm-suggestions"
       - "-p 3.13 serena-agent@latest --prerelease=allow"
       cargo:
