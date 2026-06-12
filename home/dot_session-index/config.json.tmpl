@@ -1,0 +1,5 @@
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $claudeEnvs := default (list "~/.claude") (index $settings "claude_envs") -}}
+{{- $dirs := list -}}
+{{- range $claudeEnvs -}}{{- $dirs = append $dirs (printf "%s/projects" .) -}}{{- end -}}
+{{ dict "projects_dirs" $dirs | toPrettyJson }}
