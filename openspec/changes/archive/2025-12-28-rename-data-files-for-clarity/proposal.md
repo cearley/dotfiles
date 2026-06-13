@@ -114,7 +114,7 @@ git mv home/.chezmoidata/sdkman-sdks.yaml home/.chezmoidata/sdks.yaml
 - `README.md` - Lines 68-69, 104
 - `AGENTS.md` - Line 35
 - `openspec/project.md` - Lines 156-157
-- `.serena/memories/chezmoi-dotfiles-quick-reference.md` - Lines 18, 25-26
+- `.serena/memories/chezmoi-quick-reference.md` - Lines 18, 25-26
 
 ### Specifications (Updated)
 - `openspec/specs/package-management/spec.md` - 15+ references updated

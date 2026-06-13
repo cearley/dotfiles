@@ -169,7 +169,7 @@
   - [ ] Provide PAT rotation instructions for both scenarios
   - [ ] Document package manager configuration
   - [ ] Include troubleshooting section
-- [ ] 12.2 Update `.serena/memories/chezmoi-dotfiles-quick-reference.md`
+- [ ] 12.2 Update `.serena/memories/chezmoi-quick-reference.md`
   - [ ] Add GitHub authentication section
   - [ ] Reference authentication scripts
   - [ ] Document optional tag requirements

@@ -76,6 +76,6 @@ This change brings Azure DevOps authentication to parity with GitHub authenticat
     - `home/private_dot_zsh_secrets.tmpl` (modify - add AZURE_DEVOPS_EXT_PAT for both accounts)
   - **Documentation**:
     - `.serena/memories/azure-devops-authentication.md` (create)
-    - `.serena/memories/chezmoi-dotfiles-quick-reference.md` (modify)
+    - `.serena/memories/chezmoi-quick-reference.md` (modify)
 - **Dependencies**: Azure CLI (already in packages.yaml), docker, git
 - **Breaking changes**: None (purely additive)

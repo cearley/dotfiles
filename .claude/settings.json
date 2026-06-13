@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "UserPromptSubmit": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo 'SYSTEM REMINDER: This is the chezmoi-dotfiles project. Before responding, check basic-memory project \"chezmoi-dotfiles\" using search_notes and recent_activity for prior session context, open issues, and next steps. Always do this FIRST.'"
-          }
-        ]
-      }
-    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",

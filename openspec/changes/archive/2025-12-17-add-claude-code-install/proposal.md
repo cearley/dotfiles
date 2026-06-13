@@ -62,7 +62,7 @@ Developers using Claude Code (Anthropic's AI coding assistant) need a streamline
 - **Affected code**:
   - `home/.chezmoiscripts/run_once_after_darwin-36-install-claude-code.sh.tmpl` (create - native install script)
   - `docs/command-reference.md` (modify - add Claude Code commands and usage)
-  - `.serena/memories/chezmoi-dotfiles-quick-reference.md` (modify - add Claude Code reference)
+  - `.serena/memories/chezmoi-quick-reference.md` (modify - add Claude Code reference)
 - **Dependencies**: 
   - curl (already available in core packages)
   - bash (system default)

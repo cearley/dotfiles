@@ -27,7 +27,7 @@
   - [x] Document basic commands: `claude`, `claude update`, `claude doctor`
   - [x] Document authentication setup
   - [x] Add troubleshooting tips
-- [x] Update `.serena/memories/chezmoi-dotfiles-quick-reference.md`
+- [x] Update `.serena/memories/chezmoi-quick-reference.md`
   - [x] Add Claude Code to AI tools section
   - [x] Reference script execution order (36)
   - [x] Note tag requirement (`ai`)

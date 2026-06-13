@@ -6,7 +6,7 @@ The `setup-memory-workflow` skill bootstraps basic-memory session context into a
 
 - **Fix jq idempotency guard**: replace `already_has=$(jq ...) && [ "$already_has" != "true" ]` pattern with `jq -e` exit-code check — more robust and idiomatic
 - **Fix hook command escaping**: hoist the hook command string into a shell variable passed via `jq --arg`, eliminating `\\\"` nesting inside jq filters
-- **Resolve project name at install time**: both the `save-session` skill content and the UserPromptSubmit hook command now have the project name baked in at install time (not computed at runtime), matching the pattern already used in the chezmoi-dotfiles project
+- **Resolve project name at install time**: both the `save-session` skill content and the UserPromptSubmit hook command now have the project name baked in at install time (not computed at runtime), matching the pattern already used in the chezmoi project
 - **Add basic-memory project registration step**: explicitly call `basic-memory project add "$PROJECT" "$HOME/.local/share/basic-memory/$PROJECT"` so the project exists before any MCP tools try to use it
 - **Use external notes directory**: project notes stored at `~/.local/share/basic-memory/<project>/` rather than inside the repo root, avoiding working-tree clutter
 - **Add settings verification step**: run a jq query after writes to confirm both the MCP server entry and hook command landed correctly
@@ -25,7 +25,7 @@ The `setup-memory-workflow` skill bootstraps basic-memory session context into a
 
 ## Non-goals
 
-- Does not change the `save-session` skill already installed in the chezmoi-dotfiles project (`.claude/skills/save-session/SKILL.md`)
+- Does not change the `save-session` skill already installed in the chezmoi project (`.claude/skills/save-session/SKILL.md`)
 - Does not migrate existing basic-memory projects to the new external path convention
 - Does not add cloud-sync or multi-machine sync for basic-memory notes
 

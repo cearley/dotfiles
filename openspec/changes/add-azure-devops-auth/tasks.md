@@ -64,7 +64,7 @@
 - [ ] 8.6 Document troubleshooting steps for multi-account scenarios
 - [ ] 8.7 Document staged adoption approach (git only → add package managers → add ACR)
 - [ ] 8.8 Document future enhancement path for personal account package managers
-- [ ] 8.9 Update `.serena/memories/chezmoi-dotfiles-quick-reference.md`
+- [ ] 8.9 Update `.serena/memories/chezmoi-quick-reference.md`
 
 ## 9. Testing - Work Account
 - [ ] 9.1 Create KeePassXC entry "Azure DevOps (Willdan)" with "Access Token" attribute

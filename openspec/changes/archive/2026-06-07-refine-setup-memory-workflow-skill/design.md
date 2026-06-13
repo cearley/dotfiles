@@ -17,7 +17,7 @@ The skill had three categories of problems:
 - Written config is verified before reporting success
 
 **Non-Goals:**
-- Changing the already-installed chezmoi-dotfiles `save-session` skill
+- Changing the already-installed chezmoi `save-session` skill
 - Migrating existing basic-memory projects to the new path convention
 - Supporting cloud-sync or multi-machine note access
 
@@ -43,7 +43,7 @@ The skill had three categories of problems:
 
 **Decision**: Detect `$PROJECT` once in step 2 and substitute it literally into both the `save-session` SKILL.md and the hook command string.
 
-**Rationale**: The save-session skill installed by this workflow already uses the project name in its description and search query. Having it compute the name at runtime added complexity for no benefit — the skill is project-specific by design. Baking the name in also matches the pattern already observed in the installed chezmoi-dotfiles version of the skill.
+**Rationale**: The save-session skill installed by this workflow already uses the project name in its description and search query. Having it compute the name at runtime added complexity for no benefit — the skill is project-specific by design. Baking the name in also matches the pattern already observed in the installed chezmoi version of the skill.
 
 **Alternative considered**: Keep runtime detection in the hook via `PROJECT=$(git rev-parse ...)`. Rejected — adds a subshell and `&&` chain to every prompt submission; fails silently if git is unavailable.
 

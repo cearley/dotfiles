@@ -109,6 +109,6 @@ This change enhances the existing authentication system to support package manag
     - `home/.chezmoi.toml.tmpl` (modify - add optional package manager and enterprise GitHub variables)
   - **Documentation**:
     - `.serena/memories/github-authentication.md` (create - cover both scenarios)
-    - `.serena/memories/chezmoi-dotfiles-quick-reference.md` (modify)
+    - `.serena/memories/chezmoi-quick-reference.md` (modify)
 - **Dependencies**: GitHub CLI (already in packages.yaml), docker, git, package managers (optional)
 - **Breaking changes**: None (purely additive, existing setup continues to work as Scenario A with new package manager support)
