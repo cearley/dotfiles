@@ -24,7 +24,7 @@ PROJECT=$(basename "$PROJECT_ROOT")
 mkdir -p .claude/skills/save-session
 ```
 
-`$PROJECT` and `$PROJECT_ROOT` are used in steps 3–5 — resolve them once here.
+`$PROJECT` and `$PROJECT_ROOT` are used in steps 3–5b — resolve them once here.
 
 ### 3. Register the basic-memory project
 
@@ -58,7 +58,24 @@ Never overwrite the existing note — always append.
 Confirm the note title and permalink after saving.
 ```
 
-### 5. Update `.claude/settings.local.json`
+### 5a. Add basic-memory MCP server to `.mcp.json`
+
+First check whether basic-memory is already registered globally — if so, skip this step:
+
+```bash
+if claude mcp list 2>/dev/null | grep -q "basic-memory"; then
+  echo "basic-memory already registered globally — skipping .mcp.json"
+else
+  [ -f .mcp.json ] || echo '{}' > .mcp.json
+  jq '.mcpServers["basic-memory"] //= {"command": "uvx", "args": ["--python", "3.12", "basic-memory", "mcp"]}' \
+    .mcp.json > .mcp.json.tmp \
+    && mv .mcp.json.tmp .mcp.json
+fi
+```
+
+Note: `.mcp.json` is the standard project-level MCP config file for Claude Code. Whether to commit it or add it to `.gitignore` is a team preference — the confirm step will remind you.
+
+### 5b. Add UserPromptSubmit hook to `.claude/settings.local.json`
 
 Use jq to merge into `.claude/settings.local.json` (create it if absent). `$PROJECT` was resolved in step 2 — use it directly when constructing the hook command.
 
@@ -67,14 +84,7 @@ Use jq to merge into `.claude/settings.local.json` (create it if absent). `$PROJ
 [ -f .claude/settings.local.json ] || echo '{}' > .claude/settings.local.json
 ```
 
-**Add basic-memory MCP server** (idempotent — `//=` only sets if key is absent):
-```bash
-jq '.mcpServers["basic-memory"] //= {"command": "basic-memory", "args": ["mcp"]}' \
-  .claude/settings.local.json > .claude/settings.local.json.tmp \
-  && mv .claude/settings.local.json.tmp .claude/settings.local.json
-```
-
-**Add UserPromptSubmit hook** (only if no existing hook already contains "basic-memory"):
+**Add hook** (only if no existing hook already contains "basic-memory"):
 ```bash
 if ! jq -e '[.hooks.UserPromptSubmit[]?.hooks[]?.command // ""] | any(contains("basic-memory"))' \
     .claude/settings.local.json >/dev/null 2>&1; then
@@ -88,18 +98,20 @@ fi
 
 If jq is not available, use the Read and Write tools to merge manually, preserving all existing keys.
 
-### 5.5. Verify the settings file
+### 5.5. Verify configuration
 
-Validate the file is well-formed JSON and that both keys landed:
-
+**Verify `.mcp.json`** (skip if global registration was detected in step 5a):
 ```bash
-jq '{
-  mcp: .mcpServers["basic-memory"],
-  hook_commands: [.hooks.UserPromptSubmit[]?.hooks[]?.command // ""]
-}' .claude/settings.local.json
+jq '{mcp: .mcpServers["basic-memory"]}' .mcp.json
 ```
 
-If jq exits non-zero (malformed JSON), stop and report the error — do not proceed to step 6. Otherwise show the output to the user so they can see exactly what was written.
+**Verify hook in `.claude/settings.local.json`**:
+```bash
+jq '{hook_commands: [.hooks.UserPromptSubmit[]?.hooks[]?.command // ""]}' \
+  .claude/settings.local.json
+```
+
+If either jq call exits non-zero (malformed JSON), stop and report the error — do not proceed to step 6. Otherwise show the output to the user so they can see exactly what was written.
 
 ### 6. Confirm
 
@@ -108,11 +120,12 @@ Report what was done (or skipped as already present):
 ```
 ✓ basic-memory project registered — <project-name> → ~/.local/share/basic-memory/<project-name>
 ✓ .claude/skills/save-session/SKILL.md — session save skill installed
-✓ .claude/settings.local.json — basic-memory MCP server configured
+✓ .mcp.json — basic-memory MCP server configured  (or: already registered globally — skipped)
 ✓ .claude/settings.local.json — UserPromptSubmit hook added
 ```
 
 Remind the user that:
+- `.mcp.json` is the project-level MCP config — commit it if the whole team uses basic-memory, or add it to `.gitignore` if this is a personal setup
 - `.claude/settings.local.json` is personal to this machine — add it to `.gitignore` if it's not already there
 - At the end of each session, run `/save-session` to persist decisions and next steps
 - Notes are stored outside the repo at `~/.local/share/basic-memory/<project-name>/`
