@@ -170,7 +170,7 @@ packages:
           - 'localstack-mcp-server -- mcp-env-wrapper localstack-mcp-server npx -y @localstack/localstack-mcp-server'
           - 'playwright npx @playwright/mcp@latest'
           - 'safari -- npx safari-mcp'
-          skills: # Installed via `npx skills add <args>`
+          skills: # Installed via `npx skills add <args> -g`
           - 'basicmachines-co/basic-memory-skills --skill memory-notes'
           - 'specstoryai/agent-skills -all'
           # Install specific skills with arguments
