@@ -171,7 +171,7 @@ packages:
           - 'playwright npx @playwright/mcp@latest'
           - 'safari -- npx safari-mcp'
           skills: # Installed via `npx skills add <args> -g`
-          - 'basicmachines-co/basic-memory-skills --skill memory-notes'
+          - 'basicmachines-co/basic-memory-skills --skill memory-notes --skill memory-defrag'
           - 'cearley/claude-session-index --skill session-index'
           - 'specstoryai/agent-skills -all'
           # Install specific skills with arguments
