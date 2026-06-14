@@ -448,6 +448,19 @@ audit_claude_marketplaces() {
     rm -f "$installed_file" "$declared_file"
 }
 
+# Derive a skill-name prefix from a collection-wildcard spec:
+#   extract the org component (before /) and strip known company suffixes,
+#   then strip trailing hyphens/underscores.
+#   e.g. "specstoryai/agent-skills -all" → "specstory"
+_wildcard_prefix() {
+    local spec="$1"
+    local org
+    org=$(echo "$spec" | cut -d'/' -f1)
+    echo "$org" \
+        | sed -E 's/(ai|hq|io|dev|co|labs|inc|app|apps|tech|ware|js|ly)$//' \
+        | sed -E 's/[-_]+$//'
+}
+
 audit_claude_skills() {
     print_message "info" "=== Claude Code Skills ==="
 
@@ -492,8 +505,10 @@ audit_claude_skills() {
     done <<< "$declared_specs"
 
     # --- Pass 2: classify each installed skill ---
-    # Note: wildcards and orphans are mutually exclusive — if any wildcard spec is
-    # declared, every unmatched skill goes to wildcard_covered, so orphans stays empty.
+    # A skill is attributed to a wildcard only if its name starts with the prefix
+    # derived from that wildcard's org (e.g. "specstoryai" → "specstory").
+    # Skills that don't match any deterministic spec and don't start with any
+    # wildcard prefix are orphans.
     local orphans=""        # newline-delimited list
     local wildcard_covered=false
 
@@ -504,10 +519,23 @@ audit_claude_skills() {
 
         if echo "$known_skills" | grep -qxF "$skill_name"; then
             : # directly matched by a deterministic spec
-        elif [[ -n "$wildcards" ]]; then
-            wildcard_covered=true
         else
-            orphans="${orphans}${skill_name}"$'\n'
+            local attributed=false
+            while IFS= read -r wc_spec; do
+                [[ -z "$wc_spec" ]] && continue
+                local prefix
+                prefix=$(_wildcard_prefix "$wc_spec")
+                if [[ -n "$prefix" && "$skill_name" == "${prefix}"* ]]; then
+                    attributed=true
+                    break
+                fi
+            done <<< "$wildcards"
+
+            if [[ "$attributed" == true ]]; then
+                wildcard_covered=true
+            else
+                orphans="${orphans}${skill_name}"$'\n'
+            fi
         fi
     done
 

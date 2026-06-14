@@ -109,17 +109,18 @@ The audit SHALL produce orphan reports for each of the following package manager
   - A spec of the form `<owner>/skills/<name>` (path-style) SHALL map to skill name `<name>` (last path segment)
   - A spec containing `--skill <name>` SHALL map to skill name `<name>`
   - A spec that matches neither rule SHALL be treated as a **collection wildcard**
-- **AND** the audit SHALL report as orphans only the installed skills that are not matched by any deterministic mapping AND are not covered by at least one collection wildcard
+- **AND** the audit SHALL report as orphans only the installed skills that are not matched by any deterministic mapping AND are not covered by any collection wildcard's org-derived prefix
 
-#### Scenario: Claude Code skills section — wildcard coverage
+#### Scenario: Claude Code skills section — wildcard prefix coverage
 - **WHEN** at least one declared spec is a collection wildcard (matches neither path-style nor `--skill` pattern)
-- **AND** all unmatched installed skills are covered by that wildcard
-- **THEN** the audit SHALL emit a note naming the wildcard spec(s)
-- **AND** SHALL NOT report those skills as orphans
+- **AND** an installed skill's name starts with a prefix derived from that wildcard spec's org component
+  (the org name with known company suffixes stripped, e.g. `specstoryai` → `specstory`)
+- **THEN** that skill SHALL be attributed to the wildcard (not reported as orphan)
+- **AND** the audit SHALL emit a `print_message "info"` note naming the wildcard spec(s) that covered at least one skill
 
 #### Scenario: Claude Code skills section — orphan detection
 - **WHEN** an installed skill cannot be matched by any deterministic mapping
-- **AND** no collection wildcard is declared
+- **AND** the skill's name does not start with any collection wildcard's org-derived prefix
 - **THEN** the audit SHALL report that skill as an orphan
 
 #### Scenario: Claude Code skills section — no orphans

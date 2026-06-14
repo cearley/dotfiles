@@ -19,21 +19,24 @@ The root cause is a real mapping problem: a single declared spec can expand to m
 
 ## Decisions
 
-### Decision: Two-tier matching (deterministic → wildcard)
+### Decision: Two-tier matching (deterministic → prefix-narrowed wildcard)
 
 Map installed skills to declared specs in two passes:
 
 1. **Deterministic pass** — parse each declared spec string to extract a skill name:
    - Pattern `*/skills/<name>` (path-style, e.g. `wondelai/skills/clean-code`) → skill name `clean-code`
    - Flag `--skill <name>` anywhere in the spec string → skill name `<name>` (repeatable)
-   - If neither pattern applies, the spec is a **wildcard** (e.g. `specstoryai/agent-skills -all`, `cearley/claude-session-index`)
-2. **Wildcard fallback** — if any wildcard specs are declared, installed skills not matched in pass 1 are attributed to the wildcard bucket (not flagged as orphans)
-3. **Orphan** — an installed skill that wasn't matched in either pass
+   - If neither pattern applies, the spec is a **wildcard** (e.g. `specstoryai/agent-skills -all`)
+2. **Prefix-narrowed wildcard fallback** — for each wildcard spec, derive a prefix from the org name by stripping known company suffixes (`ai`, `hq`, `io`, `dev`, `co`, `labs`, `inc`, `app`, `apps`, `tech`, `ware`, `js`, `ly`) and trailing hyphens. An unmatched skill is attributed to a wildcard only if its name starts with that prefix (e.g. `specstoryai` → `specstory` → covers `specstory-*` skills).
+3. **Orphan** — an installed skill that wasn't matched in either pass (including skills that don't start with any wildcard's derived prefix)
 
-**Why not try to derive names from bare repo specs?** The repo name rarely matches the installed skill name (`claude-session-index` ≠ `session-index`). Guessing produces false negatives; the wildcard bucket is the honest answer.
+**Why prefix-narrowed rather than blanket wildcard?** The original blanket approach caused false negatives: `specstoryai/agent-skills -all` would suppress orphan detection for unrelated personal skills (e.g. `integrate-worktrees`, `memory-organize`) that happened to be installed alongside it. Prefix narrowing attributes a wildcard only to skills that plausibly originate from that org, while still reporting genuinely untracked skills as orphans.
+
+**Why not try to derive names from bare repo specs?** The repo name rarely matches the installed skill name (`claude-session-index` ≠ `session-index`). The prefix heuristic is imperfect but far less noisy than guessing from the repo name.
 
 **Alternatives considered:**
 - *Execute `npx skills ls` per spec to get exact names* — requires network access and `npx`, breaks offline runs, out of scope
+- *Blanket wildcard suppression* — original approach; superseded because it hid unrelated orphans
 - *Maintain an explicit mapping in `packages.yaml`* — adds maintenance burden; deterministic parsing covers the common case without any extra config
 
 ### Decision: Output format
