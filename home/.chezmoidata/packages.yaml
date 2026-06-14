@@ -172,6 +172,7 @@ packages:
           - 'safari -- npx safari-mcp'
           skills: # Installed via `npx skills add <args> -g`
           - 'basicmachines-co/basic-memory-skills --skill memory-notes'
+          - 'cearley/claude-session-index'
           - 'specstoryai/agent-skills -all'
           # Install specific skills with arguments
           #- 'specstoryai/agent-skills --skill specstory-yak specstory-session-summary'

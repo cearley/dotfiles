@@ -449,10 +449,7 @@ audit_claude_marketplaces() {
 }
 
 audit_claude_skills() {
-    print_message "info" "=== Claude Code Skills (informational) ==="
-    # Skills are installed from collection specs (e.g. "specstoryai/agent-skills -all").
-    # Individual skill names cannot be reliably mapped back to their collection spec,
-    # so this section lists installed user-scope skills as a reference — not as orphans.
+    print_message "info" "=== Claude Code Skills ==="
 
     local skills_dir="${HOME}/.claude/skills"
     if [[ ! -d "$skills_dir" ]]; then
@@ -462,26 +459,74 @@ audit_claude_skills() {
 
     local declared_specs
     declared_specs=$(declared_for_agent "claude_code" "skills")
-    local installed_count=0
 
-    print_message "info" "Declared skill specs:"
-    if [[ -z "$declared_specs" ]]; then
-        echo "  (none)"
-    else
-        echo "$declared_specs" | while IFS= read -r s; do echo "  $s"; done
-    fi
+    # --- Pass 1: derive known skill names from deterministic specs ---
+    # Deterministic rules:
+    #   <owner>/skills/<name>    → skill name is the last path segment
+    #   <spec> --skill <name>    → skill name from the flag value
+    # Any spec that matches neither rule is a collection wildcard.
+    local known_skills=""   # newline-delimited list
+    local wildcards=""      # newline-delimited list
 
-    print_message "info" "Installed user-scope skills:"
+    while IFS= read -r spec; do
+        [[ -z "$spec" ]] && continue
+        local matched=false
+
+        # Path-style: */skills/<name>
+        if [[ "$spec" =~ ^[^[:space:]]*/skills/([^[:space:]/]+) ]]; then
+            known_skills="${known_skills}${BASH_REMATCH[1]}"$'\n'
+            matched=true
+        fi
+
+        # --skill <name> flag (may appear multiple times in one spec)
+        local tmp="$spec"
+        while [[ "$tmp" =~ --skill[[:space:]]+([^[:space:]]+) ]]; do
+            known_skills="${known_skills}${BASH_REMATCH[1]}"$'\n'
+            tmp="${tmp/"${BASH_REMATCH[0]}"/ }"
+            matched=true
+        done
+
+        if [[ "$matched" == false ]]; then
+            wildcards="${wildcards}${spec}"$'\n'
+        fi
+    done <<< "$declared_specs"
+
+    # --- Pass 2: classify each installed skill ---
+    # Note: wildcards and orphans are mutually exclusive — if any wildcard spec is
+    # declared, every unmatched skill goes to wildcard_covered, so orphans stays empty.
+    local orphans=""        # newline-delimited list
+    local wildcard_covered=false
+
     for skill_dir in "$skills_dir"/*/; do
         [[ -e "$skill_dir" ]] || continue
-        echo "  $(basename "$skill_dir")"
-        installed_count=$((installed_count + 1))
+        local skill_name
+        skill_name=$(basename "$skill_dir")
+
+        if echo "$known_skills" | grep -qxF "$skill_name"; then
+            : # directly matched by a deterministic spec
+        elif [[ -n "$wildcards" ]]; then
+            wildcard_covered=true
+        else
+            orphans="${orphans}${skill_name}"$'\n'
+        fi
     done
-    if [[ $installed_count -eq 0 ]]; then
-        echo "  (none)"
+
+    # --- Output ---
+    if [[ "$wildcard_covered" == true ]]; then
+        local wc_note
+        wc_note=$(printf '%s' "$wildcards" | tr '\n' ',' | sed 's/,*$//' | sed 's/,/, /g')
+        print_message "info" "Skills not individually verified (covered by collection spec): ${wc_note}"
     fi
 
-    print_message "tip" "Review the lists above manually — skill collections don't map 1:1 to skill names"
+    if [[ -z "$orphans" ]]; then
+        print_message "success" "No orphans"
+    else
+        echo "$orphans" | grep -v '^$'
+        local orphan_count
+        orphan_count=$(echo "$orphans" | grep -c '[^[:space:]]')
+        TOTAL_ORPHANS=$((TOTAL_ORPHANS + orphan_count))
+        MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
+    fi
 }
 
 audit_claude_mcp_servers() {
