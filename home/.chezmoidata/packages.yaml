@@ -193,11 +193,11 @@ packages:
           - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
           plugins: # Installed via `claude plugins install`
           - 'atlassian@claude-plugins-official'
-          - 'aws-core@agent-toolkit-for-aws'
+          # - 'aws-core@agent-toolkit-for-aws'
           - 'claude-code-setup@claude-plugins-official'
           - 'claude-md-management@claude-plugins-official'
           - 'example-skills@anthropic-agent-skills'
-          - 'fulcrum-skills@viewpoint-tools'
+          # - 'fulcrum-skills@viewpoint-tools'         
           - 'ralph-loop@claude-plugins-official'
           - 'superpowers@claude-plugins-official'
         # codex:
