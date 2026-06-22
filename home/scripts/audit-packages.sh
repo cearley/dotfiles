@@ -161,12 +161,44 @@ normalize_cargo_spec() {
 }
 
 # ---------------------------------------------------------------------------
+# Print a suggested uninstall command after listing orphans
+# Usage: print_uninstall_hint <prefix> <mode> <orphans_newline_separated>
+#   mode: "one_line" — all orphans joined onto a single command
+#         "per_line" — one command per orphan (easier to edit individual items)
+# ---------------------------------------------------------------------------
+print_uninstall_hint() {
+    local prefix="$1"
+    local mode="$2"
+    local orphans="$3"
+    [[ -z "$orphans" ]] && return
+
+    local tip_prefix="💡"
+    if [ "${LANG}" = "${LANG%UTF-8*}" ]; then
+        tip_prefix="[TIP]"
+    fi
+
+    if [[ "$mode" == "per_line" ]]; then
+        echo "${tip_prefix} To remove:" >&2
+        while IFS= read -r item; do
+            [[ -z "$item" ]] && continue
+            echo "   ${prefix} ${item}" >&2
+        done <<< "$orphans"
+    else
+        local items
+        items=$(echo "$orphans" | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+        echo "${tip_prefix} To remove: ${prefix} ${items}" >&2
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Core report helper — compare sorted installed vs declared; print orphans
 # ---------------------------------------------------------------------------
 report_orphans() {
     local label="$1"
     local installed_file="$2"   # sorted list of installed items
     local declared_file="$3"    # list of declared items (will be sorted internally)
+    local uninstall_prefix="${4:-}"          # optional: command prefix for hint
+    local uninstall_mode="${5:-one_line}"    # "one_line" or "per_line"
 
     print_message "info" "=== ${label} ==="
 
@@ -184,6 +216,7 @@ report_orphans() {
         orphan_count=$(echo "$orphans" | wc -l | tr -d '[:space:]')
         TOTAL_ORPHANS=$((TOTAL_ORPHANS + orphan_count))
         MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
+        [[ -n "$uninstall_prefix" ]] && print_uninstall_hint "$uninstall_prefix" "$uninstall_mode" "$orphans"
     fi
 }
 
@@ -203,7 +236,7 @@ audit_brews() {
     fi
 
     declared_for "brews" > "$declared"
-    report_orphans "Homebrew Formulae" "$installed" "$declared"
+    report_orphans "Homebrew Formulae" "$installed" "$declared" "brew uninstall" "one_line"
     rm -f "$installed" "$declared"
 }
 
@@ -214,7 +247,7 @@ audit_casks() {
 
     brew list --cask -1 2>/dev/null | sort > "$installed"
     declared_for "casks" > "$declared"
-    report_orphans "Homebrew Casks" "$installed" "$declared"
+    report_orphans "Homebrew Casks" "$installed" "$declared" "brew uninstall --cask" "one_line"
     rm -f "$installed" "$declared"
 }
 
@@ -231,7 +264,7 @@ audit_taps() {
         declared_for "taps"
     } | sort -u > "$declared"
 
-    report_orphans "Homebrew Taps" "$installed" "$declared"
+    report_orphans "Homebrew Taps" "$installed" "$declared" "brew untap" "per_line"
     rm -f "$installed" "$declared"
 }
 
@@ -278,6 +311,7 @@ audit_uv() {
         orphan_count=$(echo "$orphans" | wc -l | tr -d '[:space:]')
         TOTAL_ORPHANS=$((TOTAL_ORPHANS + orphan_count))
         MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
+        print_uninstall_hint "uv tool uninstall" "one_line" "$orphans"
     fi
     rm -f "$installed_file" "$declared_file"
 }
@@ -313,6 +347,7 @@ audit_bun() {
         orphan_count=$(echo "$orphans" | wc -l | tr -d '[:space:]')
         TOTAL_ORPHANS=$((TOTAL_ORPHANS + orphan_count))
         MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
+        print_uninstall_hint "bun remove -g" "one_line" "$orphans"
     fi
     rm -f "$installed_file" "$declared_file"
 }
@@ -340,7 +375,7 @@ audit_cargo() {
         normalize_cargo_spec "$spec"
     done <<< "$declared_raw" | sort -u > "$declared_file"
 
-    report_orphans "Cargo Crates" "$installed_file" "$declared_file"
+    report_orphans "Cargo Crates" "$installed_file" "$declared_file" "cargo uninstall" "one_line"
     rm -f "$installed_file" "$declared_file"
 }
 
@@ -361,6 +396,7 @@ audit_sdkman() {
 
     local orphan_count=0
     local has_orphans=false
+    local sdkman_orphans=""
 
     # Enumerate installed candidate/version pairs (skip "current" symlinks)
     for cand_dir in "${HOME}/.sdkman/candidates"/*/; do
@@ -384,6 +420,7 @@ audit_sdkman() {
             fi
 
             echo "$item"
+            sdkman_orphans="${sdkman_orphans}${item}"$'\n'
             orphan_count=$((orphan_count + 1))
             has_orphans=true
         done
@@ -394,6 +431,7 @@ audit_sdkman() {
     else
         TOTAL_ORPHANS=$((TOTAL_ORPHANS + orphan_count))
         MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
+        print_uninstall_hint "sdk uninstall" "per_line" "$sdkman_orphans"
     fi
 }
 
@@ -416,7 +454,7 @@ audit_claude_plugins() {
     fi
 
     declared_for_agent "claude_code" "plugins" | sort > "$declared_file"
-    report_orphans "Claude Code Plugins" "$installed_file" "$declared_file"
+    report_orphans "Claude Code Plugins" "$installed_file" "$declared_file" "claude plugins uninstall" "per_line"
     rm -f "$installed_file" "$declared_file"
 }
 
@@ -444,7 +482,7 @@ audit_claude_marketplaces() {
         | sed 's/#[^#]*$//' \
         | sort > "$declared_file"
 
-    report_orphans "Claude Code Plugin Marketplaces" "$installed_file" "$declared_file"
+    report_orphans "Claude Code Plugin Marketplaces" "$installed_file" "$declared_file" "claude plugins marketplace remove" "per_line"
     rm -f "$installed_file" "$declared_file"
 }
 
@@ -549,11 +587,14 @@ audit_claude_skills() {
     if [[ -z "$orphans" ]]; then
         print_message "success" "No orphans"
     else
-        echo "$orphans" | grep -v '^$'
+        local clean_orphans
+        clean_orphans=$(echo "$orphans" | grep -v '^$')
+        echo "$clean_orphans"
         local orphan_count
-        orphan_count=$(echo "$orphans" | grep -c '[^[:space:]]')
+        orphan_count=$(echo "$clean_orphans" | grep -c '[^[:space:]]')
         TOTAL_ORPHANS=$((TOTAL_ORPHANS + orphan_count))
         MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
+        print_uninstall_hint "claude skills remove" "per_line" "$clean_orphans"
     fi
 }
 
@@ -585,7 +626,7 @@ audit_claude_mcp_servers() {
         | awk '{print $1}' \
         | sort > "$declared_file"
 
-    report_orphans "Claude Code MCP Servers" "$installed_file" "$declared_file"
+    report_orphans "Claude Code MCP Servers" "$installed_file" "$declared_file" "claude mcp remove" "per_line"
     rm -f "$installed_file" "$declared_file"
 }
 
