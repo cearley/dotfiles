@@ -1,17 +1,17 @@
 packages:
   darwin:
     trusted:
-    - 'buo/cask-upgrade'           # Tap for upgrading outdated Homebrew Casks with `brew cu` command
-    - 'isen-ng/dotnet-sdk-versions' # Tap for managing multiple .NET SDK versions on macOS
-    - 'itspriddle/brews/ical-guy'  # CLI for querying macOS calendar events, outputting JSON
-    - 'localstack/tap'             # Homebrew tap for LocalStack, a fully functional local AWS cloud stack
-    - 'manaflow-ai/cmux/cmux'      # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
+    - 'buo/cask-upgrade'               # Tap for upgrading outdated Homebrew Casks with `brew cu` command
+    - 'isen-ng/dotnet-sdk-versions'    # Tap for managing multiple .NET SDK versions on macOS
+    - 'itspriddle/brews/ical-guy'      # CLI for querying macOS calendar events, outputting JSON
+    - 'localstack/tap'                 # Homebrew tap for LocalStack, a fully functional local AWS cloud stack
+    - 'manaflow-ai/cmux/cmux'          # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
     - 'microsoft/mssql-release/msodbcsql18' # Microsoft ODBC Driver 18 for SQL Server
     - 'microsoft/mssql-release/mssql-tools18' # Microsoft SQL Server Command Line Tools (sqlcmd and bcp)
-    - 'oven-sh/bun'                # Required for the oven-sh/bun/bun formula
-    - 'postrv/narsil/narsil-mcp'   # MCP server for code analysis and security scanning
+    - 'oven-sh/bun'                    # Required for the oven-sh/bun/bun formula
+    - 'postrv/narsil/narsil-mcp'       # MCP server for code analysis and security scanning
     - 'qltysh-archive/formulae/codeclimate' # Code quality analysis tool
-    - 'supabase/tap/supabase'      # Supabase CLI
+    - 'supabase/tap/supabase'          # Supabase CLI
 
     taps:
     - 'isen-ng/dotnet-sdk-versions'
@@ -20,39 +20,39 @@ packages:
     # Core packages (always installed)
     core:
       taps:
-      - 'oven-sh/bun'              # Required for the oven-sh/bun/bun formula
+      - 'oven-sh/bun'                  # Required for the oven-sh/bun/bun formula
       brews:
-      - 'aria2'                    # Download with resuming and segmented downloading
-      - 'atuin'                    # Improved shell history for zsh, bash, fish and nushell
-      - 'awscli'                   # Official Amazon AWS command-line interface
-      - 'bat'                      # Clone of cat(1) with syntax highlighting and Git integration
-      - 'chezmoi'                  # Manage your dotfiles across multiple diverse machines, securely
-      - 'direnv'                   # Load/unload environment variables based on $PWD
-      - 'fd'                       # Simple, fast and user-friendly alternative to find
-      - 'fzf'                      # Command-line fuzzy finder written in Go
-      - 'git'                      # Distributed revision control system
-      - 'jq'                       # Lightweight and flexible command-line JSON processor
-      - 'lsd'                      # Clone of ls with colorful output, file type icons, and more
-      - 'mas'                      # Mac App Store command-line interface
-      - 'neovim'                   # Ambitious Vim-fork focused on extensibility and agility
-      - 'oven-sh/bun/bun'          # Fast all-in-one JavaScript runtime, bundler, transpiler and package manager
-      - 'pwgen'                    # Password generator
-      - 'rclone'                   # Rsync for cloud storage
-      - 'tree'                     # Display directories as trees (with optional color/HTML output)
-      - 'yq'                       # YAML/JSON/XML processor - like jq but for YAML
-      - 'zoxide'                   # Shell extension to navigate your filesystem faster
+      - 'aria2'                        # Download with resuming and segmented downloading
+      - 'atuin'                        # Improved shell history for zsh, bash, fish and nushell
+      - 'awscli'                       # Official Amazon AWS command-line interface
+      - 'bat'                          # Clone of cat(1) with syntax highlighting and Git integration
+      - 'chezmoi'                      # Manage your dotfiles across multiple diverse machines, securely
+      - 'direnv'                       # Load/unload environment variables based on $PWD
+      - 'fd'                           # Simple, fast and user-friendly alternative to find
+      - 'fzf'                          # Command-line fuzzy finder written in Go
+      - 'git'                          # Distributed revision control system
+      - 'jq'                           # Lightweight and flexible command-line JSON processor
+      - 'lsd'                          # Clone of ls with colorful output, file type icons, and more
+      - 'mas'                          # Mac App Store command-line interface
+      - 'neovim'                       # Ambitious Vim-fork focused on extensibility and agility
+      - 'oven-sh/bun/bun'              # Fast all-in-one JavaScript runtime, bundler, transpiler and package manager
+      - 'pwgen'                        # Password generator
+      - 'rclone'                       # Rsync for cloud storage
+      - 'tree'                         # Display directories as trees (with optional color/HTML output)
+      - 'yq'                           # YAML/JSON/XML processor - like jq but for YAML
+      - 'zoxide'                       # Shell extension to navigate your filesystem faster
       casks:
-      - 'appcleaner'               # Application uninstaller
-      - 'dropbox'                  # Client for the Dropbox cloud storage service
-      - 'font-hack-nerd-font'      # Hack Nerd Font (Hack) - [no description]
-      - 'font-meslo-lg-nerd-font'  # MesloLG Nerd Font families (Meslo LG) - [no description]
-      - 'fuse-t'                   # Kext-less implementation of FUSE
-      - 'google-drive'             # Client for the Google Drive storage service
-      - 'grandperspective'         # Graphically shows disk usage within a file system
-      - 'iterm2'                   # Terminal emulator as alternative to Apple's Terminal app
-      - 'keepassxc'                # Password manager app
-      - 'lulu'                     # Open-source firewall to block unknown outgoing connections
-      - 'zoom'                     # Video communication and virtual meeting platform
+      - 'appcleaner'                   # Application uninstaller
+      - 'dropbox'                      # Client for the Dropbox cloud storage service
+      - 'font-hack-nerd-font'          # Hack Nerd Font (Hack) - [no description]
+      - 'font-meslo-lg-nerd-font'      # MesloLG Nerd Font families (Meslo LG) - [no description]
+      - 'fuse-t'                       # Kext-less implementation of FUSE
+      - 'google-drive'                 # Client for the Google Drive storage service
+      - 'grandperspective'             # Graphically shows disk usage within a file system
+      - 'iterm2'                       # Terminal emulator as alternative to Apple's Terminal app
+      - 'keepassxc'                    # Password manager app
+      - 'lulu'                         # Open-source firewall to block unknown outgoing connections
+      - 'zoom'                         # Video communication and virtual meeting platform
       mas:
       - '"The Unarchiver", id: 425424353'
 
@@ -71,9 +71,9 @@ packages:
       - 'jump-desktop-connect'
       - 'logi-options+'
       - 'onyx'
-      - 'powerphotos'               # Mac app for managing duplicate photos across libraries
+      - 'powerphotos'                  # Mac app for managing duplicate photos across libraries
       - 'slack'
-      - 'utm'                       # Virtual machine app for running other operating systems on Apple Silicon Macs
+      - 'utm'                          # Virtual machine app for running other operating systems on Apple Silicon Macs
       mas:
       - '"ASUS Device Discovery", id: 995124504'
       - '"ASUS Firmware Restoration", id: 1020519014'
@@ -89,7 +89,7 @@ packages:
       brews:
       - 'ack'
       - 'act'
-      - 'aws-cdk'                   # AWS Cloud Development Kit for defining cloud infrastructure in code
+      - 'aws-cdk'                      # AWS Cloud Development Kit for defining cloud infrastructure in code
       - 'aws-sam-cli'
       - 'azure-cli'
       - 'bats-core'
@@ -112,8 +112,8 @@ packages:
       - 'nuget'
       - 'pipx'
       - 'pkgconf'
-      - 'qltysh-archive/formulae/codeclimate'  # Code quality analysis tool
-      - 'shellcheck'                # Static analysis tool for shell scripts
+      - 'qltysh-archive/formulae/codeclimate' # Code quality analysis tool
+      - 'shellcheck'                   # Static analysis tool for shell scripts
       - 'snyk-cli'
       - 'sqlite'
       casks:
@@ -134,12 +134,12 @@ packages:
       - "java 8.0.462-zulu"
       - "liquibase"
       cargo: # Rust crates via cargo install (requires dev tag for Rust toolchain)
-      - 'cargo-update'              # cargo install-update command for updating installed crates
+      - 'cargo-update'                 # cargo install-update command for updating installed crates
       bun: # npm-compatible packages installed globally via bun
-      - 'aws-cdk-local'             # cdklocal: wraps aws-cdk CLI to target LocalStack
-      - 'azure-functions-core-tools@4'  # func: Azure Functions CLI (Homebrew tap disabled by GitHub)
+      - 'aws-cdk-local'                # cdklocal: wraps aws-cdk CLI to target LocalStack
+      - 'azure-functions-core-tools@4' # func: Azure Functions CLI (Homebrew tap disabled by GitHub)
       uv: # Python tools installed via uv tool install
-      - 'aws-sam-cli-local'         # samlocal: wraps aws-sam-cli to target LocalStack
+      - 'aws-sam-cli-local'            # samlocal: wraps aws-sam-cli to target LocalStack
 
     # Optional AI packages (ai tag)
     ai:
@@ -149,29 +149,29 @@ packages:
       - 'specstoryai/tap'
       - 'supabase/tap'
       brews:
-      - 'beads'                      # Memory upgrade for your coding agent
-      - 'block-goose-cli'            # Open source, extensible AI agent that goes beyond code suggestions
-      - 'github-mcp-server'          # GitHub Model Context Protocol server for AI tools
-      - 'itspriddle/brews/ical-guy'  # CLI for querying macOS calendar events, outputting JSON
-      - 'postrv/narsil/narsil-mcp'   # MCP server for code analysis and security scanning
-      - 'qwen-code'                  # AI-powered command-line workflow tool for developers
-      - 'specstoryai/tap/specstory'  # Claude Code wrapper that saves conversation history to markdown
-      - 'supabase/tap/supabase'      # Supabase CLI
+      - 'beads'                        # Memory upgrade for your coding agent
+      - 'block-goose-cli'              # Open source, extensible AI agent that goes beyond code suggestions
+      - 'github-mcp-server'            # GitHub Model Context Protocol server for AI tools
+      - 'itspriddle/brews/ical-guy'    # CLI for querying macOS calendar events, outputting JSON
+      - 'postrv/narsil/narsil-mcp'     # MCP server for code analysis and security scanning
+      - 'qwen-code'                    # AI-powered command-line workflow tool for developers
+      - 'specstoryai/tap/specstory'    # Claude Code wrapper that saves conversation history to markdown
+      - 'supabase/tap/supabase'        # Supabase CLI
       bun:
       - '@fission-ai/openspec@latest'  # AI-native system for spec-driven development
       - 'ralph-tui'                    # AI agent loop orchestrator TUI
       casks:
-      - 'block-goose'                # Open source, extensible AI agent that goes beyond code suggestions
-      - 'claude'                     # Anthropic's official Claude AI desktop app
-      - 'manaflow-ai/cmux/cmux'      # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
-      - 'codex'                      # OpenAI's coding agent that runs in your terminal
-      - 'codex-app'                  # OpenAI's Codex desktop app for managing coding agents
+      - 'block-goose'                  # Open source, extensible AI agent that goes beyond code suggestions
+      - 'claude'                       # Anthropic's official Claude AI desktop app
+      - 'manaflow-ai/cmux/cmux'        # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
+      - 'codex'                        # OpenAI's coding agent that runs in your terminal
+      - 'codex-app'                    # OpenAI's Codex desktop app for managing coding agents
       #- 'copilot-cli'
-      - 'copilot-cli@prerelease'     # Brings the power of Copilot coding agent directly to your terminal
-      - 'google-gemini'              # Google's Gemini AI desktop app
-      - 'jan'                        # Offline AI chat tool
-      - 'lm-studio'                  # Discover, download, and run local LLMs
-      - 'ollama-app'                 # Get up and running with large language models locally
+      - 'copilot-cli@prerelease'       # Brings the power of Copilot coding agent directly to your terminal
+      - 'google-gemini'                # Google's Gemini AI desktop app
+      - 'jan'                          # Offline AI chat tool
+      - 'lm-studio'                    # Discover, download, and run local LLMs
+      - 'ollama-app'                   # Get up and running with large language models locally
       uv:
       - "basic-memory"
       - "claude-monitor"
@@ -217,7 +217,7 @@ packages:
           - 'claude-code-setup@claude-plugins-official'
           - 'claude-md-management@claude-plugins-official'
           - 'example-skills@anthropic-agent-skills'
-          # - 'fulcrum-skills@viewpoint-tools' # Project/local-only plugin        
+          # - 'fulcrum-skills@viewpoint-tools' # Project/local-only plugin
           - 'ralph-loop@claude-plugins-official'
           - 'superpowers@claude-plugins-official'
         # codex:
@@ -260,7 +260,7 @@ packages:
       - 'microsoft-auto-update'
       - 'microsoft-teams'
       - 'obsidian'
-      - 'postman'                  # API testing and development platform
+      - 'postman'                      # API testing and development platform
       - 'webex'
       - 'whimsical'
       - 'windows-app'
