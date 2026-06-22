@@ -192,12 +192,12 @@ packages:
           - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev'
           - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
           plugins: # Installed via `claude plugins install`
-          - 'atlassian@claude-plugins-official'
-          # - 'aws-core@agent-toolkit-for-aws'
+          # - 'atlassian@claude-plugins-official' # Project/local-only plugin
+          # - 'aws-core@agent-toolkit-for-aws' # Project/local-only plugin
           - 'claude-code-setup@claude-plugins-official'
           - 'claude-md-management@claude-plugins-official'
           - 'example-skills@anthropic-agent-skills'
-          # - 'fulcrum-skills@viewpoint-tools'         
+          # - 'fulcrum-skills@viewpoint-tools' # Project/local-only plugin        
           - 'ralph-loop@claude-plugins-official'
           - 'superpowers@claude-plugins-official'
         # codex:
