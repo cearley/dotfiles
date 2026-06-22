@@ -1,5 +1,18 @@
 packages:
   darwin:
+    trusted:
+    - 'buo/cask-upgrade'           # Tap for upgrading outdated Homebrew Casks with `brew cu` command
+    - 'isen-ng/dotnet-sdk-versions' # Tap for managing multiple .NET SDK versions on macOS
+    - 'itspriddle/brews/ical-guy'  # CLI for querying macOS calendar events, outputting JSON
+    - 'localstack/tap'             # Homebrew tap for LocalStack, a fully functional local AWS cloud stack
+    - 'manaflow-ai/cmux/cmux'      # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
+    - 'microsoft/mssql-release/msodbcsql18' # Microsoft ODBC Driver 18 for SQL Server
+    - 'microsoft/mssql-release/mssql-tools18' # Microsoft SQL Server Command Line Tools (sqlcmd and bcp)
+    - 'oven-sh/bun'                # Required for the oven-sh/bun/bun formula
+    - 'postrv/narsil/narsil-mcp'   # MCP server for code analysis and security scanning
+    - 'qltysh-archive/formulae/codeclimate' # Code quality analysis tool
+    - 'supabase/tap/supabase'      # Supabase CLI
+
     taps:
     - 'isen-ng/dotnet-sdk-versions'
     - 'buo/cask-upgrade'
@@ -58,8 +71,9 @@ packages:
       - 'jump-desktop-connect'
       - 'logi-options+'
       - 'onyx'
-      - 'powerphotos'              # Mac app for managing duplicate photos across libraries
+      - 'powerphotos'               # Mac app for managing duplicate photos across libraries
       - 'slack'
+      - 'utm'                       # Virtual machine app for running other operating systems on Apple Silicon Macs
       mas:
       - '"ASUS Device Discovery", id: 995124504'
       - '"ASUS Firmware Restoration", id: 1020519014'
@@ -71,6 +85,7 @@ packages:
     dev:
       taps:
       - 'localstack/tap'
+      - 'qltysh-archive/formulae'
       brews:
       - 'ack'
       - 'act'
@@ -97,7 +112,8 @@ packages:
       - 'nuget'
       - 'pipx'
       - 'pkgconf'
-      - 'shellcheck'               # Static analysis tool for shell scripts
+      - 'qltysh-archive/formulae/codeclimate'  # Code quality analysis tool
+      - 'shellcheck'                # Static analysis tool for shell scripts
       - 'snyk-cli'
       - 'sqlite'
       casks:
@@ -118,32 +134,36 @@ packages:
       - "java 8.0.462-zulu"
       - "liquibase"
       cargo: # Rust crates via cargo install (requires dev tag for Rust toolchain)
-      - 'cargo-update'             # cargo install-update command for updating installed crates
+      - 'cargo-update'              # cargo install-update command for updating installed crates
       bun: # npm-compatible packages installed globally via bun
-      - 'aws-cdk-local'            # cdklocal: wraps aws-cdk CLI to target LocalStack
+      - 'aws-cdk-local'             # cdklocal: wraps aws-cdk CLI to target LocalStack
       - 'azure-functions-core-tools@4'  # func: Azure Functions CLI (Homebrew tap disabled by GitHub)
       uv: # Python tools installed via uv tool install
-      - 'aws-sam-cli-local'        # samlocal: wraps aws-sam-cli to target LocalStack
+      - 'aws-sam-cli-local'         # samlocal: wraps aws-sam-cli to target LocalStack
 
     # Optional AI packages (ai tag)
     ai:
       taps:
       - 'manaflow-ai/cmux'
+      - 'postrv/narsil'
       - 'specstoryai/tap'
+      - 'supabase/tap'
       brews:
       - 'beads'                      # Memory upgrade for your coding agent
       - 'block-goose-cli'            # Open source, extensible AI agent that goes beyond code suggestions
       - 'github-mcp-server'          # GitHub Model Context Protocol server for AI tools
       - 'itspriddle/brews/ical-guy'  # CLI for querying macOS calendar events, outputting JSON
+      - 'postrv/narsil/narsil-mcp'   # MCP server for code analysis and security scanning
       - 'qwen-code'                  # AI-powered command-line workflow tool for developers
       - 'specstoryai/tap/specstory'  # Claude Code wrapper that saves conversation history to markdown
+      - 'supabase/tap/supabase'      # Supabase CLI
       bun:
       - '@fission-ai/openspec@latest'  # AI-native system for spec-driven development
       - 'ralph-tui'                    # AI agent loop orchestrator TUI
       casks:
       - 'block-goose'                # Open source, extensible AI agent that goes beyond code suggestions
       - 'claude'                     # Anthropic's official Claude AI desktop app
-      - 'cmux'                       # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
+      - 'manaflow-ai/cmux/cmux'      # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
       - 'codex'                      # OpenAI's coding agent that runs in your terminal
       - 'codex-app'                  # OpenAI's Codex desktop app for managing coding agents
       #- 'copilot-cli'
@@ -224,7 +244,10 @@ packages:
     # Optional work packages (work tag)
     work:
       taps:
+      - 'microsoft/mssql-release'
       brews:
+      - 'microsoft/mssql-release/msodbcsql18'
+      - 'microsoft/mssql-release/mssql-tools18'
       - 'vips'
       casks:
       - 'amazon-workspaces'

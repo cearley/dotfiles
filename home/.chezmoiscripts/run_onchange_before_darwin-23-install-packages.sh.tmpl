@@ -43,7 +43,7 @@ brew update
 brew_exit=0
 brew bundle --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
 {{- range .packages.darwin.taps }}
-tap {{ . | quote }}
+tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{- end }}
 
 {{- $categories := prepend .tag_choices "core" }}
@@ -54,19 +54,19 @@ tap {{ . | quote }}
 # Install {{ $category }} packages
     {{- if and (hasKey $categoryData "taps") $categoryData.taps }}
 {{ range $categoryData.taps -}}
-tap {{ . | quote }}
+tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{ end -}}
     {{- end }}
 
     {{- if and (hasKey $categoryData "brews") $categoryData.brews }}
 {{ range $categoryData.brews -}}
-brew {{ . | quote }}
+brew {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{ end -}}
     {{- end }}
 
     {{- if and (hasKey $categoryData "casks") $categoryData.casks }}
 {{ range $categoryData.casks -}}
-cask {{ . | quote }}
+cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{ end -}}
     {{- end }}
 
