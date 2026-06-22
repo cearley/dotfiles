@@ -10,7 +10,7 @@ packages:
     - 'microsoft/mssql-release/mssql-tools18' # Microsoft SQL Server Command Line Tools (sqlcmd and bcp)
     - 'oven-sh/bun'                    # Required for the oven-sh/bun/bun formula
     - 'postrv/narsil/narsil-mcp'       # MCP server for code analysis and security scanning
-    - 'qltysh-archive/formulae/codeclimate' # Code quality analysis tool
+    - 'qltysh/tap'                     # Homebrew tap for Qlty CLI (successor to Code Climate)
     - 'supabase/tap/supabase'          # Supabase CLI
 
     taps:
@@ -85,7 +85,7 @@ packages:
     dev:
       taps:
       - 'localstack/tap'
-      - 'qltysh-archive/formulae'
+      - 'qltysh/tap'                   # Qlty CLI (successor to Code Climate)
       brews:
       - 'ack'
       - 'act'
@@ -112,7 +112,7 @@ packages:
       - 'nuget'
       - 'pipx'
       - 'pkgconf'
-      - 'qltysh-archive/formulae/codeclimate' # Code quality analysis tool
+      - 'qltysh/tap/qlty'              # Code quality CLI: linting, formatting, security (successor to Code Climate)
       - 'shellcheck'                   # Static analysis tool for shell scripts
       - 'snyk-cli'
       - 'sqlite'
@@ -144,6 +144,7 @@ packages:
     # Optional AI packages (ai tag)
     ai:
       taps:
+      - 'itspriddle/brews'
       - 'manaflow-ai/cmux'
       - 'postrv/narsil'
       - 'specstoryai/tap'
