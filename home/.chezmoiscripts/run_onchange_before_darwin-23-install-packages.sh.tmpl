@@ -25,6 +25,7 @@ print_message "warning" "Not signed into iCloud - Mac App Store packages will be
 # tap is not yet registered.
 print_message "info" "Adding Homebrew taps..."
 {{- range .packages.darwin.taps }}
+{{ if has . $.packages.darwin.trusted }}brew trust {{ . | quote }} && {{ end -}}
 brew tap {{ . | quote }}
 {{- end }}
 {{- $categories := prepend .tag_choices "core" }}
@@ -33,6 +34,7 @@ brew tap {{ . | quote }}
   {{- if or (eq $category "core") (has $category $.tags) }}
     {{- if and (hasKey $categoryData "taps") $categoryData.taps }}
 {{- range $categoryData.taps }}
+{{ if has . $.packages.darwin.trusted }}brew trust {{ . | quote }} && {{ end -}}
 brew tap {{ . | quote }}
 {{- end }}
     {{- end }}
@@ -40,6 +42,25 @@ brew tap {{ . | quote }}
 {{- end }}
 
 brew update
+
+{{- $allEnv := dict }}
+{{- range $category := $categories }}
+  {{- $categoryData := index $.packages.darwin $category }}
+  {{- if or (eq $category "core") (has $category $.tags) }}
+    {{- if hasKey $categoryData "brew_env" }}
+      {{- range $k, $v := $categoryData.brew_env }}
+        {{- $allEnv = set $allEnv $k $v }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- if $allEnv }}
+# Export environment variables required for package installation
+  {{- range $k, $v := $allEnv }}
+export {{ $k }}={{ $v | quote }}
+  {{- end }}
+{{- end }}
+
 brew_exit=0
 brew bundle --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
 {{- range .packages.darwin.taps }}

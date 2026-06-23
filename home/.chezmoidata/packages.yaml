@@ -11,6 +11,7 @@ packages:
     - 'oven-sh/bun'                    # Required for the oven-sh/bun/bun formula
     - 'postrv/narsil/narsil-mcp'       # MCP server for code analysis and security scanning
     - 'qltysh/tap'                     # Homebrew tap for Qlty CLI (successor to Code Climate)
+    - 'specstoryai/tap/specstory'      # A Claude Code wrapper that saves conversation history to markdown
     - 'supabase/tap/supabase'          # Supabase CLI
 
     taps:
@@ -246,6 +247,8 @@ packages:
     work:
       taps:
       - 'microsoft/mssql-release'
+      brew_env:
+        HOMEBREW_ACCEPT_EULA: "Y"  # Required for msodbcsql18 and mssql-tools18
       brews:
       - 'microsoft/mssql-release/msodbcsql18'
       - 'microsoft/mssql-release/mssql-tools18'
