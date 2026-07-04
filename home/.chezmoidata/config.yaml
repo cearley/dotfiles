@@ -174,6 +174,12 @@ Mac Studio:
           keep: "5"
       ignores:
         - "(?d).DS_Store"
+  cloudflare_tunnels:
+    - name: ow-dev
+      id: f2ab9336-44f9-4bfc-8c2e-5696fc9bc2e4
+      hostname: ow-dev.craigearley.software
+      service: http://localhost:8000
+      keepassxc_entry: "Cloudflare Tunnel (ow-dev)"
 Mac mini:
   brewfile: mac-mini-brewfile
   keepassxc_entries:

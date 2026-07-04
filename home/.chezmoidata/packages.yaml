@@ -96,6 +96,7 @@ packages:
       - 'bats-core'
       - 'cfn-lint'
       - 'checkmake'
+      - 'cloudflared'
       - 'dagger'
       - 'frum'
       - 'gh'

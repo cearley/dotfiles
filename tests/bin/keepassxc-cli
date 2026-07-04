@@ -25,6 +25,20 @@ lookup() {
     echo "${result:-mock:${entry}:${attr}}"
 }
 
+handle_attachment_export_args() {
+    # chezmoi sends: attachment-export --quiet <entry> <attachment> <output-path>
+    # Positional args (after flags) are entry, attachment name, output path.
+    local positional=()
+    for arg in "$@"; do
+        case "$arg" in
+            --quiet|-q) ;;
+            *) positional+=("$arg") ;;
+        esac
+    done
+    local entry="${positional[0]:-}" attachment="${positional[1]:-}" outpath="${positional[2]:-}"
+    lookup "$entry" "$attachment" > "$outpath"
+}
+
 handle_show_args() {
     # Parses show flags and returns the looked-up value.
     # Supports both direct mode (database path as first positional) and open-session mode.
@@ -70,6 +84,10 @@ run_open_session() {
             show)
                 value=$(handle_show_args "${tokens[@]:1}")
                 printf "%s\n> " "$value"
+                ;;
+            attachment-export)
+                handle_attachment_export_args "${tokens[@]:1}"
+                printf "> "
                 ;;
             exit|quit)
                 return 0

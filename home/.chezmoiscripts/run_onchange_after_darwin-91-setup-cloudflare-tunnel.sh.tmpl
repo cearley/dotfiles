@@ -1,0 +1,114 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+# Chezmoi script to restore Cloudflare Tunnel system configuration and LaunchDaemon.
+# Runs whenever cloudflare_tunnels machine config changes, after chezmoi applies other changes on macOS.
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools cloudflared; then
+    exit 1
+fi
+
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $tunnels := index $settings "cloudflare_tunnels" }}
+{{- if not $tunnels }}
+print_message "skip" "No cloudflare_tunnels configured for this machine"
+exit 0
+{{- end }}
+
+CONFIG_DIR="/usr/local/etc/cloudflared"
+CONFIG_FILE="$CONFIG_DIR/config.yml"
+PLIST_FILE="/Library/LaunchDaemons/com.cloudflare.cloudflared.plist"
+CLOUDFLARED_BIN="$(command -v cloudflared)"
+
+render_plist() {
+    local out="$1"
+    {
+        printf '<?xml version="1.0" encoding="UTF-8"?>\n'
+        printf '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n'
+        printf '<plist version="1.0">\n'
+        printf '\t<dict>\n'
+        printf '\t\t<key>Label</key>\n'
+        printf '\t\t<string>com.cloudflare.cloudflared</string>\n'
+        printf '\t\t<key>ProgramArguments</key>\n'
+        printf '\t\t<array>\n'
+        printf '\t\t\t<string>%s</string>\n' "$CLOUDFLARED_BIN"
+        printf '\t\t\t<string>tunnel</string>\n'
+        printf '\t\t\t<string>run</string>\n'
+        printf '\t\t</array>\n'
+        printf '\t\t<key>RunAtLoad</key>\n'
+        printf '\t\t<true/>\n'
+        printf '\t\t<key>StandardOutPath</key>\n'
+        printf '\t\t<string>/Library/Logs/com.cloudflare.cloudflared.out.log</string>\n'
+        printf '\t\t<key>StandardErrorPath</key>\n'
+        printf '\t\t<string>/Library/Logs/com.cloudflare.cloudflared.err.log</string>\n'
+        printf '\t\t<key>KeepAlive</key>\n'
+        printf '\t\t<dict>\n'
+        printf '\t\t\t<key>SuccessfulExit</key>\n'
+        printf '\t\t\t<false/>\n'
+        printf '\t\t</dict>\n'
+        printf '\t\t<key>ThrottleInterval</key>\n'
+        printf '\t\t<integer>5</integer>\n'
+        printf '\t</dict>\n'
+        printf '</plist>\n'
+    } > "$out"
+}
+
+{{ range $tunnels }}
+{{- $name := index . "name" }}
+{{- $id := index . "id" }}
+{{- $hostname := index . "hostname" }}
+{{- $service := index . "service" }}
+{{- $kpEntry := index . "keepassxc_entry" }}
+
+# ----- Tunnel: {{ $name }} ({{ $id }}) -----
+CERT_FILE="$HOME/.cloudflared/cert.pem"
+CREDS_FILE="$HOME/.cloudflared/{{ $id }}.json"
+
+if [[ ! -f "$CERT_FILE" || ! -f "$CREDS_FILE" ]]; then
+    print_message "warning" "Secrets missing for tunnel '{{ $name }}' — populate KeePassXC entry '{{ $kpEntry }}' (attachments cert.pem and {{ $id }}.json), then re-run chezmoi apply"
+else
+    NEW_CONFIG="$(mktemp)"
+    cat > "$NEW_CONFIG" <<CONFIGEOF
+tunnel: {{ $id }}
+credentials-file: $CREDS_FILE
+
+ingress:
+  - hostname: {{ $hostname }}
+    service: {{ $service }}
+  - service: http_status:404
+CONFIGEOF
+
+    NEW_PLIST="$(mktemp)"
+    render_plist "$NEW_PLIST"
+
+    file_changed=false
+
+    if [[ ! -f "$CONFIG_FILE" ]] || ! diff -q "$NEW_CONFIG" "$CONFIG_FILE" > /dev/null 2>&1; then
+        print_message "info" "Writing $CONFIG_FILE"
+        sudo mkdir -p "$CONFIG_DIR"
+        sudo tee "$CONFIG_FILE" < "$NEW_CONFIG" > /dev/null
+        file_changed=true
+    fi
+
+    if [[ ! -f "$PLIST_FILE" ]] || ! diff -q "$NEW_PLIST" "$PLIST_FILE" > /dev/null 2>&1; then
+        print_message "info" "Writing $PLIST_FILE"
+        sudo tee "$PLIST_FILE" < "$NEW_PLIST" > /dev/null
+        file_changed=true
+    fi
+
+    rm -f "$NEW_CONFIG" "$NEW_PLIST"
+
+    if [[ "$file_changed" == true ]]; then
+        print_message "info" "Reloading cloudflared LaunchDaemon"
+        sudo launchctl bootout system/com.cloudflare.cloudflared 2>/dev/null || true
+        sudo launchctl bootstrap system "$PLIST_FILE"
+    fi
+
+    print_message "success" "Tunnel '{{ $name }}' ready at https://{{ $hostname }}"
+fi
+{{ end }}
+{{ end -}}

@@ -1,0 +1,5 @@
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $tunnels := index $settings "cloudflare_tunnels" -}}
+{{- if and $tunnels .has_keepassxc_db -}}
+{{ keepassxcAttachment "Cloudflare Tunnel (ow-dev)" "f2ab9336-44f9-4bfc-8c2e-5696fc9bc2e4.json" -}}
+{{- end -}}
