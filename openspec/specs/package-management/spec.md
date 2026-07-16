@@ -402,8 +402,6 @@ The system SHALL provide Claude Code with proper configuration and state managem
 - **AND** the `claude` command SHALL be immediately accessible
 - **AND** SHALL work without requiring shell restart
 
-## UV Tool Management
-
 ### Requirement: UV Installation
 The `uv` package manager SHALL be installed before UV tools are installed.
 
@@ -471,8 +469,6 @@ UV tools SHALL be organized within the same tag categories as Homebrew packages 
 - **WHEN** a tool is essential for basic operations
 - **THEN** it SHALL be placed under the `core` tag's `uv` list in `packages.yaml`
 
-## Bun Global Package Management
-
 ### Requirement: Bun Global Package Definition
 Bun global packages SHALL be defined within tag categories in `home/.chezmoidata/packages.yaml` using the `bun` key.
 
@@ -528,8 +524,6 @@ Bun packages SHALL be organized within the same tag categories as other package 
 #### Scenario: Core package category
 - **WHEN** a package is essential for basic operations
 - **THEN** it SHALL be placed under the `core` tag's `bun` list in `packages.yaml`
-
-## Cargo Package Management
 
 ### Requirement: Cargo Package Definition
 Cargo packages SHALL be defined within tag categories in `home/.chezmoidata/packages.yaml` using the `cargo` key.
@@ -602,8 +596,6 @@ Cargo packages SHALL be organized within the same tag categories as other packag
 #### Scenario: Development package category
 - **WHEN** a package is a Rust development tool
 - **THEN** it SHALL be placed under the `dev` tag's `cargo` list in `packages.yaml`
-
-## SDKMAN SDK Management
 
 ### Requirement: SDKMAN Installation
 SDKMAN SHALL be installed before SDKs are installed, and only on machines with the `dev` tag. Because macOS ships Bash 3.2 and SDKMAN's installer requires Bash 4+, a modern Bash SHALL be provisioned inline before invoking the SDKMAN installer.
@@ -693,8 +685,6 @@ SDKs SHALL be defined under the `dev` tag's `sdkman` key in `packages.yaml`.
 - **WHEN** JVM build tools are needed (Liquibase, Gradle, Maven)
 - **THEN** they SHALL be placed under `packages.darwin.dev.sdkman` in `packages.yaml`
 
-## Script Execution Order
-
 ### Requirement: Package Manager Installation Order
 Package managers SHALL be installed before their respective packages, following the numbered script execution sequence.
 
@@ -738,8 +728,6 @@ The complete package installation sequence SHALL follow this order:
   6. Position 26: Install global packages via Bun
   7. Position 28: Install additional machine-specific Homebrew packages
   8. Position 27 (after apply): Install Rust crates via Cargo (if `dev` tag)
-
-## Claude Code Agent Configuration
 
 ### Requirement: AI Coding Agent Configuration Namespace
 The `packages.darwin.ai` section SHALL provide an `agents` sub-namespace for per-coding-agent configuration. Each direct child of `agents` SHALL be a coding-agent identifier (e.g. `claude_code`, `codex`, `gemini`), and its value SHALL be a mapping of agent-specific configuration keys to lists.
