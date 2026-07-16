@@ -191,6 +191,7 @@ packages:
           - 'basic-memory -s user -- uvx --python 3.12 basic-memory mcp'
           - 'fast-filesystem -e CREATE_BACKUP_FILES="true" -- npx -y fast-filesystem-mcp'
           - 'localstack-mcp-server -- mcp-env-wrapper localstack-mcp-server npx -y @localstack/localstack-mcp-server'
+          - 'openspec -- npx openspec-mcp --with-dashboard'
           - 'playwright npx @playwright/mcp@latest'
           - 'safari -- npx safari-mcp'
           skills: # Installed via `npx skills add <args> -g`
