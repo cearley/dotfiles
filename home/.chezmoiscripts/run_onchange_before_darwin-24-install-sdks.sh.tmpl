@@ -5,6 +5,11 @@ set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
+if package_layer_should_skip "sdkman"; then
+    print_message "skip" "Skipping SDKMAN package updates for this run"
+    exit 0
+fi
+
 # SDKMAN internals are not set -u compatible (unguarded $ZSH_VERSION, $2, etc.)
 # Suspend nounset for the entire SDKMAN section; -e and pipefail remain active.
 set +u

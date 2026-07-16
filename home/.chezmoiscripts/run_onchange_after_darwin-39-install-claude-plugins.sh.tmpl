@@ -7,6 +7,11 @@ set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
+if package_layer_should_skip "claude"; then
+    print_message "skip" "Skipping Claude Code plugin updates for this run"
+    exit 0
+fi
+
 if ! require_tools claude; then
     exit 1
 fi

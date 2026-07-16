@@ -7,6 +7,11 @@ set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
+if package_layer_should_skip "uv"; then
+    print_message "skip" "Skipping UV self update for this run"
+    exit 0
+fi
+
 if ! require_tools curl; then
     exit 1
 fi

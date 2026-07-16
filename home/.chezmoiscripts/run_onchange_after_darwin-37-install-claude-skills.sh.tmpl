@@ -7,6 +7,11 @@ set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
+if package_layer_should_skip "claude"; then
+    print_message "skip" "Skipping Claude Code skills updates for this run"
+    exit 0
+fi
+
 # Load nvm so npx is available (installed at position 35)
 export NVM_DIR="$HOME/.nvm"
 # shellcheck disable=SC1091

@@ -7,6 +7,11 @@ set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
+if package_layer_should_skip "bun"; then
+    print_message "skip" "Skipping Bun package updates for this run"
+    exit 0
+fi
+
 if ! require_tools bun; then
     exit 1
 fi

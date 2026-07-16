@@ -243,3 +243,92 @@ for_each_claude_env() {
         "$callback_fn" "$env_dir"
     done
 }
+
+# Determine whether a long-running package-update layer should be skipped for
+# this chezmoi apply run. Layers: homebrew, sdkman, uv, bun, cargo, claude.
+# Resolution order: CHEZMOI_SKIP_PACKAGE_UPDATES env var -> per-run cache file
+# (keyed by $PPID, the chezmoi apply process that spawned this script) ->
+# TTY-gated two-step prompt -> default (run everything).
+# Usage: if package_layer_should_skip "homebrew"; then ...; fi
+package_layer_should_skip() {
+    local layer="$1"
+
+    if [ -n "${CHEZMOI_SKIP_PACKAGE_UPDATES:-}" ]; then
+        return 0
+    fi
+
+    local cache_file="${TMPDIR:-/tmp}/chezmoi-package-update-skip.${PPID}"
+    _package_update_skip_load_or_prompt "$cache_file"
+
+    local var_name
+    var_name="SKIP_$(echo "$layer" | tr '[:lower:]' '[:upper:]')"
+    [ "${!var_name:-0}" = "1" ]
+}
+
+# Reuse a fresh (< 1 hour old) cached decision, or resolve and cache a new one.
+_package_update_skip_load_or_prompt() {
+    local cache_file="$1"
+
+    if [ -f "$cache_file" ]; then
+        local mtime now age
+        mtime=$(stat -f %m "$cache_file" 2>/dev/null || echo 0)
+        now=$(date +%s)
+        age=$(( now - mtime ))
+        if [ "$age" -lt 3600 ]; then
+            # shellcheck source=/dev/null
+            source "$cache_file"
+            return 0
+        fi
+    fi
+
+    _package_update_skip_resolve_and_cache "$cache_file"
+}
+
+# Prompt (if a TTY is attached) or default to "run everything", then write the
+# decision to the cache file so subsequent layer scripts in this apply run reuse it.
+_package_update_skip_resolve_and_cache() {
+    local cache_file="$1"
+    local skip_homebrew=0 skip_sdkman=0 skip_uv=0 skip_bun=0 skip_cargo=0 skip_claude=0
+    local skip_all=0
+
+    if [ -t 0 ]; then
+        local skip_reply="" selective_reply="" layer layer_reply
+
+        read -r -p "⏭️  Skip ALL long-running package-update checks this run? (y/N): " skip_reply || skip_reply=""
+        if [[ "$skip_reply" =~ ^[Yy]$ ]]; then
+            skip_all=1
+        else
+            read -r -p "🎯 Selectively skip specific layers instead? (y/N): " selective_reply || selective_reply=""
+            if [[ "$selective_reply" =~ ^[Yy]$ ]]; then
+                for layer in homebrew sdkman uv bun cargo claude; do
+                    layer_reply=""
+                    read -r -p "   Skip ${layer} package updates this run? (y/N): " layer_reply || layer_reply=""
+                    if [[ "$layer_reply" =~ ^[Yy]$ ]]; then
+                        eval "skip_${layer}=1"
+                    fi
+                done
+            fi
+        fi
+    fi
+
+    if [ "$skip_all" = "1" ]; then
+        skip_homebrew=1
+        skip_sdkman=1
+        skip_uv=1
+        skip_bun=1
+        skip_cargo=1
+        skip_claude=1
+    fi
+
+    {
+        echo "SKIP_HOMEBREW=$skip_homebrew"
+        echo "SKIP_SDKMAN=$skip_sdkman"
+        echo "SKIP_UV=$skip_uv"
+        echo "SKIP_BUN=$skip_bun"
+        echo "SKIP_CARGO=$skip_cargo"
+        echo "SKIP_CLAUDE=$skip_claude"
+    } > "$cache_file"
+
+    # shellcheck source=/dev/null
+    source "$cache_file"
+}

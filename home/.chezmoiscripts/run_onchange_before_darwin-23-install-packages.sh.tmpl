@@ -7,6 +7,11 @@ set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
+if package_layer_should_skip "homebrew"; then
+    print_message "skip" "Skipping Homebrew package updates for this run"
+    exit 0
+fi
+
 if ! require_tools brew; then
     exit 1
 fi

@@ -5,6 +5,11 @@ set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
+if package_layer_should_skip "homebrew"; then
+    print_message "skip" "Skipping additional package installation (brewfile) for this run"
+    exit 0
+fi
+
 if ! require_tools brew scutil; then
     exit 1
 fi
