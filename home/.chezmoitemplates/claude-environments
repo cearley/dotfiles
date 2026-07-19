@@ -21,7 +21,10 @@
 # Claude Code environments
 {{- range $name := $envNames }}
 claude-{{ $name }}() {
-    CLAUDE_CONFIG_DIR="$HOME/.claude-{{ $name }}" command claude "$@"
+    (
+        [ -f "$HOME/.config/claude-env/{{ $name }}.env" ] && . "$HOME/.config/claude-env/{{ $name }}.env"
+        CLAUDE_CONFIG_DIR="$HOME/.claude-{{ $name }}" exec command claude "$@"
+    )
 }
 {{- end }}
 # Switch the active Claude environment for this shell session.
