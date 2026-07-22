@@ -68,9 +68,9 @@ Prefixes in source filenames control how chezmoi processes them:
 - `run_onchange_before_darwin-20-install-sdkman.sh.tmpl` - Re-runs when sdkman config changes
 - `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl` - Re-runs on changes
 
-**Script execution order:**
+**Script execution order** (filenames in `home/.chezmoiscripts/` are authoritative; each position number must be unique):
 - **05**: Rosetta 2 | **10**: Rust | **20**: SDKMAN | **21**: UV manager | **23**: Homebrew packages | **24**: SDKMAN SDKs | **25**: UV tools | **26**: Bun packages | **27** (`run_onchange_before`, `dev` tag): Cargo crates | **28**: Machine-specific Brewfile
-- **35**: nvm | **36**: Claude Code (`ai` tag) | **37**: Claude Code skills (`ai` tag, `run_onchange_after`) | **38**: Claude Code MCP servers (`ai` tag) | **39**: Claude Code plugins (`ai` tag) | **40**: Claude LaunchAgent (`ai` tag, Darwin)
+- **33**: Skills-to-symlinks transition (`ai` tag, `run_onchange_before`) | **35**: nvm | **36**: Claude Code (`ai` tag) | **37**: Claude Code skills (`ai` tag, `run_onchange_after`) | **38**: Claude Code MCP servers (`ai` tag) | **39**: Claude Code plugins (`ai` tag) | **40**: Claude LaunchAgent (`ai` tag, Darwin) | **41**: SpecStory patched build (`ai` tag) | **42**: freshbooks-mcp-server build (`ai`+`dev` tags, needs nvm from 35)
 - **45**: GitHub auth | **46**: SSH GitHub setup | **80**: Microsoft Defender | **82**: Global Protect VPN | **83**: Atuin | **85**: System defaults | **90**: Hosts file | **94**: Syncthing folder setup | **95**: Syncthing restart
 
 ### Shared Utilities
