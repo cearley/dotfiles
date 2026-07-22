@@ -12,7 +12,7 @@ if package_layer_should_skip "cargo"; then
     exit 0
 fi
 
-source "$HOME/.cargo/env"
+source "{{ .chezmoi.homeDir -}}/.cargo/env"
 
 if ! require_tools cargo rustup; then
     exit 1
