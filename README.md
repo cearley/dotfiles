@@ -76,7 +76,7 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 - **SDKMAN**: Java/JVM toolchain management (requires `dev` tag)
 - **uv**: Python package and tool management
 - **nvm**: Node.js version management
-- **conda**: Python environment management (Miniforge)
+- **conda**: Python environment management (Miniforge, requires `datascience` tag)
 
 ## Using This Repository
 

@@ -38,6 +38,7 @@ packages:
       - 'neovim'                       # Ambitious Vim-fork focused on extensibility and agility
       - 'oven-sh/bun/bun'              # Fast all-in-one JavaScript runtime, bundler, transpiler and package manager
       - 'pwgen'                        # Password generator
+      - 'python3'                      # Python programming language interpreter
       - 'rclone'                       # Rsync for cloud storage
       - 'tree'                         # Display directories as trees (with optional color/HTML output)
       - 'yq'                           # YAML/JSON/XML processor - like jq but for YAML
@@ -126,7 +127,6 @@ packages:
       - 'google-chrome'
       - 'gitbutler'
       - 'jetbrains-toolbox'
-      - 'miniforge'
       - 'nosql-workbench'
       - 'visual-studio-code'
       mas:
@@ -244,6 +244,7 @@ packages:
       casks:
       - 'basictex'
       - 'cursor'
+      - 'miniforge'
       - 'r-app'
       - 'rstudio'
 

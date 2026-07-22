@@ -63,6 +63,17 @@ alias dotnet64=/usr/local/share/dotnet/x64/dotnet
 
 [ -f "$HOME/.cargo/env" ] && source "$HOME/.cargo/env"
 
+# Enable frum - Ruby version manager written in Rust https://github.com/TaKO8Ki/frum
+command -v frum >/dev/null 2>&1 && eval "$(frum init)"
+
+# Liquibase - Database schema change management tool
+export LIQUIBASE_HOME=/opt/homebrew/opt/liquibase/libexec
+export PATH="$LIQUIBASE_HOME:$PATH"
+
+{{- end }}
+
+{{ if has "datascience" .tags -}}
+
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
 __conda_setup="$('/opt/homebrew/Caskroom/miniforge/base/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
@@ -77,13 +88,6 @@ else
 fi
 unset __conda_setup
 # <<< conda initialize <<<
-
-# Enable frum - Ruby version manager written in Rust https://github.com/TaKO8Ki/frum
-command -v frum >/dev/null 2>&1 && eval "$(frum init)"
-
-# Liquibase - Database schema change management tool
-export LIQUIBASE_HOME=/opt/homebrew/opt/liquibase/libexec
-export PATH="$LIQUIBASE_HOME:$PATH"
 
 {{- end }}
 
