@@ -35,4 +35,4 @@ Surfaced by task 2.6, recorded here so it is not lost: `~/.bash_profile` (chezmo
 
 ## 3. Finalize spec
 
-- [ ] 3.1 Run `openspec archive enrich-claude-env-title --yes` once implementation is verified, to merge the delta spec into `openspec/specs/claude-environments/spec.md`.
+- [x] 3.1 Run `openspec archive enrich-claude-env-title --yes` once implementation is verified, to merge the delta spec into `openspec/specs/claude-environments/spec.md`. (Archiving initially aborted twice: the delta listed "Title reflects suffix only" under `## REMOVED Requirements`, but it is a *scenario* of the `Terminal Title Hook` requirement, not a requirement; and openspec then required every scenario of the current requirement to be carried into the MODIFIED block, to prevent silently dropping documented behavior. Resolved by folding the removal rationale into the requirement prose and carrying all five original scenario headers forward — two of them marked as superseded rather than deleted.)

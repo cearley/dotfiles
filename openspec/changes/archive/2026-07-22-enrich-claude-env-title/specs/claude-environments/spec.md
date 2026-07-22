@@ -5,7 +5,9 @@ The partial SHALL emit an OSC-0 sequence on every prompt, in both zsh and bash, 
 
 Segments SHALL be ordered general to specific (env label, repo, branch, job) and SHALL be joined by a single uniform separator, the middot surrounded by spaces (` · `), so the title reads as one flat hierarchy. The ordering exists so that a truncated tab label retains the segments that identify *which* terminal this is, discarding only the most volatile segment.
 
-#### Scenario: zsh precmd title hook (idle)
+This requirement supersedes two behaviours of its previous form. The title is no longer the bare env suffix (e.g. `personal`), which was ambiguous with a same-named directory and discarded the job/git context the terminal would otherwise show; it is now the structured string above, of which the environment is one segment. The title also no longer clears to an empty string when `CLAUDE_CONFIG_DIR` is unset — the env-label segment is omitted and the remaining segments are still emitted, so an unconfigured shell keeps a useful title rather than falling back to the terminal default. No migration is required in either case.
+
+#### Scenario: zsh precmd title hook
 - **WHEN** the partial is sourced by zsh and no command is currently running
 - **THEN** it SHALL register a `precmd` function that emits an OSC-0 title built from the env label, git context, and the shell name (e.g. `zsh`) as the job segment
 - **AND** SHALL emit a title with the env-label segment omitted when `CLAUDE_CONFIG_DIR` is unset
@@ -15,7 +17,7 @@ Segments SHALL be ordered general to specific (env label, repo, branch, job) and
 - **THEN** it SHALL register a `preexec` function that emits an OSC-0 title built from the env label, git context, and the first word of the about-to-run command as the job segment
 - **AND** the title SHALL update again to the idle form once the command completes and the next prompt is drawn
 
-#### Scenario: bash PROMPT_COMMAND title hook (idle only)
+#### Scenario: bash PROMPT_COMMAND title hook
 - **WHEN** the partial is sourced by bash
 - **THEN** it SHALL append a command to `PROMPT_COMMAND` that emits an OSC-0 title built from the env label, git context, and the literal shell name (`bash`) as the job segment
 - **AND** SHALL preserve any pre-existing `PROMPT_COMMAND` value
@@ -26,6 +28,17 @@ Segments SHALL be ordered general to specific (env label, repo, branch, job) and
 - **THEN** the title's env-label segment SHALL render as `✳ work`
 - **AND** SHALL NOT render as the bare word `work`
 - **AND** the `✳` marker SHALL match the glyph Claude Code itself uses in its OSC-0 title, so shell-set and Claude-set titles read as one family
+
+#### Scenario: Title reflects suffix only
+- **WHEN** `CLAUDE_CONFIG_DIR` is `$HOME/.claude-personal`
+- **THEN** this behaviour SHALL no longer apply — the emitted title SHALL NOT be the bare suffix `personal`
+- **AND** the environment SHALL instead appear as the leading `✳ personal` segment of the structured title
+- **AND** no migration SHALL be required, the structured title being a superset of the old one
+
+#### Scenario: Title clears when env unset
+- **WHEN** `CLAUDE_CONFIG_DIR` is unset between prompts
+- **THEN** this behaviour SHALL no longer apply — the title SHALL NOT be cleared to an empty string
+- **AND** the env-label segment SHALL be omitted while the remaining segments are still emitted, so the shell keeps a useful title instead of falling back to the terminal default
 
 #### Scenario: Git repository and branch included when available (zsh, gitstatus reuse)
 - **WHEN** the shell is zsh, the current directory is inside a git working tree, and Powerlevel10k's gitstatus plugin has already populated `$VCS_STATUS_WORKDIR` and `$VCS_STATUS_LOCAL_BRANCH` for the current prompt
@@ -55,7 +68,7 @@ Segments SHALL be ordered general to specific (env label, repo, branch, job) and
 - **WHEN** `CLAUDE_CONFIG_DIR` is unset and the current directory is not inside a git working tree
 - **THEN** the emitted title SHALL be exactly `<job>` with no leading or trailing separator
 
-#### Scenario: Stand down when the terminal manages its own titles
+#### Scenario: Compatibility with cmux tab labels
 - **WHEN** `$GHOSTTY_SHELL_FEATURES` contains `title` (the terminal's own shell integration is already writing titles every prompt — e.g. inside cmux, which embeds Ghostty)
 - **THEN** the partial SHALL NOT register its `precmd`/`preexec` hooks in zsh, and SHALL NOT append to `PROMPT_COMMAND` in bash
 - **AND** the terminal's native title behavior SHALL be left intact, rather than raced by a second writer whose winner depends on hook ordering
@@ -66,8 +79,3 @@ Segments SHALL be ordered general to specific (env label, repo, branch, job) and
 - **THEN** the partial SHALL register its title hooks as normal
 - **AND** the condition SHALL be evaluated on that feature flag rather than on terminal identity, so disabling the terminal's own title integration hands title management back to this partial
 
-## REMOVED Requirements
-
-### Requirement: Title reflects suffix only
-**Reason**: Superseded by the structured, additive title format above — showing only the bare suffix (e.g. `personal`) was found to be ambiguous with same-named directories and to discard information the terminal would otherwise show by default (foreground job/command, git context).
-**Migration**: No action required; the new title format is a superset that still conveys the environment, now disambiguated as the leading `✳ <label>` segment instead of the bare suffix.
