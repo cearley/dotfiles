@@ -5,18 +5,18 @@
 {{- $claudeDefault := default "" (index $settings "claude_default") -}}
 {{- $envNames := list -}}
 {{- range $entry := (index $settings "claude_envs") -}}
-{{- if not (hasPrefix "~/.claude-" $entry) -}}
-{{- fail (printf "claude_envs: entry %q does not match ~/.claude-<name> convention (must start with ~/.claude-)" $entry) -}}
-{{- end -}}
-{{- $envNames = append $envNames (trimPrefix "~/.claude-" $entry) -}}
+  {{- if not (hasPrefix "~/.claude-" $entry) -}}
+    {{- fail (printf "claude_envs: entry %q does not match ~/.claude-<name> convention (must start with ~/.claude-)" $entry) -}}
+  {{- end -}}
+  {{- $envNames = append $envNames (trimPrefix "~/.claude-" $entry) -}}
 {{- end -}}
 {{- if $claudeDefault -}}
-{{- if not (hasPrefix "claude-" $claudeDefault) -}}
-{{- fail (printf "claude_default: %q must use the \"claude-<name>\" format (e.g. \"claude-work\")" $claudeDefault) -}}
-{{- end -}}
-{{- if not (has (trimPrefix "claude-" $claudeDefault) $envNames) -}}
-{{- fail (printf "claude_default: %q is not a valid environment name; derived names from claude_envs: %v" $claudeDefault $envNames) -}}
-{{- end -}}
+  {{- if not (hasPrefix "claude-" $claudeDefault) -}}
+    {{- fail (printf "claude_default: %q must use the \"claude-<name>\" format (e.g. \"claude-work\")" $claudeDefault) -}}
+  {{- end -}}
+  {{- if not (has (trimPrefix "claude-" $claudeDefault) $envNames) -}}
+    {{- fail (printf "claude_default: %q is not a valid environment name; derived names from claude_envs: %v" $claudeDefault $envNames) -}}
+  {{- end -}}
 {{- end -}}
 # Claude Code environments
 {{- range $name := $envNames }}
@@ -31,22 +31,18 @@ claude-{{ $name }}() {
 # Usage: claude-env [{{ join "|" $envNames }}]  (no args = show current)
 claude-env() {
     case "$1" in
-{{- if $envNames }}
+        {{- if $envNames }}
         {{ join "|" $envNames }})
             export CLAUDE_CONFIG_DIR="$HOME/.claude-$1"
             if [ -n "$ZSH_VERSION" ]; then
                 command -v p10k >/dev/null 2>&1 && p10k reload
             fi
             ;;
-{{- end }}
+        {{- end }}
         "")
-            if [ -n "$CLAUDE_CONFIG_DIR" ]; then
-                local _s="${CLAUDE_CONFIG_DIR##*/}"
-                _s="${_s#.}"
-                echo "${_s#claude-}"
-            else
-                echo "(none)"
-            fi
+            local REPLY
+            _claude_env_name
+            echo "${REPLY:-(none)}"
             ;;
         *)
             echo "Usage: claude-env [{{ join "|" $envNames }}]" >&2
@@ -59,66 +55,116 @@ export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
 {{- end }}
 {{- $projectPaths := list "$HOME/.claude/projects" -}}
 {{- range $name := $envNames -}}
-{{- $projectPaths = append $projectPaths (printf "$HOME/.claude-%s/projects" $name) -}}
+  {{- $projectPaths = append $projectPaths (printf "$HOME/.claude-%s/projects" $name) -}}
 {{- end }}
 export SESSION_INDEX_PROJECTS="{{ join ":" $projectPaths }}"
 # SpecStory https://specstory.com/specstory-cli
-claude-spec() {
-    specstory run claude --no-cloud-sync "$@"
-}
-{{- range $name := $envNames }}
-claude-{{ $name }}-spec() {
-    CLAUDE_CONFIG_DIR="$HOME/.claude-{{ $name }}" specstory run claude --no-cloud-sync "$@"
+{{- range $tool := list "claude" "codex" "gemini" }}
+{{ $tool }}-spec() {
+    specstory run {{ $tool }} --no-cloud-sync "$@"
 }
 {{- end }}
-codex-spec() {
-    specstory run codex --no-cloud-sync "$@"
+{{- range $name := $envNames }}
+claude-{{ $name }}-spec() {
+    CLAUDE_CONFIG_DIR="$HOME/.claude-{{ $name }}" claude-spec "$@"
 }
-gemini-spec() {
-    specstory run gemini --no-cloud-sync "$@"
-}
+{{- end }}
 # OpenSpecUI
 alias openspecui='npx openspecui@latest'
 
-# Sets the terminal window/tab title (OSC-2) to the active Claude env suffix.
-# See openspec/specs/claude-environments/spec.md for requirements.
-_claude_env_set_title() {
-    if [ -n "${CLAUDE_CONFIG_DIR}" ]; then
-        local suffix="${CLAUDE_CONFIG_DIR##*/}"
-        suffix="${suffix#.}"
-        local label="${suffix#claude-}"
-        printf '\033]2;%s\007' "$label"
+# Sets REPLY to the active environment name (e.g. "personal"), empty if none.
+# Callers MUST declare `local REPLY`: the bash `read` builtin stores into the global
+# REPLY, so an undeclared caller would clobber it from PROMPT_COMMAND. Sets a variable
+# rather than echoing to avoid a subshell fork on every prompt.
+_claude_env_name() {
+    REPLY="${CLAUDE_CONFIG_DIR##*/}"
+    REPLY="${REPLY#.}"
+    REPLY="${REPLY#claude-}"
+}
+
+# Sets REPLY to "<repo>" or "<repo> · <branch>", empty when not in a work tree.
+_claude_env_git_context() {
+    local repo branch
+    REPLY=""
+    if [ -n "$ZSH_VERSION" ] && [ -n "${VCS_STATUS_WORKDIR}" ]; then
+        # Reuse gitstatus data already computed by the p10k vcs segment — no git forks.
+        repo="${VCS_STATUS_WORKDIR##*/}"
+        branch="${VCS_STATUS_LOCAL_BRANCH}"
     else
-        printf '\033]2;\007'
+        repo=$(git rev-parse --show-toplevel 2>/dev/null) || return
+        repo="${repo##*/}"
+        branch=$(git branch --show-current 2>/dev/null)
     fi
+    REPLY="$repo${branch:+ · $branch}"
+}
+
+# Emits the terminal title: ✳ <label> · <repo> · <branch> · <job>, ordered general ->
+# specific, omitting any unavailable segment. The ${title:+...} guard adds a separator
+# only when something precedes it, making a leading/trailing/doubled " · " impossible.
+# OSC 0 sets the icon name as well as the window title (OSC 2 sets only the latter),
+# and is what Claude Code emits. Rationale: openspec/specs/claude-environments/spec.md
+_claude_env_build_title() {
+    local job="$1" title="" REPLY
+    _claude_env_name
+    [ -n "$REPLY" ] && title="✳ $REPLY"
+    _claude_env_git_context
+    [ -n "$REPLY" ] && title="${title:+$title · }$REPLY"
+    [ -n "$job" ] && title="${title:+$title · }$job"
+    printf '\033]0;%s\007' "$title"
+}
+
+# True when the terminal runs its own shell integration that writes a title every
+# prompt (cmux embeds Ghostty, which does). This partial then registers no hooks at
+# all, rather than racing a second writer whose winner depends on hook ordering.
+# Tests the feature flag, not the terminal, so disabling that integration hands title
+# management back here — do not reduce this to a $TERM check.
+_claude_env_titles_are_managed() {
+    case "${GHOSTTY_SHELL_FEATURES-}" in
+        *title*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+_claude_env_precmd() {
+    _claude_env_build_title "zsh"
+}
+
+_claude_env_preexec() {
+    _claude_env_build_title "${1%% *}"
 }
 
 if [ -n "$ZSH_VERSION" ]; then
     # p10k user-defined segment — see openspec/specs/claude-environments/spec.md
     prompt_claude_env() {
-        [ -z "${CLAUDE_CONFIG_DIR}" ] && return
-        local suffix="${CLAUDE_CONFIG_DIR##*/}"
-        suffix="${suffix#.}"
-        local label="${suffix#claude-}"
-        local color
+        local color REPLY
+        _claude_env_name
+        [ -n "$REPLY" ] || return
+        local label="$REPLY"
         case "$label" in
-{{- range $name, $c := $colors }}
+            {{- range $name, $c := $colors }}
             {{ $name }}) color={{ $c }} ;;
-{{- end }}
+            {{- end }}
             *) color=244 ;;
         esac
-        p10k segment -f $color -t "$label"
+        # nf-md-asterisk (U+F06C4), not the ✳ (U+2733) used in the window title: this
+        # renders in the terminal grid font, where U+2733 is missing from many installed
+        # faces, whereas PUA icons are guaranteed by nerdfont-v3. Passed via -i so
+        # placement follows POWERLEVEL9K_ICON_BEFORE_CONTENT like the other segments.
+        p10k segment -f $color -i '󰛄' -t "$label"
     }
 
     instant_prompt_claude_env() {
         prompt_claude_env
     }
 
-    autoload -Uz add-zsh-hook
-    add-zsh-hook precmd _claude_env_set_title
+    if ! _claude_env_titles_are_managed; then
+        autoload -Uz add-zsh-hook
+        add-zsh-hook precmd _claude_env_precmd
+        add-zsh-hook preexec _claude_env_preexec
+    fi
 fi
 
-if [ -n "$BASH_VERSION" ]; then
-    PROMPT_COMMAND="_claude_env_set_title${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
+if [ -n "$BASH_VERSION" ] && ! _claude_env_titles_are_managed; then
+    PROMPT_COMMAND="_claude_env_build_title bash${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
 fi
 {{- end -}}
