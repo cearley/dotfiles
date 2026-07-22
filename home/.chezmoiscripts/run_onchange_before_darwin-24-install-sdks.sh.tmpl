@@ -28,17 +28,12 @@ fi
 print_message "info" "Installing packages using SDKMAN!..."
 # Get the latest list of available SDKs
 sdk update
-{{- $categories := prepend .tag_choices "core" }}
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if or (eq $category "core") (has $category $.tags) }}
-    {{- if and (hasKey $categoryData "sdkman") $categoryData.sdkman }}
-# Install {{ $category }} SDKs
-{{ range $categoryData.sdkman -}}
+{{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "sdkman") .) | fromJson }}
+{{- range $groups }}
+# Install {{ .category }} SDKs
+{{ range .items -}}
 sdk install {{ . }}
 {{ end -}}
-    {{- end }}
-  {{- end }}
 {{- end }}
 
 set -u

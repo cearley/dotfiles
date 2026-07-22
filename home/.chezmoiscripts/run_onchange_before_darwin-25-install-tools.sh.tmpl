@@ -19,17 +19,12 @@ fi
 print_message "info" "Installing tools using uv..."
 # Upgrade all existing tools first
 uv tool update --all
-{{- $categories := prepend .tag_choices "core" }}
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if or (eq $category "core") (has $category $.tags) }}
-    {{- if and (hasKey $categoryData "uv") $categoryData.uv }}
-# Install {{ $category }} tools
-{{ range $categoryData.uv -}}
+{{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "uv") .) | fromJson }}
+{{- range $groups }}
+# Install {{ .category }} tools
+{{ range .items -}}
 uv tool install {{ . }}
 {{ end -}}
-    {{- end }}
-  {{- end }}
 {{- end }}
 
 {{ end -}}

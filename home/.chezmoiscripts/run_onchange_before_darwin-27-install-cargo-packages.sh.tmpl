@@ -25,17 +25,12 @@ print_message "info" "Installing cargo packages..."
 # Bulk update all installed cargo packages first
 cargo install cargo-update
 cargo install-update -a
-{{- $categories := .tag_choices }}
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if has $category $.tags }}
-    {{- if and (hasKey $categoryData "cargo") $categoryData.cargo }}
-# Install {{ $category }} cargo packages
-{{ range $categoryData.cargo -}}
+{{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "cargo" "includeCore" false) .) | fromJson }}
+{{- range $groups }}
+# Install {{ .category }} cargo packages
+{{ range .items -}}
 cargo install {{ . }}
 {{ end -}}
-    {{- end }}
-  {{- end }}
 {{- end }}
 
 print_message "success" "Cargo packages installed."

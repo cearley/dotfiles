@@ -19,17 +19,12 @@ fi
 print_message "info" "Installing global packages using bun..."
 # Update outdated dependencies first
 bun update -g
-{{- $categories := prepend .tag_choices "core" }}
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if or (eq $category "core") (has $category $.tags) }}
-    {{- if and (hasKey $categoryData "bun") $categoryData.bun }}
-# Install {{ $category }} bun packages
-{{ range $categoryData.bun -}}
+{{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "bun") .) | fromJson }}
+{{- range $groups }}
+# Install {{ .category }} bun packages
+{{ range .items -}}
 bun add -g {{ . }}
 {{ end -}}
-    {{- end }}
-  {{- end }}
 {{- end }}
 
 {{ end -}}

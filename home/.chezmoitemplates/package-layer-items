@@ -1,0 +1,56 @@
+{{- /* Returns eligible package-layer items grouped by category, given a packages.yaml key.
+
+     Resolves which categories under `.packages.darwin` contribute items for a
+     given key (e.g. "bun", "cargo", "brews"), based on the machine's tags.
+     Category iteration order is core (if included) followed by .tag_choices
+     order, matching packages.yaml declaration order.
+
+     Params (merge with the chezmoi context before calling):
+       key:         packages.yaml key to resolve (e.g. "bun", "uv", "sdkman",
+                    "cargo", "taps", "brews", "casks", "mas", "brew_env")
+       includeCore: optional, default true. When false, iterates only
+                    .tag_choices and requires the category to be in .tags (no
+                    core prepend) — used by layers with no core packages
+                    (e.g. cargo).
+
+     Returns a JSON array: [{"category": <name>, "items": <value>}, ...]
+     `items` is passed through unmodified — a list for list-valued keys
+     (taps, brews, casks, mas, sdkman, uv, bun, cargo) or a map for dict-valued
+     keys (brew_env). Values must be strings or maps/lists of strings —
+     toJson/fromJson round-tripping of other types (e.g. numbers) is not
+     verified.
+
+     Example:
+       {{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "bun") .) | fromJson -}}
+       {{- range $groups }}
+       # Install {{ .category }} bun packages
+       {{- range .items }}
+       bun add -g {{ . }}
+       {{- end }}
+       {{- end }}
+
+       {{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "cargo" "includeCore" false) .) | fromJson -}}
+*/ -}}
+{{- $key := .key -}}
+{{- $includeCore := true -}}
+{{- if hasKey . "includeCore" -}}
+  {{- $includeCore = .includeCore -}}
+{{- end -}}
+{{- $categories := .tag_choices -}}
+{{- if $includeCore -}}
+  {{- $categories = prepend .tag_choices "core" -}}
+{{- end -}}
+{{- $result := list -}}
+{{- range $category := $categories -}}
+  {{- $categoryData := index $.packages.darwin $category -}}
+  {{- $eligible := has $category $.tags -}}
+  {{- if and $includeCore (eq $category "core") -}}
+    {{- $eligible = true -}}
+  {{- end -}}
+  {{- if $eligible -}}
+    {{- if and (hasKey $categoryData $key) (index $categoryData $key) -}}
+      {{- $result = append $result (dict "category" $category "items" (index $categoryData $key)) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- toJson $result -}}

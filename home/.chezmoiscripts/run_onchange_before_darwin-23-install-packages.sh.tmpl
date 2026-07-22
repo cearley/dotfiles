@@ -24,6 +24,12 @@ print_message "info" "Installing packages using Homebrew..."
 print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
 {{ end -}}
 
+{{- $tapGroups := includeTemplate "package-layer-items" (merge (dict "key" "taps") .) | fromJson -}}
+{{- $brewGroups := includeTemplate "package-layer-items" (merge (dict "key" "brews") .) | fromJson -}}
+{{- $caskGroups := includeTemplate "package-layer-items" (merge (dict "key" "casks") .) | fromJson -}}
+{{- $masGroups := includeTemplate "package-layer-items" (merge (dict "key" "mas") .) | fromJson -}}
+{{- $envGroups := includeTemplate "package-layer-items" (merge (dict "key" "brew_env") .) | fromJson -}}
+
 # Pre-tap all required sources before brew bundle runs.
 # brew bundle's fetch/validation phase checks casks before tap declarations
 # in the Brewfile are processed, which fails on fresh machines where the
@@ -33,30 +39,19 @@ print_message "info" "Adding Homebrew taps..."
 {{ if has . $.packages.darwin.trusted }}brew trust {{ . | quote }} && {{ end -}}
 brew tap {{ . | quote }}
 {{- end }}
-{{- $categories := prepend .tag_choices "core" }}
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if or (eq $category "core") (has $category $.tags) }}
-    {{- if and (hasKey $categoryData "taps") $categoryData.taps }}
-{{- range $categoryData.taps }}
+{{- range $tapGroups }}
+  {{- range .items }}
 {{ if has . $.packages.darwin.trusted }}brew trust {{ . | quote }} && {{ end -}}
 brew tap {{ . | quote }}
 {{- end }}
-    {{- end }}
-  {{- end }}
 {{- end }}
 
 brew update
 
 {{- $allEnv := dict }}
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if or (eq $category "core") (has $category $.tags) }}
-    {{- if hasKey $categoryData "brew_env" }}
-      {{- range $k, $v := $categoryData.brew_env }}
-        {{- $allEnv = set $allEnv $k $v }}
-      {{- end }}
-    {{- end }}
+{{- range $envGroups }}
+  {{- range $k, $v := .items }}
+    {{- $allEnv = set $allEnv $k $v }}
   {{- end }}
 {{- end }}
 {{- if $allEnv }}
@@ -72,32 +67,50 @@ brew bundle --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
 tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{- end }}
 
-{{- $categories := prepend .tag_choices "core" }}
-{{- range $category := $categories }}
-  {{- $categoryData := index $.packages.darwin $category }}
-  {{- if or (eq $category "core") (has $category $.tags) }}
+{{- $tapByCategory := dict }}
+{{- range $tapGroups }}
+  {{- $tapByCategory = set $tapByCategory .category .items }}
+{{- end }}
+{{- $brewByCategory := dict }}
+{{- range $brewGroups }}
+  {{- $brewByCategory = set $brewByCategory .category .items }}
+{{- end }}
+{{- $caskByCategory := dict }}
+{{- range $caskGroups }}
+  {{- $caskByCategory = set $caskByCategory .category .items }}
+{{- end }}
+{{- $masByCategory := dict }}
+{{- range $masGroups }}
+  {{- $masByCategory = set $masByCategory .category .items }}
+{{- end }}
+{{- range $category := prepend .tag_choices "core" }}
+  {{- $tapItems := index $tapByCategory $category }}
+  {{- $brewItems := index $brewByCategory $category }}
+  {{- $caskItems := index $caskByCategory $category }}
+  {{- $masItems := index $masByCategory $category }}
+  {{- if or $tapItems $brewItems $caskItems $masItems }}
 
 # Install {{ $category }} packages
-    {{- if and (hasKey $categoryData "taps") $categoryData.taps }}
-{{ range $categoryData.taps -}}
+    {{- if $tapItems }}
+{{ range $tapItems -}}
 tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{ end -}}
     {{- end }}
 
-    {{- if and (hasKey $categoryData "brews") $categoryData.brews }}
-{{ range $categoryData.brews -}}
+    {{- if $brewItems }}
+{{ range $brewItems -}}
 brew {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{ end -}}
     {{- end }}
 
-    {{- if and (hasKey $categoryData "casks") $categoryData.casks }}
-{{ range $categoryData.casks -}}
+    {{- if $caskItems }}
+{{ range $caskItems -}}
 cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{ end -}}
     {{- end }}
 
-    {{- if and $icloudSignedIn (hasKey $categoryData "mas") $categoryData.mas }}
-{{ range $categoryData.mas -}}
+    {{- if and $icloudSignedIn $masItems }}
+{{ range $masItems -}}
 mas {{ . }}
 {{ end -}}
     {{- end }}
