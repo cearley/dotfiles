@@ -1,11 +1,9 @@
 {{ if has "dev" .tags -}}
-# SML/NJ - Standard ML of New Jersey - https://www.smlnj.org/dist/working/110.99.9/index.html
-#export PATH=/usr/local/smlnj/bin:"$PATH"
 # AWS bash completion
-complete -C "$HOMEBREW_PREFIX/bin/aws_completer" aws
+[ -x "$HOMEBREW_PREFIX/bin/aws_completer" ] && complete -C "$HOMEBREW_PREFIX/bin/aws_completer" aws
 # AWS cli for use with LocalStack. (See https://github.com/localstack/awscli-local#alternative.)
 alias awslocal="AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test AWS_DEFAULT_REGION=${DEFAULT_REGION:-$AWS_DEFAULT_REGION} aws --endpoint-url=http://${LOCALSTACK_HOST:-localhost}:4566"
-. "$HOME/.cargo/env"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 # Load nvm
 export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
@@ -20,9 +18,9 @@ export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 {{- end }}
 
 # direnv - Load/unload environment variables based on $PWD
-eval "$(direnv hook bash)"
+command -v direnv >/dev/null 2>&1 && eval "$(direnv hook bash)"
 
 # Astral.sh uv - Python package manager
-. "$HOME/.local/bin/env"
-eval "$(uv generate-shell-completion bash)"
-eval "$(uvx --generate-shell-completion bash)"
+[ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
+command -v uv >/dev/null 2>&1 && eval "$(uv generate-shell-completion bash)"
+command -v uvx >/dev/null 2>&1 && eval "$(uvx --generate-shell-completion bash)"

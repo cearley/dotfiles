@@ -558,11 +558,11 @@ Cargo package installation SHALL be controlled by user-selected tags, with `dev`
 - **AND** packages from unselected categories SHALL be skipped
 
 ### Requirement: Cargo Package Installation Script
-Cargo packages SHALL be installed via a `run_onchange_after` script at position 27.
+Cargo packages SHALL be installed via a `run_onchange_before` script at position 27.
 
 #### Scenario: Script execution timing
 - **WHEN** chezmoi applies configuration
-- **THEN** cargo package installation SHALL run AFTER dotfiles are applied (`run_onchange_after`)
+- **THEN** cargo package installation SHALL run BEFORE dotfiles are applied (`run_onchange_before`)
 - **AND** SHALL execute at position 27, between Bun packages (26) and machine-specific Brewfile (28)
 
 #### Scenario: Cargo environment initialization
@@ -708,9 +708,9 @@ Package managers SHALL be installed before their respective packages, following 
 - **WHEN** scripts execute in order
 - **THEN** machine-specific Brewfile installation (position 28) SHALL be the last `run_onchange_before` script in the package management group (20-29)
 
-#### Scenario: Cargo packages run after apply
+#### Scenario: Cargo packages run in before-phase
 - **WHEN** scripts execute in order
-- **THEN** cargo package installation (position 27, `run_onchange_after`) SHALL run after chezmoi applies dotfiles
+- **THEN** cargo package installation (position 27, `run_onchange_before`) SHALL run before chezmoi applies dotfiles, between Bun packages (26) and the machine-specific Brewfile (28)
 - **AND** SHALL run only when the `dev` tag is selected
 
 ### Requirement: Complete Installation Sequence
@@ -725,8 +725,8 @@ The complete package installation sequence SHALL follow this order:
   4. Position 24: Install SDKs via SDKMAN (if `dev` tag)
   5. Position 25: Install tools via UV
   6. Position 26: Install global packages via Bun
-  7. Position 28: Install additional machine-specific Homebrew packages
-  8. Position 27 (after apply): Install Rust crates via Cargo (if `dev` tag)
+  7. Position 27: Install Rust crates via Cargo (if `dev` tag)
+  8. Position 28: Install additional machine-specific Homebrew packages
 
 ### Requirement: AI Coding Agent Configuration Namespace
 The `packages.darwin.ai` section SHALL provide an `agents` sub-namespace for per-coding-agent configuration. Each direct child of `agents` SHALL be a coding-agent identifier (e.g. `claude_code`, `codex`, `gemini`), and its value SHALL be a mapping of agent-specific configuration keys to lists.
@@ -1100,11 +1100,11 @@ packages:
 
 | Script | Position | Frequency | Purpose |
 |--------|----------|-----------|---------|
-| `run_once_before_darwin-20-install-sdkman.sh.tmpl` | 20 | Once | Install SDKMAN (requires `dev` tag) |
-| `run_once_before_darwin-21-install-uv.sh.tmpl` | 21 | Once | Install UV package manager |
+| `run_onchange_before_darwin-20-install-sdkman.sh.tmpl` | 20 | On change | Install SDKMAN (requires `dev` tag) |
+| `run_onchange_before_darwin-21-install-uv.sh.tmpl` | 21 | On change | Install UV package manager |
 | `run_onchange_before_darwin-23-install-packages.sh.tmpl` | 23 | On change | Install Homebrew packages from packages.yaml |
 | `run_onchange_before_darwin-24-install-sdks.sh.tmpl` | 24 | On change | Install SDKs via SDKMAN from packages.yaml (requires `dev` tag) |
 | `run_onchange_before_darwin-25-install-tools.sh.tmpl` | 25 | On change | Install UV tools from packages.yaml |
 | `run_onchange_before_darwin-26-install-bun-packages.sh.tmpl` | 26 | On change | Install Bun global packages from packages.yaml |
-| `run_onchange_after_darwin-27-install-cargo-packages.sh.tmpl` | 27 (after) | On change | Install Rust crates via Cargo from packages.yaml (requires `dev` tag) |
+| `run_onchange_before_darwin-27-install-cargo-packages.sh.tmpl` | 27 | On change | Install Rust crates via Cargo from packages.yaml (requires `dev` tag) |
 | `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl` | 28 | On change | Install machine-specific Homebrew packages |
