@@ -1,5 +1,7 @@
 packages:
   darwin:
+    # INVARIANT: every third-party tap/formula that appears in any category below
+    # must also appear here, or it will install without `trusted: true` in the Brewfile.
     trusted:
     - 'buo/cask-upgrade'               # Tap for upgrading outdated Homebrew Casks with `brew cu` command
     - 'isen-ng/dotnet-sdk-versions'    # Tap for managing multiple .NET SDK versions on macOS
@@ -60,7 +62,6 @@ packages:
 
     # Packages that are very specific to my personal setup (personal tag)
     personal:
-      taps:
       brews:
       - 'syncthing'
       casks:
@@ -183,17 +184,26 @@ packages:
       - 'git+https://github.com/cearley/claude-session-index'
       - "git+https://github.com/cearley/zsh-llm-suggestions"
       - "-p 3.13 serena-agent@latest --prerelease=allow"
-      cargo:
-      #- '--git https://github.com/Dicklesworthstone/beads_rust.git beads_rust'  # Removed: requires nightly Rust (fsqlite-pager E0554); brew beads is sufficient
       agents:
         claude_code:
           mcp_servers: # Registered via `claude mcp add --scope user <name> -- <command...>`
-          - 'basic-memory -s user -- uvx --python 3.12 basic-memory mcp'
-          - 'fast-filesystem -e CREATE_BACKUP_FILES="true" -- npx -y fast-filesystem-mcp'
-          - 'localstack-mcp-server -- mcp-env-wrapper localstack-mcp-server npx -y @localstack/localstack-mcp-server'
-          - 'openspec -- npx openspec-mcp --with-dashboard'
-          - 'playwright npx @playwright/mcp@latest'
-          - 'safari -- npx safari-mcp'
+          - name: basic-memory
+            scope: user
+            command: uvx --python 3.12 basic-memory mcp
+          - name: fast-filesystem
+            env:
+              CREATE_BACKUP_FILES: "true"
+            command: npx -y fast-filesystem-mcp
+          - name: localstack-mcp-server
+            env:
+              LOCALSTACK_AUTH_TOKEN: ""  # read from shell environment at runtime
+            command: mcp-env-wrapper localstack-mcp-server npx -y @localstack/localstack-mcp-server
+          - name: openspec
+            command: npx openspec-mcp --with-dashboard
+          - name: playwright
+            command: npx @playwright/mcp@latest
+          - name: safari
+            command: npx safari-mcp
           skills: # Installed via `npx skills add <args> -g`
           - 'basicmachines-co/basic-memory-skills --skill --skill memory-defrag memory-notes --kill memory-reflect --skill memory-schema'
           - 'cearley/claude-session-index --skill session-index'
@@ -236,7 +246,6 @@ packages:
 
     # Optional data science packages (datascience tag)
     datascience:
-      taps:
       brews:
       - 'csvkit'
       - 'pandoc'
@@ -282,8 +291,6 @@ packages:
 
     # Optional mobile packages (mobile tag)
     mobile:
-      taps:
-      brews:
       casks:
       - 'tunnelblick'
       - 'wifi-explorer-pro'

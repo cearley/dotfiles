@@ -67,120 +67,121 @@
 #                         List of Syncthing ignore patterns. Replaces the folder's .stignore on
 #                         each apply. Omit to leave the existing .stignore unchanged.
 #
-MacBook Pro:
-  brewfile: mbp-brewfile
-  claude_default: claude-work
-  claude_envs:
-    - '~/.claude-bedrock'
-    - '~/.claude-personal'
-    - '~/.claude-work'
-  keepassxc_entries:
-    ssh: SSH (MacBook Pro)
-  syncthing_folders:
-    - id: default
-      label: Default Folder
-      path: ~/Sync
-      versioning:
-        type: none
-      ignores:
-        - "(?d).DS_Store"
-    - id: emmxp-fxjwr
-      label: knowledge-personal
-      path: ~/basic-memory
-      versioning:
-        type: simple
-        params:
-          cleanoutDays: "0"
-          keep: "5"
-      ignores:
-        - "(?d).DS_Store"
-    - id: gprnu-lxo9w
-      label: Confidential
-      path: ~/Confidential
-      versioning:
-        type: none
-      ignores:
-        - "(?d).DS_Store"
-    - id: onhkl-pan5k
-      label: Business
-      path: ~/Business
-      versioning:
-        type: simple
-        params:
-          cleanoutDays: "0"
-          keep: "5"
-      ignores:
-        - "(?d).DS_Store"
-    - id: uqowz-v2f3n
-      label: knowledge-work
-      path: ~/.local/share/basic-memory
-      versioning:
-        type: simple
-        params:
-          cleanoutDays: "0"
-          keep: "5"
-      ignores:
-        - "(?d).DS_Store"
-Mac Studio:
-  brewfile: studio-brewfile
-  claude_default: claude-personal
-  claude_envs:
-    - '~/.claude-personal'
-    - '~/.claude-work'
-  keepassxc_entries:
-    ssh: SSH (Mac Studio)
-  syncthing_folders:
-    - id: default
-      label: Default Folder
-      path: ~/Sync
-      versioning:
-        type: none
-      ignores:
-        - "(?d).DS_Store"
-    - id: emmxp-fxjwr
-      label: knowledge-personal
-      path: ~/basic-memory
-      versioning:
-        type: simple
-        params:
-          cleanoutDays: "0"
-          keep: "5"
-      ignores:
-        - "(?d).DS_Store"
-    - id: gprnu-lxo9w
-      label: Confidential
-      path: ~/Confidential
-      versioning:
-        type: none
-      ignores:
-        - "(?d).DS_Store"
-    - id: onhkl-pan5k
-      label: Business
-      path: ~/Business
-      versioning:
-        type: simple
-        params:
-          cleanoutDays: "0"
-          keep: "5"
-      ignores:
-        - "(?d).DS_Store"
-    - id: uqowz-v2f3n
-      label: knowledge-work
-      path: ~/.local/share/basic-memory
-      versioning:
-        type: simple
-        params:
-          cleanoutDays: "0"
-          keep: "5"
-      ignores:
-        - "(?d).DS_Store"
-  cloudflare_tunnels:
-    - name: ow-dev
-      id: f2ab9336-44f9-4bfc-8c2e-5696fc9bc2e4
-      hostname: ow-dev.craigearley.software
-      service: http://localhost:8000
-      keepassxc_entry: "Cloudflare Tunnel (ow-dev)"
-Mac mini:
-  brewfile: mac-mini-brewfile
-  keepassxc_entries:
-    ssh: SSH (Mac mini)
+machines:
+  MacBook Pro:
+    brewfile: mbp-brewfile
+    claude_default: claude-work
+    claude_envs:
+      - '~/.claude-bedrock'
+      - '~/.claude-personal'
+      - '~/.claude-work'
+    keepassxc_entries:
+      ssh: SSH (MacBook Pro)
+    syncthing_folders:
+      - id: default
+        label: Default Folder
+        path: ~/Sync
+        versioning:
+          type: none
+        ignores:
+          - "(?d).DS_Store"
+      - id: emmxp-fxjwr
+        label: knowledge-personal
+        path: ~/basic-memory
+        versioning:
+          type: simple
+          params:
+            cleanoutDays: "0"
+            keep: "5"
+        ignores:
+          - "(?d).DS_Store"
+      - id: gprnu-lxo9w
+        label: Confidential
+        path: ~/Confidential
+        versioning:
+          type: none
+        ignores:
+          - "(?d).DS_Store"
+      - id: onhkl-pan5k
+        label: Business
+        path: ~/Business
+        versioning:
+          type: simple
+          params:
+            cleanoutDays: "0"
+            keep: "5"
+        ignores:
+          - "(?d).DS_Store"
+      - id: uqowz-v2f3n
+        label: knowledge-work
+        path: ~/.local/share/basic-memory
+        versioning:
+          type: simple
+          params:
+            cleanoutDays: "0"
+            keep: "5"
+        ignores:
+          - "(?d).DS_Store"
+  Mac Studio:
+    brewfile: studio-brewfile
+    claude_default: claude-personal
+    claude_envs:
+      - '~/.claude-personal'
+      - '~/.claude-work'
+    keepassxc_entries:
+      ssh: SSH (Mac Studio)
+    syncthing_folders:
+      - id: default
+        label: Default Folder
+        path: ~/Sync
+        versioning:
+          type: none
+        ignores:
+          - "(?d).DS_Store"
+      - id: emmxp-fxjwr
+        label: knowledge-personal
+        path: ~/basic-memory
+        versioning:
+          type: simple
+          params:
+            cleanoutDays: "0"
+            keep: "5"
+        ignores:
+          - "(?d).DS_Store"
+      - id: gprnu-lxo9w
+        label: Confidential
+        path: ~/Confidential
+        versioning:
+          type: none
+        ignores:
+          - "(?d).DS_Store"
+      - id: onhkl-pan5k
+        label: Business
+        path: ~/Business
+        versioning:
+          type: simple
+          params:
+            cleanoutDays: "0"
+            keep: "5"
+        ignores:
+          - "(?d).DS_Store"
+      - id: uqowz-v2f3n
+        label: knowledge-work
+        path: ~/.local/share/basic-memory
+        versioning:
+          type: simple
+          params:
+            cleanoutDays: "0"
+            keep: "5"
+        ignores:
+          - "(?d).DS_Store"
+    cloudflare_tunnels:
+      - name: ow-dev
+        id: f2ab9336-44f9-4bfc-8c2e-5696fc9bc2e4
+        hostname: ow-dev.craigearley.software
+        service: http://localhost:8000
+        keepassxc_entry: "Cloudflare Tunnel (ow-dev)"
+  Mac mini:
+    brewfile: mac-mini-brewfile
+    keepassxc_entries:
+      ssh: SSH (Mac mini)

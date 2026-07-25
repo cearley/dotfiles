@@ -1,7 +1,7 @@
 {{- /* Returns all machine settings as a JSON-encoded dict.
 
      Uses machine-config to find the matched machine pattern,
-     then returns all settings from config.yaml for that machine.
+     then returns all settings from config.yaml .machines for that machine.
 
      Example (use index/default for safe property access):
        {{- $settings := includeTemplate "machine-settings" . | fromJson -}}
@@ -19,17 +19,10 @@
 {{- $machineKey := includeTemplate "machine-config" (merge (dict "return_key" true) .) -}}
 
 {{- if $machineKey -}}
-  {{- /* Add the machine key itself as a special property */ -}}
   {{- $_ := set $result "_machine_key" $machineKey -}}
-
-  {{- /* Iterate over root context to find matching machine and copy all properties */ -}}
-  {{- range $pattern, $config := . -}}
-    {{- /* Skip non-machine keys */ -}}
-    {{- if and (ne $pattern "chezmoi") (eq $pattern $machineKey) -}}
-      {{- range $key, $value := $config -}}
-        {{- $_ := set $result $key $value -}}
-      {{- end -}}
-    {{- end -}}
+  {{- $config := index .machines $machineKey -}}
+  {{- range $key, $value := $config -}}
+    {{- $_ := set $result $key $value -}}
   {{- end -}}
 {{- end -}}
 

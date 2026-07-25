@@ -8,7 +8,7 @@
      Params (merge with the chezmoi context before calling):
        key:         packages.yaml key to resolve (e.g. "bun", "uv", "sdkman",
                     "cargo", "taps", "brews", "casks", "mas", "brew_env")
-       includeCore: optional, default true. When false, iterates only
+       coreAlwaysEligible: optional, default true. When false, iterates only
                     .tag_choices and requires the category to be in .tags (no
                     core prepend) — used by layers with no core packages
                     (e.g. cargo).
@@ -29,22 +29,22 @@
        {{- end }}
        {{- end }}
 
-       {{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "cargo" "includeCore" false) .) | fromJson -}}
+       {{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "cargo" "coreAlwaysEligible" false) .) | fromJson -}}
 */ -}}
 {{- $key := .key -}}
-{{- $includeCore := true -}}
-{{- if hasKey . "includeCore" -}}
-  {{- $includeCore = .includeCore -}}
+{{- $coreAlwaysEligible := true -}}
+{{- if hasKey . "coreAlwaysEligible" -}}
+  {{- $coreAlwaysEligible = .coreAlwaysEligible -}}
 {{- end -}}
 {{- $categories := .tag_choices -}}
-{{- if $includeCore -}}
+{{- if $coreAlwaysEligible -}}
   {{- $categories = prepend .tag_choices "core" -}}
 {{- end -}}
 {{- $result := list -}}
 {{- range $category := $categories -}}
   {{- $categoryData := index $.packages.darwin $category -}}
   {{- $eligible := has $category $.tags -}}
-  {{- if and $includeCore (eq $category "core") -}}
+  {{- if and $coreAlwaysEligible (eq $category "core") -}}
     {{- $eligible = true -}}
   {{- end -}}
   {{- if $eligible -}}

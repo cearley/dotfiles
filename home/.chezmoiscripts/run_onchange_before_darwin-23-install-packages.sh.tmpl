@@ -20,9 +20,7 @@ print_message "info" "Installing packages using Homebrew..."
 
 {{ $icloudAccountId := includeTemplate "icloud-account-id" . | trim -}}
 {{ $icloudSignedIn := ne $icloudAccountId "" -}}
-{{ if not $icloudSignedIn -}}
-print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
-{{ end -}}
+warn_icloud_not_signed_in || true
 
 {{- $tapGroups := includeTemplate "package-layer-items" (merge (dict "key" "taps") .) | fromJson -}}
 {{- $brewGroups := includeTemplate "package-layer-items" (merge (dict "key" "brews") .) | fromJson -}}

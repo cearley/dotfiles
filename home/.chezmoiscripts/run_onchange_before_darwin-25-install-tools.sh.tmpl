@@ -17,8 +17,9 @@ if ! require_tools uv; then
 fi
 
 print_message "info" "Installing tools using uv..."
-# Upgrade all existing tools first
-uv tool update --all
+# Upgrade all existing tools first (allow partial failure — some tools may require
+# custom install flags and are handled by the install loop below)
+uv tool update --all || print_message "warning" "uv tool update --all had errors — continuing with installs"
 {{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "uv") .) | fromJson }}
 {{- range $groups }}
 # Install {{ .category }} tools

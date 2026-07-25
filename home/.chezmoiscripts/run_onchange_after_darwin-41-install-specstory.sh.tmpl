@@ -1,6 +1,9 @@
 {{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
 #!/bin/bash
-# re-run trigger: bump this date when the patch changes — 2026-05-18
+
+# run_onchange trigger - re-run every 30 days: {{ includeTemplate "time-bucket" (dict "days" 30) }}
+# Prerequisite: clone https://github.com/specstoryai/getspecstory to ~/work/getspecstory/specstory-cli
+# and apply the CLAUDE_CONFIG_DIR patch before running chezmoi apply.
 
 set -euo pipefail
 

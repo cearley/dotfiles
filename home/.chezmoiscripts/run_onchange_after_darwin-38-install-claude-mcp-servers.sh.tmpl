@@ -16,10 +16,9 @@ if ! require_tools claude; then
     exit 1
 fi
 
-# Source shell secrets so env vars declared in private_dot_zsh_secrets.tmpl
-# (e.g. LOCALSTACK_AUTH_TOKEN) are available for MCP server registration.
-# chezmoi applies files before running after-scripts, so ~/.zsh_secrets is
-# already written on disk by the time this script executes.
+# Source shell secrets so env vars (e.g. LOCALSTACK_AUTH_TOKEN) are available
+# for MCP server registration. chezmoi applies files before running after-scripts,
+# so ~/.zsh_secrets is already written on disk by the time this script executes.
 if [[ -f "$HOME/.zsh_secrets" ]]; then
     # shellcheck source=/dev/null
     source "$HOME/.zsh_secrets"
@@ -35,86 +34,51 @@ print_message "skip" "No MCP servers declared in ai.agents.claude_code.mcp_serve
 exit 0
 {{- end }}
 
-# ---------------------------------------------------------------------------
-# Register MCP servers in each Claude Code environment
-#
-# Two entry formats are supported:
-#   Simple:  "<name> <command...>"
-#            e.g. "playwright npx @playwright/mcp@latest"
-#
-#   With env: "<name> [-e VAR1] [-e KEY=VALUE ...] -- <command...>"
-#            e.g. "localstack-mcp-server -e LOCALSTACK_AUTH_TOKEN -- npx -y @localstack/localstack-mcp-server"
-#            -e VAR (no '=') reads the value from the current shell environment.
-#            -e KEY=VALUE uses the literal value (quotes are stripped).
-#            Registration is skipped (with a warning) if any required var is unset.
-# ---------------------------------------------------------------------------
 _register_mcp_for_env() {
     local env_dir="$1"
     print_message "info" "Registering MCP servers for $(basename "$env_dir")..."
 
 {{- range $mcpServers }}
-    # Register: {{ . }}
-    _mcp_entry={{ . | quote }}
-    _mcp_name="${_mcp_entry%% *}"
-    _mcp_rest="${_mcp_entry#* }"
-
-    # Parse optional '-e VAR' flags before a ' -- ' separator, or handle a bare '-- ' with no flags
-    _claude_flags=""
-    _mcp_cmd="$_mcp_rest"
+{{- $name := .name }}
+{{- $scope := "user" }}{{- if hasKey . "scope" }}{{- $scope = .scope }}{{- end }}
+{{- $cmd := .command }}
+{{- $envMap := dict }}
+{{- if hasKey . "env" }}{{- $envMap = .env }}{{- end }}
+    # Register: {{ $name }}
     _skip_server=false
-    if [[ "$_mcp_rest" == "-- "* ]]; then
-        # Bare -- separator with no -e flags; strip it and use the rest as the command
-        _mcp_cmd="${_mcp_rest#-- }"
-    elif [[ "$_mcp_rest" == *" -- "* ]]; then
-        _flags_section="${_mcp_rest%% -- *}"
-        _mcp_cmd="${_mcp_rest#* -- }"
-        _prev=""
-        for _tok in $_flags_section; do
-            if [[ "$_prev" == "-e" ]]; then
-                if [[ "$_tok" == *"="* ]]; then
-                    # Literal KEY=VALUE — strip surrounding quotes if present
-                    _kv="${_tok#\"}"
-                    _kv="${_kv%\"}"
-                    _kv="${_kv#\'}"
-                    _kv="${_kv%\'}"
-                    _claude_flags+=" -e $_kv"
-                else
-                    # Bare VAR — read value from the environment
-                    _val="${!_tok:-}"
-                    if [[ -z "$_val" ]]; then
-                        print_message "warning" "Skipping MCP server '$_mcp_name': env var '$_tok' is unset"
-                        _skip_server=true
-                        break
-                    fi
-                    _claude_flags+=" -e ${_tok}=${_val}"
-                fi
-            fi
-            _prev="$_tok"
-        done
+    _env_flags=""
+{{- range $var, $val := $envMap }}
+{{- if eq $val "" }}
+    if [[ -z "${{"{"}}{{ $var }}:-{{"}"}}" ]]; then
+        print_message "warning" "Skipping MCP server '{{ $name }}': env var '{{ $var }}' is unset"
+        _skip_server=true
+    else
+        _env_flags+=" -e {{ $var }}=${{"{"}}{{ $var }}{{"}"}}"
     fi
-
+{{- else }}
+    _env_flags+=" -e {{ $var }}={{ $val }}"
+{{- end }}
+{{- end }}
     if [[ "$_skip_server" == false ]]; then
-        # shellcheck disable=SC2086  # word-splitting intentional for flags and command
-        # Note: name comes before -e flags; claude mcp add syntax is:
-        #   add --scope <scope> <name> [-e KEY=VALUE ...] -- <command>
+        # shellcheck disable=SC2086
         _mcp_exit=0
-        _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" $_claude_flags -- $_mcp_cmd 2>&1) || _mcp_exit=$?
+        _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope {{ $scope }} "{{ $name }}"${_env_flags} -- {{ $cmd }} 2>&1) || _mcp_exit=$?
         if [[ $_mcp_exit -eq 0 ]]; then
-            print_message "success" "Registered MCP server: $_mcp_name"
+            print_message "success" "Registered MCP server: {{ $name }}"
         elif echo "$_mcp_output" | grep -q "already exists"; then
-            CLAUDE_CONFIG_DIR="$env_dir" claude mcp remove "$_mcp_name" --scope user 2>/dev/null || true
+            CLAUDE_CONFIG_DIR="$env_dir" claude mcp remove "{{ $name }}" --scope {{ $scope }} 2>/dev/null || true
             # shellcheck disable=SC2086
             _mcp_exit=0
-            _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope user "$_mcp_name" $_claude_flags -- $_mcp_cmd 2>&1) || _mcp_exit=$?
+            _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope {{ $scope }} "{{ $name }}"${_env_flags} -- {{ $cmd }} 2>&1) || _mcp_exit=$?
             if [[ $_mcp_exit -eq 0 ]]; then
-                print_message "success" "Updated MCP server: $_mcp_name"
+                print_message "success" "Updated MCP server: {{ $name }}"
             else
                 echo "$_mcp_output"
-                print_message "warning" "Could not update MCP server '$_mcp_name' in $(basename "$env_dir") — skipping"
+                print_message "warning" "Could not update MCP server '{{ $name }}' in $(basename "$env_dir") — skipping"
             fi
         else
             echo "$_mcp_output"
-            print_message "warning" "Could not register MCP server '$_mcp_name' in $(basename "$env_dir") — skipping"
+            print_message "warning" "Could not register MCP server '{{ $name }}' in $(basename "$env_dir") — skipping"
         fi
     fi
 {{- end }}

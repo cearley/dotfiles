@@ -25,7 +25,7 @@ print_message "info" "Installing cargo packages..."
 # Bulk update all installed cargo packages first
 cargo install cargo-update
 cargo install-update -a
-{{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "cargo" "includeCore" false) .) | fromJson }}
+{{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "cargo" "coreAlwaysEligible" false) .) | fromJson }}
 {{- range $groups }}
 # Install {{ .category }} cargo packages
 {{ range .items -}}

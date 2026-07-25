@@ -126,9 +126,7 @@ if [ -f "{{ .chezmoi.homeDir }}/.local/share/zsh-llm-suggestions/zsh-llm-suggest
 fi
 
 # Added by LM Studio CLI (lms)
-export PATH="$PATH:{{- .chezmoi.homeDir -}}/.cache/lm-studio/bin"
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
-# End of LM Studio CLI section
 {{- end }}
 
 # ------------------------------------------------------------------------------
@@ -169,7 +167,6 @@ _defer_shell_integrations() {
 if command -v zsh-defer >/dev/null 2>&1; then
     zsh-defer _defer_shell_integrations
 else
-    # Fallback: run immediately if zsh-defer is not available
     _defer_shell_integrations
 fi
 

@@ -282,7 +282,14 @@ _package_update_skip_resolve_and_cache() {
                     layer_reply=""
                     read -r -p "   Skip ${layer} package updates this run? (y/N): " layer_reply || layer_reply=""
                     if [[ "$layer_reply" =~ ^[Yy]$ ]]; then
-                        eval "skip_${layer}=1"
+                        case "$layer" in
+                            homebrew) skip_homebrew=1 ;;
+                            sdkman)   skip_sdkman=1 ;;
+                            uv)       skip_uv=1 ;;
+                            bun)      skip_bun=1 ;;
+                            cargo)    skip_cargo=1 ;;
+                            claude)   skip_claude=1 ;;
+                        esac
                     fi
                 done
             fi

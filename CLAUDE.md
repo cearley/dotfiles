@@ -174,6 +174,7 @@ See `openspec/specs/machine-config/` for complete machine configuration system d
 4. **Consistent messaging** - Always use shared utilities for script output
 5. **Platform wrapping** - Darwin scripts must use conditional templates
 6. **Script ordering** - Machine-specific Brewfile (position 28) must always be last in the package management group (20-29)
+7. **`trusted` list invariant** - `packages.yaml` has a `packages.darwin.trusted` list used by script 23 to emit `trusted: true` in the Brewfile for third-party taps and formulae. **Every third-party tap or formula added to any category must also appear in `trusted:`**, or it will install without the trust flag. The lists must be kept in sync manually — there is no automatic check.
 
 ### Platform Requirements
 - **Target OS**: macOS 11.0+ (Big Sur or later)
