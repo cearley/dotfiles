@@ -5,15 +5,24 @@ packages:
     trusted:
     - 'buo/cask-upgrade'               # Tap for upgrading outdated Homebrew Casks with `brew cu` command
     - 'isen-ng/dotnet-sdk-versions'    # Tap for managing multiple .NET SDK versions on macOS
+    - 'itspriddle/brews'               # Tap for the ical-guy formula
     - 'itspriddle/brews/ical-guy'      # CLI for querying macOS calendar events, outputting JSON
     - 'localstack/tap'                 # Homebrew tap for LocalStack, a fully functional local AWS cloud stack
+    - 'localstack/tap/localstack-cli'  # LocalStack CLI
+    - 'manaflow-ai/cmux'               # Tap for the cmux formula
     - 'manaflow-ai/cmux/cmux'          # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
+    - 'microsoft/mssql-release'        # Tap for Microsoft SQL Server tools
     - 'microsoft/mssql-release/msodbcsql18' # Microsoft ODBC Driver 18 for SQL Server
     - 'microsoft/mssql-release/mssql-tools18' # Microsoft SQL Server Command Line Tools (sqlcmd and bcp)
     - 'oven-sh/bun'                    # Required for the oven-sh/bun/bun formula
+    - 'oven-sh/bun/bun'                # Fast all-in-one JavaScript runtime, bundler, transpiler and package manager
+    - 'postrv/narsil'                  # Tap for the narsil-mcp formula
     - 'postrv/narsil/narsil-mcp'       # MCP server for code analysis and security scanning
     - 'qltysh/tap'                     # Homebrew tap for Qlty CLI (successor to Code Climate)
+    - 'qltysh/tap/qlty'                # Qlty CLI (successor to Code Climate)
+    - 'specstoryai/tap'                # Tap for the specstory formula
     - 'specstoryai/tap/specstory'      # A Claude Code wrapper that saves conversation history to markdown
+    - 'supabase/tap'                   # Tap for the supabase formula
     - 'supabase/tap/supabase'          # Supabase CLI
 
     taps:

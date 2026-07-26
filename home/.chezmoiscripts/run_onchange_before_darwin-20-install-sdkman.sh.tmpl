@@ -34,7 +34,7 @@ fi
 print_message "info" "Installing sdkman (Software Development Kit Manager)..."
 
 # Install sdkman using the official installation script from sdkman.io
-export SDKMAN_DIR="$HOME/.sdkman"
+export SDKMAN_DIR="{{ .chezmoi.homeDir -}}/.sdkman"
 curl -s "https://get.sdkman.io" | "$MODERN_BASH"
 
 print_message "success" "sdkman installed successfully!"
