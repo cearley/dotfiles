@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "chezmoi-expert",
+  "owner": "derekspelledcorrectly",
+  "repo": "claude-plugins",
+  "path": "plugins/chezmoi/skills/chezmoi-expert",
+  "branch": "main",
+  "sha": "76105bc6768166afc0eeb7972b3fd071c43ed322",
+  "source": "manual"
+}

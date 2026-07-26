@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "chezmoi",
+  "owner": "martinemde",
+  "repo": "dotfiles",
+  "path": ".claude/skills/chezmoi",
+  "branch": "main",
+  "sha": "7999cb0718f1eaef077746c54988e62e6ad62c47",
+  "source": "manual"
+}
