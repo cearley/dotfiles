@@ -9,69 +9,20 @@ Quick reference guide for AI assistants working with this chezmoi dotfiles repos
 - **OpenSpec specs**: `openspec/specs/` - Capability specifications and design
 - **Code style examples**: `.serena/memories/code-style-quick-reference.md` - Extended cookbook
 
-### Key Directories
-- `home/.chezmoiscripts/` - Numbered setup scripts (execution order: 00-99)
-- `home/.chezmoidata/` - Static data files (packages.yaml, config.yaml)
-- `home/.chezmoitemplates/` - Reusable template components
-- `home/scripts/shared-utils.sh` - Common script functions
-
 ## Common Commands
 
 ```bash
-chezmoi apply                  # Apply changes to home directory
-chezmoi diff                   # Preview changes before applying
-chezmoi update                 # Pull latest from repo and apply
-chezmoi status                 # Show files that would change
-chezmoi add ~/.<file>          # Add a dotfile to source state
-chezmoi edit ~/.<file>         # Edit the source version of a file
-chezmoi cd                     # Open shell in source directory
-chezmoi managed                # List all managed files
-chezmoi cat ~/path/to/file     # Preview generated file content (verify templates/modify_ scripts)
 audit-packages                 # List packages installed but not declared in packages.yaml (read-only)
 audit-packages --strict        # Same, but exit non-zero if any orphans found (CI-friendly)
 ```
 
-## Chezmoi File Attributes
-
-Prefixes in source filenames control how chezmoi processes them:
-- **`private_`** - Sensitive/machine-specific files (restricted permissions)
-- **`dot_`** - Creates dotfiles (hidden files starting with `.`)
-- **`executable_`** - Creates executable files (chmod +x)
-- **`symlink_`** - Creates symbolic links
-- **`.tmpl` suffix** - Template files processed by Go template engine
-
-## Source Directory Structure
-
-```
-.local/share/chezmoi/
-├── home/                           # Root for all managed files (.chezmoiroot)
-│   ├── .chezmoidata/              # Static data files (YAML/JSON/TOML)
-│   ├── .chezmoitemplates/         # Reusable template snippets
-│   ├── .chezmoiscripts/           # Automated setup scripts
-│   ├── .chezmoiexternal.toml.tmpl # External dependency definitions
-│   ├── .chezmoi.toml.tmpl         # User configuration prompts
-│   └── [dotfiles with chezmoi prefixes]
-├── scripts/                        # Shared utility scripts
-├── hooks/                          # Pre/post operation hooks
-├── brewfiles/                      # Machine-specific Homebrew bundles
-└── remote_install.sh              # One-command bootstrap script
-```
+Standard chezmoi commands (`apply`, `diff`, `status`, `add`, `managed`, ...) and file-attribute prefixes (`private_`, `dot_`, `executable_`, `symlink_`, `.tmpl`) are covered by the `chezmoi-expert` skill — invoke it rather than duplicating that reference here.
 
 ## Practical Quick Reference
 
 ### Script Naming Pattern
-```
-{frequency}_{timing}_{os}-{order}-{description}.sh.tmpl
-```
 
-**Examples:**
-- `run_onchange_before_darwin-20-install-sdkman.sh.tmpl` - Re-runs when sdkman config changes
-- `run_onchange_after_darwin-45-setup-github-auth.sh.tmpl` - Re-runs on changes
-
-**Script execution order** (filenames in `home/.chezmoiscripts/` are authoritative; each position number must be unique):
-- **05**: Rosetta 2 | **10**: Rust | **20**: SDKMAN | **21**: UV manager | **23**: Homebrew packages | **24**: SDKMAN SDKs | **25**: UV tools | **26**: Bun packages | **27** (`run_onchange_before`, `dev` tag): Cargo crates | **28**: Machine-specific Brewfile
-- **35**: nvm | **36**: Claude Code (`ai` tag) | **37**: Claude Code skills (`ai` tag, `run_onchange_after`) | **38**: Claude Code MCP servers (`ai` tag) | **39**: Claude Code plugins (`ai` tag) | **40**: Claude LaunchAgent (`ai` tag, Darwin) | **41**: SpecStory patched build (`ai` tag) | **42**: freshbooks-mcp-server build (`ai`+`dev` tags, needs nvm from 35)
-- **45**: GitHub auth | **46**: SSH GitHub setup | **80**: Microsoft Defender | **82**: Global Protect VPN | **83**: Atuin | **85**: System defaults | **90**: Hosts file | **91**: Cloudflare Tunnel setup | **94**: Syncthing folder setup | **95**: Syncthing restart
+Naming grammar and position assignment are covered by the `/new-script` skill. Current execution order is authoritative in the filenames themselves — run `ls home/.chezmoiscripts/` rather than trusting a hand-maintained table (one drifted out of sync in commit `6f3790c`). Each position number must be unique.
 
 ### Shared Utilities
 
@@ -80,15 +31,7 @@ Prefixes in source filenames control how chezmoi processes them:
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 ```
 
-**Common functions:**
-- `print_message "info|success|warning|error|skip|tip" "message"` - Consistent output
-- `command_exists "command"` - Check availability
-- `require_tools "tool1" "tool2"` - Validate dependencies
-- `wait_for_app_installation "/path/to/App.app" "App Name"` - Interactive install wait
-- `ensure_directory "path" ["sudo"]` - Create directory if missing
-- `prompt_ready ["message"]` - User prompt helper
-
-See `.serena/memories/code-style-quick-reference.md` for extended examples and patterns.
+See `.serena/memories/code-style-quick-reference.md` for the function reference and extended examples.
 
 ### Template Testing
 ```bash
@@ -135,36 +78,7 @@ Use `modify_` prefix for files where you only manage specific keys (e.g., JSON c
 
 ### Reusable Templates
 
-Available in `home/.chezmoitemplates/`:
-- `machine-name` - Cross-platform machine name detection
-- `machine-config` - Machine-specific setting lookup (single property)
-- `machine-settings` - All machine settings as JSON dict (preferred for multiple lookups)
-- `icloud-account-id` - Returns iCloud account ID if signed in (macOS)
-- `time-bucket` - Rolling epoch bucket for periodic `run_onchange_*` re-execution; embed in comment near script top
-- `claude-environments` - **Source of truth for Claude environment wiring**: per-env shell functions (`claude-bedrock`, `claude-personal`, `claude-work`), `export CLAUDE_CONFIG_DIR` (when `claude_default` is set), and all `*-spec` SpecStory aliases. Gated internally on `ai` tag. Used by both `dot_zshrc.tmpl` and `dot_bashrc.tmpl`.
-- `package-layer-items` - Resolves which `packages.yaml` categories are eligible for a given key (e.g. `bun`, `brews`) given the machine's tags, returning an ordered JSON array of `{category, items}` groups. Single source of category/tag eligibility logic for the package-layer scripts (positions 23-27).
-  ```go-template
-  {{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "bun") .) | fromJson -}}
-  {{- range $groups }}
-  {{- range .items }}
-  bun add -g {{ . }}
-  {{- end }}
-  {{- end }}
-  ```
-
-**Periodic re-execution with time-bucket:**
-```go-template
-# re-run trigger - changes or every 7 days: {{ includeTemplate "time-bucket" (dict "days" 7) }}
-```
-Used to force `chezmoi apply` to rerun a script on a schedule even when source files haven't changed.
-
-**Access machine config:**
-```go-template
-{{- $brewfilePath := includeTemplate "machine-brewfile-path" . }}
-{{- $sshEntry := includeTemplate "machine-config" (merge (dict "setting" "keepassxc_entries.ssh") .) }}
-```
-
-See `openspec/specs/machine-config/` for complete machine configuration system documentation.
+Catalog and usage examples moved to `home/.chezmoitemplates/CLAUDE.md` (loads automatically when working in that directory).
 
 ## Key Principles
 
@@ -222,12 +136,10 @@ See `openspec/specs/machine-config/` for complete machine configuration system d
 
 ## Session Completion
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
-
-**MANDATORY WORKFLOW:**
+**When ending a work session**, complete these steps. Committing and pushing each still require explicit user confirmation per the global Git Workflow gates — this checklist does not override that.
 
 1. **Run quality gates** (if code changed) - Tests, linters, builds
-2. **PUSH TO REMOTE** - This is MANDATORY:
+2. **Offer to push to remote** (only after the user confirms):
    ```bash
    git pull --rebase
    git push
