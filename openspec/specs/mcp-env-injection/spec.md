@@ -65,13 +65,13 @@ Env files containing values sourced from KeePassXC SHALL be chezmoi-managed temp
 - **WHEN** a server's env file contains a personal or machine-specific value (e.g. `AWS_PROFILE`)
 - **THEN** no corresponding file SHALL exist in the chezmoi source tree; the user creates and edits the file directly
 
-### Requirement: Registration script supports bare -- separator
-The Claude Code MCP registration script SHALL support entries of the form `<name> -- <command> [args...]` (bare `--` with no preceding `-e` flags) in addition to the existing `<name> [-e VAR]... -- <command> [args...]` form. Both formats MUST register the server correctly.
+### Requirement: Registration script reads structured server entries
+Each `mcp_servers` entry in `packages.yaml` SHALL be a mapping with a `name`, a `command`, an optional `scope` (default `user`), and an optional `env` map. The registration script SHALL read these fields directly rather than parsing a positional string DSL. A server whose `command` itself needs runtime-injected environment variables (e.g. via `mcp-env-wrapper`) SHALL express that by setting `command` to the wrapper invocation, not by a separate string-parsing mode.
 
-#### Scenario: Bare -- separator entry
-- **WHEN** `packages.yaml` contains `localstack-mcp-server -- mcp-env-wrapper localstack-mcp-server npx -y @localstack/localstack-mcp-server`
-- **THEN** the script SHALL register `mcp-env-wrapper` as the command with the remaining tokens as args
+#### Scenario: Server routed through mcp-env-wrapper
+- **WHEN** `packages.yaml` declares `{name: localstack-mcp-server, env: {LOCALSTACK_AUTH_TOKEN: ""}, command: "mcp-env-wrapper localstack-mcp-server npx -y @localstack/localstack-mcp-server"}`
+- **THEN** the script SHALL register the server with that `command` string, passing `-e LOCALSTACK_AUTH_TOKEN=<value>` only if the variable is set in the shell environment at apply time, and skipping registration with a warning otherwise
 
-#### Scenario: Existing -e flag format still works
-- **WHEN** `packages.yaml` contains `basic-memory -s user -- uvx --python 3.12 basic-memory mcp`
-- **THEN** the script SHALL register `uvx` as the command with remaining tokens as args, with no `-e` flags
+#### Scenario: Server with an explicit scope
+- **WHEN** `packages.yaml` declares `{name: basic-memory, scope: user, command: "uvx --python 3.12 basic-memory mcp"}`
+- **THEN** the script SHALL register `basic-memory` with `--scope user` and no `-e` flags

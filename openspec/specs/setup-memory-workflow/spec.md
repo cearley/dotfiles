@@ -47,7 +47,10 @@ When the MCP server entry is needed, the skill SHALL write it to `.mcp.json` at 
 
 #### Scenario: .mcp.json already exists
 - **WHEN** `.mcp.json` exists at the project root
-- **THEN** the skill merges the basic-memory entry using `//=` idempotency, preserving all other entries
+- **THEN** the skill reads the existing `mcpServers["basic-memory"]` entry (if any) and compares it to the canonical value
+- **AND** if no entry exists, adds the canonical entry while preserving all other keys
+- **AND** if an entry exists and matches the canonical value, leaves the file untouched
+- **AND** if an entry exists and differs, reports the drift to the user and asks whether to update, leave as-is, or merge manually — it SHALL NOT silently overwrite a differing entry
 
 ### Requirement: MCP server command uses uvx with Python 3.12
 The MCP server entry written to `.mcp.json` SHALL invoke basic-memory via uvx with an explicit Python version.
@@ -63,20 +66,24 @@ The skill SHALL inform the user that `.mcp.json` may be committed or gitignored,
 - **WHEN** the skill reaches the confirm step after writing `.mcp.json`
 - **THEN** the output notes that `.mcp.json` was created at the project root and reminds the user to decide whether to add it to `.gitignore` based on team preference
 
-### Requirement: Idempotent hook installation via jq exit code
-The skill SHALL use `jq -e` exit code to detect whether the UserPromptSubmit hook is already present, rather than capturing and string-comparing jq output.
+### Requirement: Idempotent, drift-checked hook installation via version marker
+The skill SHALL extract any existing UserPromptSubmit hook command containing `"basic-memory"` from `settings.local.json`, then compare an embedded `setup-memory-workflow-version:N` marker (and whether it still names the current project) against the skill's current `SMW_VERSION` to decide whether the hook is up to date, needs the user's confirmation to repair, or should be left alone.
 
 #### Scenario: Hook absent
 - **WHEN** no hook command in `settings.local.json` contains the string `"basic-memory"`
-- **THEN** `jq -e` exits non-zero and the hook is appended
+- **THEN** the skill appends a fresh hook entry with the canonical command, embedding the current `SMW_VERSION` marker
 
-#### Scenario: Hook already present
-- **WHEN** an existing hook command contains `"basic-memory"`
-- **THEN** `jq -e` exits 0 and no duplicate hook is added
+#### Scenario: Hook present and current
+- **WHEN** an existing hook command contains `"basic-memory"` with a version marker equal to `SMW_VERSION` and still naming the current project
+- **THEN** the skill reports the hook is up to date and leaves it unchanged
+
+#### Scenario: Hook present but drifted
+- **WHEN** an existing hook command's version marker is missing, older than `SMW_VERSION`, or no longer names the current project
+- **THEN** the skill shows the existing command against the canonical one and asks the user before replacing it in place — it SHALL NOT silently overwrite or append a duplicate
 
 #### Scenario: Malformed JSON
 - **WHEN** `settings.local.json` is malformed
-- **THEN** `jq` exits non-zero; the outer guard prevents a corrupt append
+- **THEN** `jq` exits non-zero; the outer guard prevents a corrupt write, and the skill stops and reports the error before proceeding further
 
 ### Requirement: Hook command built via jq --arg
 The skill SHALL pass the hook command string to jq via `--arg`, keeping the command string and the jq filter syntactically separate.

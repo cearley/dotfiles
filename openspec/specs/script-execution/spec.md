@@ -211,12 +211,19 @@ The following scripts are currently implemented (as of baseline):
 - `27` (after apply): Install Rust crates via Cargo from packages.yaml (requires `dev` tag)
 - `28`: Install machine-specific Homebrew packages (Brewfile)
 
-**Environment Managers (30-39):**
+**Environment Managers & AI Tooling (30-39):**
 - `35`: Install nvm (Node Version Manager)
 - `36`: Install Claude Code (AI coding assistant, requires `ai` tag)
+- `37`: Install Claude Code skills (requires `ai` tag)
+- `38`: Install Claude Code MCP servers (requires `ai` tag)
+- `39`: Install Claude Code plugins (requires `ai` tag)
 
 **Environment Setup (40-49):**
+- `40`: Load Claude Code LaunchAgent (requires `ai` tag, Darwin)
+- `41`: Install SpecStory patched build (requires `ai` tag)
+- `42`: Build freshbooks-mcp-server (requires `ai`+`dev` tags, needs nvm from 35)
 - `45`: Setup GitHub authentication (git, GHCR, GitHub CLI)
+- `46`: Setup SSH GitHub authentication (SSH key + commit signing)
 
 **System Configuration (80-99):**
 - `80`: Setup Microsoft Defender (security configuration)
@@ -224,8 +231,9 @@ The following scripts are currently implemented (as of baseline):
 - `83`: Login to Atuin shell history sync (requires KeePassXC)
 - `85`: Configure system defaults (macOS preferences including iTerm2)
 - `90`: Update hosts file (system-level modifications)
+- `91`: Setup Cloudflare Tunnel (machine-specific tunnel management)
+- `94`: Setup Syncthing folders (file synchronization service)
 - `95`: Restart Syncthing (file synchronization service)
-- `97`: Test SSH GitHub connectivity (system validation)
 
 ### Template-Based Scripts
 All scripts are templates to enable:

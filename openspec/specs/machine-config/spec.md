@@ -4,11 +4,11 @@
 The machine configuration system provides centralized, extensible machine-specific settings using pattern-based detection and reusable template components.
 ## Requirements
 ### Requirement: Machine Data Storage
-Machine-specific settings SHALL be stored in `home/.chezmoidata/config.yaml` as a static YAML file.
+Machine-specific settings SHALL be stored in `home/.chezmoidata/config.yaml` as a static YAML file, with all machine-name-pattern entries nested under a single top-level `machines:` key.
 
 #### Scenario: Machine settings definition
 - **WHEN** a new machine "MacBook Pro" is added to `config.yaml`
-- **THEN** the file SHALL contain nested YAML properties for that machine
+- **THEN** the file SHALL contain the pattern as a key under `machines:`, with nested YAML properties as its value
 - **AND** SHALL support arbitrary key-value pairs
 
 #### Scenario: Nested property support

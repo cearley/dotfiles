@@ -231,19 +231,20 @@ The `prompt_ready()` function SHALL prompt the user to press any key to continue
 - **AND** SHALL wait for a single keypress
 
 ### Requirement: iCloud Sign-In Check
-The `is_icloud_signed_in()` function SHALL check if the user is signed into iCloud.
+The `warn_icloud_not_signed_in()` function SHALL check at runtime whether the user is signed into iCloud, printing a standard warning as a side effect when not.
 
 #### Scenario: User signed into iCloud
-- **WHEN** `is_icloud_signed_in` is called and an iCloud account is configured
-- **THEN** the function SHALL return 0 (success)
+- **WHEN** `warn_icloud_not_signed_in` is called and an iCloud account is configured
+- **THEN** the function SHALL return 0 (success) without printing anything
 
 #### Scenario: User not signed into iCloud
-- **WHEN** `is_icloud_signed_in` is called and no iCloud account is configured
-- **THEN** the function SHALL return 1 (failure)
+- **WHEN** `warn_icloud_not_signed_in` is called and no iCloud account is configured
+- **THEN** the function SHALL print a `print_message "warning"` explaining that Mac App Store packages will be skipped
+- **AND** SHALL return 1 (failure)
 
 #### Scenario: MobileMeAccounts plist missing
 - **WHEN** the MobileMeAccounts.plist file does not exist
-- **THEN** the function SHALL return 1 (failure)
+- **THEN** the function SHALL treat this the same as not being signed in (warning printed, return 1)
 
 ### Requirement: Claude Environment Iterator
 The `for_each_claude_env` function SHALL iterate over a list of Claude environment directories, expand tilde prefixes, skip missing directories with a skip message, and invoke a caller-provided callback function for each valid directory.
@@ -268,25 +269,18 @@ The `for_each_claude_env` function SHALL iterate over a list of Claude environme
 - **WHEN** `for_each_claude_env my_fn` is called with no directory arguments
 - **THEN** the function SHALL return 0 without calling the callback
 
-### Requirement: iCloud Installation Guard Template Partial
-A chezmoi template partial named `icloud-install-guard` SHALL emit a bash block that exits the script early with a user-readable explanation when iCloud is not signed in at template-render time. Scripts that require iCloud availability SHALL include this partial instead of duplicating the guard inline.
+### Requirement: iCloud Availability via Template-Time Partial and Runtime Warning
+A chezmoi template partial named `icloud-account-id` SHALL return the signed-in iCloud account ID (or an empty string if not signed in) at template-render time, for scripts that need to conditionally render content based on iCloud availability. This is a separate, complementary mechanism to the `warn_icloud_not_signed_in()` runtime check — the partial answers "should this line even be in the rendered script," while the function answers "warn the user right now."
 
-#### Scenario: iCloud signed in — no guard emitted
-- **WHEN** the `icloud-install-guard` partial is rendered and `icloud-account-id` returns a non-empty value
-- **THEN** the partial SHALL emit no bash code
-- **AND** the containing script SHALL proceed normally
+#### Scenario: Template-time gating of Mac App Store entries
+- **WHEN** `run_onchange_before_darwin-23-install-packages.sh.tmpl` renders and `icloud-account-id` returns a non-empty value
+- **THEN** the rendered Brewfile heredoc SHALL include `mas` entries
+- **AND** WHEN `icloud-account-id` returns empty, the heredoc SHALL omit `mas` entries and the script SHALL render a reminder to re-run `chezmoi apply` after signing in
 
-#### Scenario: iCloud not signed in — guard exits the script
-- **WHEN** the `icloud-install-guard` partial is rendered and `icloud-account-id` returns an empty value
-- **THEN** the partial SHALL emit a bash block that:
-  - prints a warning via `print_message "warning"` explaining iCloud is not signed in
-  - prints an info message via `print_message "info"` advising the user to run `chezmoi apply` again after signing in
-  - calls `exit 0` to skip the script without error
-
-#### Scenario: Partial is reusable across scripts
-- **WHEN** `{{ includeTemplate "icloud-install-guard" . }}` is included in any script template
-- **THEN** the guard SHALL behave identically regardless of the surrounding script content
-- **AND** the partial SHALL NOT assume any surrounding variable or function is defined
+#### Scenario: Runtime warning alongside template-time gating
+- **WHEN** a script needs to both gate template output and inform the user during the run (e.g. script 23 and script 28's `brew bundle`/`HOMEBREW_BUNDLE_MAS_SKIP` handling)
+- **THEN** it SHALL call `warn_icloud_not_signed_in()` at runtime in addition to using `icloud-account-id` at template-render time
+- **AND** neither mechanism SHALL abort the script — both degrade gracefully by skipping iCloud-dependent work
 
 ### Requirement: Error Handling Standards
 Utility functions SHALL follow consistent error handling patterns.

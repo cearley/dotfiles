@@ -621,10 +621,9 @@ audit_claude_mcp_servers() {
 
     sort -u "$installed_file" -o "$installed_file"
 
-    # Declared: first token of each mcp_servers entry (the server name; strip command)
-    declared_for_agent "claude_code" "mcp_servers" \
-        | awk '{print $1}' \
-        | sort > "$declared_file"
+    # Declared: the `name` field of each mcp_servers entry (a structured map, not a plain string)
+    yq ".packages.darwin.ai.agents.claude_code.mcp_servers[]?.name" "$PACKAGES_YAML" 2>/dev/null \
+        | sort -u > "$declared_file"
 
     report_orphans "Claude Code MCP Servers" "$installed_file" "$declared_file" "claude mcp remove" "per_line"
     rm -f "$installed_file" "$declared_file"

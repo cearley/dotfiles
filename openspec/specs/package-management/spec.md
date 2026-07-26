@@ -489,19 +489,19 @@ Bun global package installation SHALL be controlled by user-selected tags.
 
 #### Scenario: Multiple package categories
 - **WHEN** a user selects tags `core,dev,ai`
-- **THEN** bun packages from all three tag categories SHALL be installed via `bun install -g`
+- **THEN** bun packages from all three tag categories SHALL be installed via `bun add -g`
 
 ### Requirement: Bun Global Package Installation Script
 Bun global packages SHALL be installed via a `run_onchange_before` script at position 26.
 
 #### Scenario: Package installation execution
 - **WHEN** the bun package installation script runs
-- **THEN** it SHALL execute `bun install -g <package>` for each selected package
+- **THEN** it SHALL execute `bun add -g <package>` for each selected package
 - **AND** SHALL re-run whenever the script content or `packages.yaml` changes
 
 #### Scenario: Package installation idempotency
 - **WHEN** a package is already installed globally
-- **THEN** `bun install -g` SHALL skip reinstallation or upgrade the package
+- **THEN** `bun add -g` SHALL skip reinstallation or upgrade the package
 - **AND** SHALL continue with remaining packages
 
 #### Scenario: Bun availability
@@ -756,7 +756,7 @@ The `packages.darwin.ai` section SHALL provide an `agents` sub-namespace for per
 ### Requirement: Claude Code Agent Configuration Keys
 The `packages.darwin.ai.agents.claude_code` mapping SHALL accept the following keys, each containing a list:
 
-- `mcp_servers` — Model Context Protocol server registrations, each item formatted as `"<name> <command...>"` (e.g. `"playwright npx @playwright/mcp@latest"`).
+- `mcp_servers` — Model Context Protocol server registrations, each item a mapping with a `name`, a `command` (the server launch command), an optional `scope` (default `user`), and an optional `env` map of environment-variable names to values — an empty-string value means the variable SHALL be read from the shell environment at runtime rather than declared inline, and registration SHALL be skipped with a warning if it's unset (e.g. `{name: playwright, command: npx @playwright/mcp@latest}`).
 - `skills` — Skill collection specs consumed by `npx skills add` (e.g. `"specstoryai/agent-skills -all"`).
 - `plugin_marketplaces` — Marketplace sources consumed by `claude plugins marketplace add` (GitHub `org/repo` references or full git URLs).
 - `plugins` — Plugin identifiers consumed by `claude plugins install`, in `<plugin>@<marketplace>` form.
@@ -825,8 +825,7 @@ The system SHALL install declared Claude Code MCP servers via a dedicated `run_o
 
 #### Scenario: Server registration command
 - **WHEN** the script processes a server entry
-- **AND** the entry has the form `"<name> <command...>"`
-- **THEN** the script SHALL invoke `claude mcp add --scope user <name> -- <command...>` for each declared Claude environment
+- **THEN** the script SHALL invoke `claude mcp add --scope <scope> <name> [-e VAR=value ...] -- <command>` for each declared Claude environment, using the entry's `scope` (default `user`), `env` map (rendered as `-e` flags), and `command` fields
 
 #### Scenario: Per-environment registration
 - **WHEN** the user has multiple Claude environments configured via `claude_envs`
@@ -835,8 +834,9 @@ The system SHALL install declared Claude Code MCP servers via a dedicated `run_o
 
 #### Scenario: Idempotent re-run
 - **WHEN** the script runs again with the same server list
-- **THEN** `claude mcp add` SHALL report an "already registered" condition
-- **AND** the script SHALL log a warning but continue with remaining entries
+- **AND** `claude mcp add` reports an "already exists" condition
+- **THEN** the script SHALL remove the existing registration (`claude mcp remove`) and re-add it, so the server's `env`/`command`/`scope` stay in sync with `packages.yaml`
+- **AND** SHALL log a warning and continue with remaining entries if that re-add attempt also fails
 - **AND** SHALL NOT abort the overall apply
 
 #### Scenario: Position relative to other Claude scripts
@@ -917,7 +917,7 @@ The Bun global package installation script (`run_onchange_before_darwin-26-insta
 #### Scenario: Bun layer skipped
 - **WHEN** the shared skip decision indicates the `bun` layer should be skipped
 - **THEN** the script SHALL emit a `print_message "skip"` message and exit 0
-- **AND** SHALL NOT invoke `bun install -g`
+- **AND** SHALL NOT invoke `bun add -g`
 
 #### Scenario: Bun layer not skipped
 - **WHEN** the shared skip decision indicates the `bun` layer should run
@@ -956,16 +956,16 @@ Exiting early due to a layer skip gate SHALL be treated as a successful script r
 - **AND** chezmoi SHALL record the script as successfully run, not as failed
 
 ### Requirement: Single Source of Category Eligibility Resolution
-Category/tag eligibility resolution — determining which `packages.yaml` categories contribute items for a given key on this machine — SHALL be implemented in exactly one reusable template partial, `home/.chezmoitemplates/package-layer-items`. The partial SHALL accept a `key` parameter (the `packages.yaml` key to resolve, e.g. `bun`, `uv`, `sdkman`, `cargo`, `taps`, `brews`, `casks`, `mas`, `brew_env`) and an optional `includeCore` parameter (default `true`), and SHALL return a JSON array of `{"category": <name>, "items": <value>}` objects.
+Category/tag eligibility resolution — determining which `packages.yaml` categories contribute items for a given key on this machine — SHALL be implemented in exactly one reusable template partial, `home/.chezmoitemplates/package-layer-items`. The partial SHALL accept a `key` parameter (the `packages.yaml` key to resolve, e.g. `bun`, `uv`, `sdkman`, `cargo`, `taps`, `brews`, `casks`, `mas`, `brew_env`) and an optional `coreAlwaysEligible` parameter (default `true`), and SHALL return a JSON array of `{"category": <name>, "items": <value>}` objects.
 
 #### Scenario: Eligible categories resolved with core included
-- **WHEN** the partial is invoked with `includeCore` true (or omitted)
+- **WHEN** the partial is invoked with `coreAlwaysEligible` true (or omitted)
 - **THEN** it SHALL iterate `core` followed by `.tag_choices` in order
 - **AND** SHALL include a category's entry when the category is `core` or is present in the machine's selected `.tags`
 - **AND** SHALL include only categories where the requested key exists and its value is non-empty
 
 #### Scenario: Core excluded for layers without core packages
-- **WHEN** the partial is invoked with `includeCore` false
+- **WHEN** the partial is invoked with `coreAlwaysEligible` false
 - **THEN** it SHALL iterate `.tag_choices` only
 - **AND** SHALL include a category's entry only when the category is present in the machine's selected `.tags`
 
@@ -983,7 +983,7 @@ All package-layer installation scripts (positions 23–27) SHALL obtain their pe
 
 #### Scenario: Simple layers range over partial output
 - **WHEN** the SDKMAN (24), UV (25), Bun (26), or Cargo (27) script renders install commands
-- **THEN** it SHALL call the partial with its layer key (`cargo` with `includeCore` false; others with the default)
+- **THEN** it SHALL call the partial with its layer key (`cargo` with `coreAlwaysEligible` false; others with the default)
 - **AND** SHALL render one install command per item from the returned groups, preserving the per-category comment headers
 
 #### Scenario: Homebrew script uses the partial for every category iteration
@@ -1014,7 +1014,7 @@ Using five complementary package management systems provides ecosystem-specific 
 
 #### Bun (JavaScript/TypeScript Ecosystem)
 - **Purpose**: JavaScript/TypeScript CLI tools and utilities
-- **Strengths**: Fast runtime, global package management via `bun install -g`
+- **Strengths**: Fast runtime, global package management via `bun add -g`
 - **Pattern**: Tag-based selection with `core` always installed
 - **Use cases**: AI tools (ralph-tui), development utilities
 

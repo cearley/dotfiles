@@ -52,13 +52,13 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 - **00-09**: System Foundation (Rosetta 2)
 - **10-19**: Development Toolchains (Rust)
 - **20-29**: Package Management (SDKMAN, Homebrew packages, SDKs, UV tools, Bun packages, Cargo crates, machine-specific Brewfiles)
-- **30-39**: Environment Managers & AI Tooling (nvm, Claude Code, Claude Code skills)
-- **40-49**: Environment Setup (GitHub auth, shell plugins)
+- **30-39**: Environment Managers & AI Tooling (nvm, Claude Code, skills, MCP servers, plugins)
+- **40-49**: Environment Setup (Claude LaunchAgent, SpecStory, GitHub/SSH auth)
 - **80-99**: System Configuration (security, VPN, sync services, defaults, validation)
 
 ### Shared Utilities
 - **Location**: `home/scripts/shared-utils.sh`
-- **Functions**: `print_message()`, `command_exists()`, `require_tools()`, `download_file()`, `wait_for_app_installation()`, `prompt_ready()`, `is_icloud_signed_in()`, etc.
+- **Functions**: `print_message()`, `command_exists()`, `require_tools()`, `download_file()`, `wait_for_app_installation()`, `prompt_ready()`, `warn_icloud_not_signed_in()`, etc.
 - **Consistent patterns**: All installation scripts use identical messaging and error handling
 
 ### Development Environment
@@ -112,6 +112,6 @@ This is a personal configuration reflecting specific workflows and preferences. 
 - Full name, GitHub username, GitHub emails
 - KeePassXC database path
 - Microsoft email (optional, for subscription app installs)
-- Machine tags (core, dev, ai, work, personal, data-science, mobile) - controls which tools get installed
+- Machine tags (`ai`, `datascience`, `dev`, `mobile`, `personal`, `school`, `work`) - controls which tools get installed; `core` packages install on every machine regardless of selected tags
 
 **Development focus:** Programming, Cloud (AWS, Azure), AI/ML, macOS-specific tools
