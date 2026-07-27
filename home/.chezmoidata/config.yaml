@@ -1,5 +1,77 @@
-# Machine-specific configuration
-# Maps machine name patterns to their corresponding machine settings
+# Machine-specific configuration and shared data, consumed by chezmoi templates and scripts.
+#
+# Two top-level sections below, each documented immediately above it:
+#   syncthing_shared_folders - Shared literal data, not a machine setting.
+#   machines                 - Per-machine settings, keyed by machine-name pattern.
+
+
+# syncthing_shared_folders - Shared literal Syncthing folder data (not a machine setting),
+#                     referenced by machines' `syncthing_folders` property via YAML anchor/alias.
+#                     Lives above `machines:` — anchors must precede aliases, and a shared key
+#                     nested inside `machines:` would be misread as a hostname pattern.
+#
+#                     Entry schema (same shape used by a machine's own `syncthing_folders`):
+#                       id       - Syncthing folder ID (must match across machines for the same shared folder)
+#                       label    - Human-readable folder name
+#                       path     - Local path (tilde-expanded at script runtime)
+#                       versioning (optional):
+#                         type   - Versioning strategy: simple | trashcan | staggered | external | none
+#                                  Use "none" to explicitly clear versioning. Omit the entire
+#                                  versioning key to leave existing versioning unchanged.
+#                         params - Map of versioning parameters (all values must be strings).
+#                                  Keys are Syncthing-native camelCase (e.g., keep, cleanoutDays).
+#                       ignores (optional):
+#                         List of Syncthing ignore patterns. Replaces the folder's .stignore on
+#                         each apply. Omit to leave the existing .stignore unchanged.
+#
+syncthing_shared_folders: &laptop_desktop_syncthing_folders
+  - id: default
+    label: Default Folder
+    path: ~/Sync
+    versioning:
+      type: none
+    ignores:
+      - "(?d).DS_Store"
+  - id: emmxp-fxjwr
+    label: knowledge-personal
+    path: ~/basic-memory
+    versioning:
+      type: simple
+      params:
+        cleanoutDays: "0"
+        keep: "5"
+    ignores:
+      - "(?d).DS_Store"
+  - id: gprnu-lxo9w
+    label: Confidential
+    path: ~/Confidential
+    versioning:
+      type: none
+    ignores:
+      - "(?d).DS_Store"
+  - id: onhkl-pan5k
+    label: Business
+    path: ~/Business
+    versioning:
+      type: simple
+      params:
+        cleanoutDays: "0"
+        keep: "5"
+    ignores:
+      - "(?d).DS_Store"
+  - id: uqowz-v2f3n
+    label: knowledge-work
+    path: ~/.local/share/basic-memory
+    versioning:
+      type: simple
+      params:
+        cleanoutDays: "0"
+        keep: "5"
+    ignores:
+      - "(?d).DS_Store"
+
+
+# machines - Per-machine settings, keyed by machine-name pattern.
 #
 # The machine name is obtained from the `machine-name` template, which returns:
 #   - macOS:   Output of `scutil --get "ComputerName"`
@@ -13,7 +85,7 @@
 # If no pattern matches, templates return empty strings and scripts will skip
 # machine-specific operations gracefully.
 #
-# Explanation of machine-specific properties:
+# Per-machine properties:
 #
 # brewfile          - Specifies the Homebrew Brewfile to use for that machine.
 #                     These are located in the brewfiles/ directory within the
@@ -48,24 +120,12 @@
 #                         bedrock: 208
 #                         client: 155
 #
-# syncthing_folders - List of Syncthing shared folders to configure on this machine.
-#                     The setup script (position 94) adds missing folders and reconciles
-#                     versioning and ignore patterns on every `chezmoi apply`.
+# syncthing_folders - List of Syncthing shared folders to configure on this machine. Uses the
+#                     same entry schema as `syncthing_shared_folders` above; a machine MAY alias
+#                     that shared list (`syncthing_folders: *anchor-name`) or declare its own
+#                     inline entries. The setup script (position 94) adds missing folders and
+#                     reconciles versioning and ignore patterns on every `chezmoi apply`.
 #                     Device sharing is managed separately via the Syncthing Web UI.
-#
-#                     Each entry supports:
-#                       id       - Syncthing folder ID (must match across machines for the same shared folder)
-#                       label    - Human-readable folder name
-#                       path     - Local path (tilde-expanded at script runtime)
-#                       versioning (optional):
-#                         type   - Versioning strategy: simple | trashcan | staggered | external | none
-#                                  Use "none" to explicitly clear versioning. Omit the entire
-#                                  versioning key to leave existing versioning unchanged.
-#                         params - Map of versioning parameters (all values must be strings).
-#                                  Keys are Syncthing-native camelCase (e.g., keep, cleanoutDays).
-#                       ignores (optional):
-#                         List of Syncthing ignore patterns. Replaces the folder's .stignore on
-#                         each apply. Omit to leave the existing .stignore unchanged.
 #
 machines:
   MacBook Pro:
@@ -77,51 +137,7 @@ machines:
       - '~/.claude-work'
     keepassxc_entries:
       ssh: SSH (MacBook Pro)
-    syncthing_folders:
-      - id: default
-        label: Default Folder
-        path: ~/Sync
-        versioning:
-          type: none
-        ignores:
-          - "(?d).DS_Store"
-      - id: emmxp-fxjwr
-        label: knowledge-personal
-        path: ~/basic-memory
-        versioning:
-          type: simple
-          params:
-            cleanoutDays: "0"
-            keep: "5"
-        ignores:
-          - "(?d).DS_Store"
-      - id: gprnu-lxo9w
-        label: Confidential
-        path: ~/Confidential
-        versioning:
-          type: none
-        ignores:
-          - "(?d).DS_Store"
-      - id: onhkl-pan5k
-        label: Business
-        path: ~/Business
-        versioning:
-          type: simple
-          params:
-            cleanoutDays: "0"
-            keep: "5"
-        ignores:
-          - "(?d).DS_Store"
-      - id: uqowz-v2f3n
-        label: knowledge-work
-        path: ~/.local/share/basic-memory
-        versioning:
-          type: simple
-          params:
-            cleanoutDays: "0"
-            keep: "5"
-        ignores:
-          - "(?d).DS_Store"
+    syncthing_folders: *laptop_desktop_syncthing_folders
   Mac Studio:
     brewfile: studio-brewfile
     claude_default: claude-personal
@@ -130,51 +146,8 @@ machines:
       - '~/.claude-work'
     keepassxc_entries:
       ssh: SSH (Mac Studio)
-    syncthing_folders:
-      - id: default
-        label: Default Folder
-        path: ~/Sync
-        versioning:
-          type: none
-        ignores:
-          - "(?d).DS_Store"
-      - id: emmxp-fxjwr
-        label: knowledge-personal
-        path: ~/basic-memory
-        versioning:
-          type: simple
-          params:
-            cleanoutDays: "0"
-            keep: "5"
-        ignores:
-          - "(?d).DS_Store"
-      - id: gprnu-lxo9w
-        label: Confidential
-        path: ~/Confidential
-        versioning:
-          type: none
-        ignores:
-          - "(?d).DS_Store"
-      - id: onhkl-pan5k
-        label: Business
-        path: ~/Business
-        versioning:
-          type: simple
-          params:
-            cleanoutDays: "0"
-            keep: "5"
-        ignores:
-          - "(?d).DS_Store"
-      - id: uqowz-v2f3n
-        label: knowledge-work
-        path: ~/.local/share/basic-memory
-        versioning:
-          type: simple
-          params:
-            cleanoutDays: "0"
-            keep: "5"
-        ignores:
-          - "(?d).DS_Store"
+    # Same 5 folders as MacBook Pro — see syncthing_shared_folders above.
+    syncthing_folders: *laptop_desktop_syncthing_folders
     cloudflare_tunnels:
       - name: ow-dev
         id: f2ab9336-44f9-4bfc-8c2e-5696fc9bc2e4
