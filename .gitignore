@@ -26,3 +26,6 @@ PROJECT_REVIEW.md
 .dolt/
 *.db
 .beads-credential-key
+
+# OpenSpec
+openspec/.cache/
