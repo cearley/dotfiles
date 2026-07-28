@@ -1,0 +1,44 @@
+{{- if has "ai" .tags -}}
+---
+name: audit-skills
+description: >
+  Audits installed Claude Skills for visibility settings, deterministic-vs-AI steps, and
+  duplicated logic across the skill library. Use this whenever the user asks to "audit my
+  skills", "review my Claude skills", "clean up my skills", "check my skills for issues",
+  wants to know which skills should have disable-model-invocation or user-invocable settings
+  changed, suspects a skill is doing something a script could do more reliably and
+  repeatably, or wants to find duplicate/overlapping logic across skills.
+---
+
+# Audit Skills
+
+Review the user's installed Claude Skills and report improvements across three dimensions.
+For each skill found, evaluate:
+
+## 1. Visibility
+
+- Skills with high-risk side effects (deploy, commit, send messages, delete data): add
+  `disable-model-invocation: true` so Claude can't auto-fire them without an explicit ask.
+- Skills that are pure background knowledge the user would never `/run` themselves: add
+  `user-invocable: false` to hide them from `/menu`.
+
+## 2. Deterministic vs. non-deterministic
+
+- Find any step inside a skill where the model is interpreting something that's actually a
+  fixed, repeatable operation.
+- Suggest replacing those steps with a script saved inside the skill's folder — code
+  produces the same result every time, at no token cost.
+- Keep AI-driven steps only where judgment is genuinely required.
+
+## 3. Composability
+
+- Flag any skill that duplicates logic another skill already has.
+- Suggest extracting the shared logic into a callable script or a smaller composable skill
+  that both can reference.
+
+## Output
+
+Present the findings as proposed rewrites with a changelog of what changed and why for each
+skill touched. If the user supplied additional focus areas or specific skills to prioritize,
+scope the audit to those first before covering the rest.
+{{ end -}}
