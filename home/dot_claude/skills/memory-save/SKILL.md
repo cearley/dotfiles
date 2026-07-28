@@ -9,6 +9,10 @@ Record conversations and insights as structured knowledge graph entries, avoidin
 
 ## Workflow
 
+### Step 0: Determine project
+
+If the project is unknown, use the same project-determination step as [memory-recall](../memory-recall/SKILL.md) (Step 1: `list_memory_projects()`, ask the user, remember their choice for the session) before continuing.
+
 ### Step 1: Identify what to save
 
 Determine the note type from the conversation:

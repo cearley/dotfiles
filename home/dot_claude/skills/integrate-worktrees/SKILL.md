@@ -7,6 +7,7 @@ description: >
   features", "merge my worktrees", "combine feature branches", "bring parallel features
   together", or "I'm done with parallel development and want to merge". Also use when
   the parallel-worktrees skill has been used and the user is ready to consolidate work.
+disable-model-invocation: true
 ---
 
 # Integrate Worktrees
@@ -82,14 +83,12 @@ through it with the user rather than guessing.
 
 ## Step 5: Verify Features Work Together
 
-After all merges succeed, run the project's test suite:
+After all merges succeed, run the shared detection script in test mode — the
+same script `parallel-worktrees` uses to install dependencies, kept in sync via
+a shared chezmoi template partial:
 
 ```bash
-# Auto-detect test runner
-[ -f package.json ] && (command -v bun &>/dev/null && bun test || npm test)
-[ -f Cargo.toml ] && cargo test
-[ -f pyproject.toml ] && (command -v uv &>/dev/null && uv run pytest || pytest)
-[ -f go.mod ] && go test ./...
+~/.claude/skills/integrate-worktrees/scripts/detect-project-type.sh test
 ```
 
 If tests fail:

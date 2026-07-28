@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# detect-project-type.sh — detect the project's language ecosystem(s) in the
+# current directory and run the matching install or test command.
+#
+# Usage: detect-project-type.sh <install|test>
+#
+# Single source of truth for the parallel-worktrees (install) and
+# integrate-worktrees (test) skills — rendered into both via the
+# detect-project-type chezmoi template partial. Edit here, not in either
+# skill's scripts/ copy.
+
+set -euo pipefail
+
+mode="${1:?Usage: detect-project-type.sh <install|test>}"
+found=0
+
+run() {
+  echo "-> $*"
+  "$@"
+}
+
+if [ -f package.json ]; then
+  found=1
+  echo "Detected: Node.js / Bun"
+  if [ "$mode" = "install" ]; then
+    if command -v bun &>/dev/null; then run bun install; else run npm install; fi
+  else
+    if command -v bun &>/dev/null; then run bun test; else run npm test; fi
+  fi
+fi
+
+if [ -f Cargo.toml ]; then
+  found=1
+  echo "Detected: Rust"
+  if [ "$mode" = "install" ]; then run cargo build; else run cargo test; fi
+fi
+
+if [ -f pyproject.toml ]; then
+  found=1
+  echo "Detected: Python (pyproject.toml)"
+  if [ "$mode" = "install" ]; then
+    if command -v uv &>/dev/null; then run uv sync; else run poetry install; fi
+  else
+    if command -v uv &>/dev/null; then run uv run pytest; else run pytest; fi
+  fi
+fi
+
+if [ -f requirements.txt ]; then
+  found=1
+  echo "Detected: Python (requirements.txt)"
+  if [ "$mode" = "install" ]; then
+    run pip install -r requirements.txt
+  else
+    echo "No test runner defined for requirements.txt-based projects — skipping."
+  fi
+fi
+
+if [ -f go.mod ]; then
+  found=1
+  echo "Detected: Go"
+  if [ "$mode" = "install" ]; then run go mod download; else run go test ./...; fi
+fi
+
+if [ "$found" -eq 0 ]; then
+  echo "No recognized project type found — skipping $mode."
+fi

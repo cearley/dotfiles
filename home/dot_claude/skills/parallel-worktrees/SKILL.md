@@ -54,26 +54,17 @@ existing branch name.
 
 ## Step 4: Set Up Development Environment
 
-In each worktree, auto-detect and run the appropriate setup:
+In each worktree, run the shared detection script to install dependencies for
+whatever ecosystem is present (Node/Bun, Rust, Python, or Go):
 
 ```bash
 cd "../${project}-${feature}"
-
-# Node.js / Bun
-[ -f package.json ] && (command -v bun &>/dev/null && bun install || npm install)
-
-# Rust
-[ -f Cargo.toml ] && cargo build
-
-# Python
-[ -f requirements.txt ] && pip install -r requirements.txt
-[ -f pyproject.toml ] && (command -v uv &>/dev/null && uv sync || poetry install)
-
-# Go
-[ -f go.mod ] && go mod download
+~/.claude/skills/parallel-worktrees/scripts/detect-project-type.sh install
 ```
 
-Skip setup gracefully if the project type isn't recognized — just note it.
+It skips gracefully and says so if the project type isn't recognized. This same
+script (kept in sync via a shared chezmoi template partial) is also used by
+`integrate-worktrees` to run tests before merging.
 
 ## Step 5: Confirm and Explain
 
