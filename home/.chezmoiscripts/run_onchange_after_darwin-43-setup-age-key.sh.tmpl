@@ -16,7 +16,7 @@ fi
 
 # run_onchange trigger - age key hash: {{ $ageKeySecret | sha256sum }}
 
-KEY_DIR="$HOME/.config/sops/age"
+KEY_DIR="$HOME/Library/Application Support/sops/age"
 KEY_FILE="$KEY_DIR/keys.txt"
 
 mkdir -p "$KEY_DIR"

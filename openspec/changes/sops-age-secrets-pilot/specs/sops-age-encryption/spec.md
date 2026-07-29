@@ -11,8 +11,7 @@ The system SHALL generate an age keypair for repo-scoped secret encryption, stor
 #### Scenario: Private key materialization at bootstrap
 - **WHEN** a machine bootstraps and SOPS-encrypted templates need to render
 - **THEN** a bootstrap script SHALL retrieve the private key from KeePassXC via `keepassxcAttribute`
-- **AND** SHALL write it to a fixed, non-chezmoi-managed path with restrictive permissions (0600)
-- **AND** SHALL make it available to SOPS via `SOPS_AGE_KEY_FILE`
+- **AND** SHALL write it to sops's default age key-file path for the platform, with restrictive permissions (0600), so sops auto-detects it without requiring `SOPS_AGE_KEY_FILE` to be set
 
 ### Requirement: SOPS Decryption via Template Partial
 The system SHALL decrypt SOPS+age-encrypted source files at chezmoi template-execution time via a reusable `.chezmoitemplates` partial, rather than chezmoi's native `age` encryption support.

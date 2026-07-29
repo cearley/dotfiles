@@ -1,7 +1,10 @@
-{{- /* Decrypts a SOPS+age-encrypted whole-file secret and returns its raw plaintext bytes.
+{{- /* Decrypts a SOPS+age-encrypted secret and returns its plaintext contents.
 
-     Treats the file as opaque binary content (no structured key/value
-     parsing), so it works for any file type — PEM, JSON, or otherwise.
+     Defaults to opaque binary handling (no structured key/value parsing),
+     which works for any file type — PEM, JSON, or otherwise. Pass
+     type "json" (or "yaml"/"dotenv"/"ini") for a structured file encrypted
+     with SOPS's native partial-value mode, so only leaf values were
+     ciphertext at rest while keys/structure stayed diffable in git.
      Requires the `sops` binary and a readable age private key
      (SOPS_AGE_KEY_FILE, SOPS_AGE_KEY_CMD, or sops's default key file location).
 
@@ -11,11 +14,15 @@
      Parameters (pass as dict merged with root context):
      - file (required): Path to the SOPS-encrypted source file, relative to
        .chezmoi.sourceDir (e.g. "private_dot_cloudflared/cert.pem.sops").
+     - type (optional): SOPS --input-type/--output-type value. Defaults to
+       "binary".
 
      Usage:
        {{ includeTemplate "sopsDecrypt" (merge (dict "file" "private_dot_cloudflared/cert.pem.sops") .) }}
+       {{ includeTemplate "sopsDecrypt" (merge (dict "file" "private_dot_cloudflared/foo.json.sops" "type" "json") .) }}
 
      Returns:
      - The decrypted plaintext contents of the file.
 */ -}}
-{{- output "sops" "--decrypt" "--input-type" "binary" "--output-type" "binary" (printf "%s/%s" .chezmoi.sourceDir .file) -}}
+{{- $type := index . "type" | default "binary" -}}
+{{- output "sops" "--decrypt" "--input-type" $type "--output-type" $type (printf "%s/%s" .chezmoi.sourceDir .file) -}}

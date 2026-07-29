@@ -20,28 +20,28 @@
 
 ## 4. Migrate Cloudflare Tunnel Secrets
 
-- [ ] 4.1 Encrypt the existing `cert.pem` with `sops`; commit as `home/private_dot_cloudflared/cert.pem.sops`
-- [ ] 4.2 Encrypt the existing tunnel credentials JSON with `sops`; commit as `home/private_dot_cloudflared/<tunnel-id>.json.sops`
-- [ ] 4.3 Update `home/private_dot_cloudflared/private_cert.pem.tmpl` to call the `sopsDecrypt` partial instead of `keepassxcAttachment`
-- [ ] 4.4 Update `home/private_dot_cloudflared/private_<tunnel-id>.json.tmpl` the same way
-- [ ] 4.5 Update the missing-secrets message in `home/.chezmoiscripts/run_onchange_after_darwin-91-setup-cloudflare-tunnel.sh.tmpl` to reference the age key requirement instead of the KeePassXC entry name
+- [x] 4.1 Encrypt the existing `cert.pem` with `sops`; commit as `home/private_dot_cloudflared/cert.pem.sops`
+- [x] 4.2 Encrypt the existing tunnel credentials JSON with `sops`; commit as `home/private_dot_cloudflared/<tunnel-id>.json.sops`
+- [x] 4.3 Update `home/private_dot_cloudflared/private_cert.pem.tmpl` to call the `sopsDecrypt` partial instead of `keepassxcAttachment`
+- [x] 4.4 Update `home/private_dot_cloudflared/private_<tunnel-id>.json.tmpl` the same way
+- [x] 4.5 Update the missing-secrets message in `home/.chezmoiscripts/run_onchange_after_darwin-91-setup-cloudflare-tunnel.sh.tmpl` to reference the age key requirement instead of the KeePassXC entry name
 
 ## 5. Test Harness
 
 - [x] 5.1 Add `tests/bin/sops`, a mock mirroring `tests/bin/keepassxc-cli`
 - [x] 5.2 Add a fixture file providing deterministic fake plaintext for the mock to return
 - [x] 5.3 Wire the mock into `tests/run-template`
-- [ ] 5.4 Run `tests/run-template` against both migrated templates and confirm they render without the real age key — blocked on 4.3/4.4 (templates not yet migrated)
+- [x] 5.4 Run `tests/run-template` against both migrated templates and confirm they render without the real age key
 
 ## 6. Verification & Rollback Readiness
 
 - [x] 6.1 Smoke-test the `sopsDecrypt` partial with `tests/run-template --inline`
-- [ ] 6.2 Run `chezmoi diff` then `chezmoi apply` on the tunnel's actual host (Mac Studio); confirm `cert.pem` and the tunnel JSON match the pre-migration content
-- [ ] 6.3 Confirm the LaunchDaemon reloads cleanly and the tunnel remains reachable at its configured hostname
-- [ ] 6.4 Leave the original KeePassXC attachment entries in place; confirm rollback path (revert the two `.tmpl` files and the bootstrap script via git) works if needed
+- [x] 6.2 Run `chezmoi diff` then `chezmoi apply` on the tunnel's actual host (Mac Studio); confirm `cert.pem` and the tunnel JSON match the pre-migration content — `cert.pem` was byte-identical (no diff at all); tunnel JSON matched semantically (`jq -S` hash equal) with only whitespace/key-order differences from switching to structured encryption
+- [x] 6.3 Confirm the LaunchDaemon reloads cleanly and the tunnel remains reachable at its configured hostname — `cloudflared` process was untouched (config/plist content unchanged, so no reload was triggered, correctly per the idempotent-config requirement); tunnel confirmed reachable at the Cloudflare edge (a 502 was observed, but traced to the local dev origin on :8000 not running, unrelated to this migration)
+- [x] 6.4 Leave the original KeePassXC attachment entries in place; confirm rollback path (revert the two `.tmpl` files and the bootstrap script via git) works if needed — entries untouched; rollback is a plain git revert of the three modified script/template files
 
 ## 7. Documentation
 
 - [x] 7.1 Update root `CLAUDE.md` secret-management notes to mention the new two-tier model and point to the `sops-age-encryption` spec
-- [ ] 7.2 Write a key-rotation runbook (`sops updatekeys` + re-encrypt steps) covering the pilot's age key
-- [ ] 7.3 Run `openspec validate` and confirm this change is ready for `/opsx:apply`
+- [x] 7.2 Write a key-rotation runbook (`sops updatekeys` + re-encrypt steps) covering the pilot's age key — added to `design.md`; the `updatekeys` mechanic was verified with a real two-key rotation drill
+- [x] 7.3 Run `openspec validate` and confirm this change is ready for `/opsx:apply` — `openspec validate sops-age-secrets-pilot --strict` passes

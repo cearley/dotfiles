@@ -18,6 +18,11 @@ brewfiles/
 ## scripts
 scripts/
 
+## SOPS+age ciphertext (source-only; decrypted via the sopsDecrypt partial,
+## never applied directly — see openspec/specs/sops-age-encryption/)
+.cloudflared/cert.pem.sops
+.cloudflared/f2ab9336-44f9-4bfc-8c2e-5696fc9bc2e4.json.sops
+
 # Files compiled with the zcompile builtin
 .oh-my-zsh/**/*.zwc
 .oh-my-zsh/custom/completions/
