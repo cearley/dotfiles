@@ -101,6 +101,7 @@ packages:
       brews:
       - 'ack'
       - 'act'
+      - 'age'                          # Simple, modern file-encryption tool used to decrypt SOPS-encrypted repo secrets
       - 'aws-cdk'                      # AWS Cloud Development Kit for defining cloud infrastructure in code
       - 'aws-sam-cli'
       - 'azure-cli'
@@ -128,6 +129,7 @@ packages:
       - 'qltysh/tap/qlty'              # Code quality CLI: linting, formatting, security (successor to Code Climate)
       - 'shellcheck'                   # Static analysis tool for shell scripts
       - 'snyk-cli'
+      - 'sops'                         # Encrypts/decrypts structured and binary secrets using age/PGP/KMS backends
       - 'sqlite'
       casks:
       - 'db-browser-for-sqlite'

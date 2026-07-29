@@ -9,6 +9,10 @@ Available in `home/.chezmoitemplates/`:
 - `claude-environments` - **Source of truth for Claude environment wiring**: per-env shell functions (`claude-bedrock`, `claude-personal`, `claude-work`), `export CLAUDE_CONFIG_DIR` (when `claude_default` is set), and all `*-spec` SpecStory aliases. Gated internally on `ai` tag. Used by both `dot_zshrc.tmpl` and `dot_bashrc.tmpl`.
 - `package-layer-items` - Resolves which `packages.yaml` categories are eligible for a given key (e.g. `bun`, `brews`) given the machine's tags, returning an ordered JSON array of `{category, items}` groups. Single source of category/tag eligibility logic for the package-layer scripts (positions 23-27).
 - `detect-project-type` - Full `detect-project-type.sh` script body: detects Node/Bun, Rust, Python (pyproject.toml or requirements.txt), and Go in the current directory, then runs the matching install or test command. Rendered verbatim (no template variables) into `executable_detect-project-type.sh.tmpl` in both the `parallel-worktrees` and `integrate-worktrees` Claude Skills so the two skills stay in sync without duplicating the bash logic inline in their SKILL.md files.
+- `sopsDecrypt` - Decrypts a SOPS+age-encrypted whole-file secret (e.g. `private_dot_cloudflared/cert.pem.sops`) and returns its raw plaintext bytes. Used for repo-scoped secrets that are the SOPS+age source of truth instead of KeePassXC — see `openspec/specs/sops-age-encryption/`. Requires `sops` installed and an age private key available (sourced from KeePassXC at bootstrap, never committed).
+  ```go-template
+  {{ includeTemplate "sopsDecrypt" (merge (dict "file" "private_dot_cloudflared/cert.pem.sops") .) }}
+  ```
   ```go-template
   {{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "bun") .) | fromJson -}}
   {{- range $groups }}

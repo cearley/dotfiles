@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Mock sops for chezmoi template testing (used by the sopsDecrypt partial).
+#
+# Returns fixture plaintext for known encrypted-file basenames; auto-generates
+# mock:sops:<basename> for anything not in the fixture file. The fixture file
+# is optional. Only `--decrypt` is implemented — this mock exists purely to
+# make sopsDecrypt-calling templates renderable without a real age key.
+#
+# Environment:
+#   SOPS_MOCK_FIXTURES  Path to JSON fixture file (default: ../fixtures/sops.json)
+
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+FIXTURES="${SOPS_MOCK_FIXTURES:-$SCRIPT_DIR/../fixtures/sops.json}"
+
+path=""
+skip_next=""
+for arg in "$@"; do
+    if [[ -n "$skip_next" ]]; then
+        skip_next=""
+        continue
+    fi
+    case "$arg" in
+        --input-type|--output-type) skip_next="1" ;;
+        --decrypt) ;;
+        *) path="$arg" ;;
+    esac
+done
+
+name="$(basename "${path:-}")"
+result=""
+
+if [[ -f "$FIXTURES" ]]; then
+    result=$(jq -r --arg n "$name" '.[$n] // empty' "$FIXTURES")
+fi
+
+printf '%s' "${result:-mock:sops:${name}}"

@@ -1,0 +1,21 @@
+{{- /* Decrypts a SOPS+age-encrypted whole-file secret and returns its raw plaintext bytes.
+
+     Treats the file as opaque binary content (no structured key/value
+     parsing), so it works for any file type — PEM, JSON, or otherwise.
+     Requires the `sops` binary and a readable age private key
+     (SOPS_AGE_KEY_FILE, SOPS_AGE_KEY_CMD, or sops's default key file location).
+
+     See openspec/specs/sops-age-encryption/ for the full design (key
+     custody, .sops.yaml scoping, encrypted-file naming convention).
+
+     Parameters (pass as dict merged with root context):
+     - file (required): Path to the SOPS-encrypted source file, relative to
+       .chezmoi.sourceDir (e.g. "private_dot_cloudflared/cert.pem.sops").
+
+     Usage:
+       {{ includeTemplate "sopsDecrypt" (merge (dict "file" "private_dot_cloudflared/cert.pem.sops") .) }}
+
+     Returns:
+     - The decrypted plaintext contents of the file.
+*/ -}}
+{{- output "sops" "--decrypt" "--input-type" "binary" "--output-type" "binary" (printf "%s/%s" .chezmoi.sourceDir .file) -}}

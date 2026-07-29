@@ -82,7 +82,7 @@ Catalog and usage examples moved to `home/.chezmoitemplates/CLAUDE.md` (loads au
 
 ## Key Principles
 
-1. **No hardcoded secrets** - All credentials via KeePassXC
+1. **No hardcoded secrets** - Two-tier model: KeePassXC for secrets used outside chezmoi-rendered files (default), SOPS+age-encrypted repo files only for secrets that exist solely to render chezmoi-managed files — see `openspec/specs/secret-management/` and `openspec/specs/sops-age-encryption/`
 2. **Data files are static** - Files in `.chezmoidata/` cannot be templates
 3. **Six-layer package management** (Homebrew, UV, Bun, SDKMAN, Cargo, Claude Skills via npx) - See `openspec/specs/package-management/`
 4. **Consistent messaging** - Always use shared utilities for script output
@@ -128,7 +128,7 @@ Catalog and usage examples moved to `home/.chezmoitemplates/CLAUDE.md` (loads au
 
 - **Package management** → `openspec/specs/package-management/`
 - **Machine config** → `openspec/specs/machine-config/`
-- **Secret management** → `openspec/specs/secret-management/`
+- **Secret management** → `openspec/specs/secret-management/` (tiering) and `openspec/specs/sops-age-encryption/` (SOPS+age mechanism for repo-scoped secrets)
 - **Major changes** → See archived proposals in `openspec/changes/archive/`
 
 > `openspec archive <name> --yes` — note: positional arg, not `--change` (that flag errors)

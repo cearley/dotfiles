@@ -12,11 +12,16 @@
 #   tests/run-template home/private_dot_ssh/id_ed25519.pub.tmpl
 #   tests/run-template home/private_dot_zsh_secrets.tmpl
 #   tests/run-template --inline '{{ keepassxcAttribute "GitHub" "Access Token" }}'
+#   tests/run-template --inline '{{ includeTemplate "sopsDecrypt" (merge (dict "file" "private_dot_cloudflared/cert.pem.sops") .) }}'
+#
+# Templates calling the sopsDecrypt partial are rendered against a mock
+# `sops` binary (tests/bin/sops) put ahead of PATH — no real age key needed.
 #
 # Options:
-#   --inline <template>   Evaluate an inline template string instead of a file
-#   --fixtures <path>     Path to JSON fixtures file (default: tests/fixtures/keepassxc.json)
-#   -h, --help            Show this help
+#   --inline <template>     Evaluate an inline template string instead of a file
+#   --fixtures <path>       Path to JSON fixtures file for KeePassXC (default: tests/fixtures/keepassxc.json)
+#   --sops-fixtures <path>  Path to JSON fixtures file for the sops mock (default: tests/fixtures/sops.json)
+#   -h, --help              Show this help
 
 set -euo pipefail
 
@@ -24,6 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 MOCK_CMD="$SCRIPT_DIR/bin/keepassxc-cli"
 DEFAULT_FIXTURES="$SCRIPT_DIR/fixtures/keepassxc.json"
+DEFAULT_SOPS_FIXTURES="$SCRIPT_DIR/fixtures/sops.json"
 
 usage() {
     sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
@@ -32,17 +38,19 @@ usage() {
 
 INLINE=""
 FIXTURES="$DEFAULT_FIXTURES"
+SOPS_FIXTURES="$DEFAULT_SOPS_FIXTURES"
 TEMPLATE_FILE=""
 EXTRA_ARGS=()
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -h|--help)      usage 0 ;;
-        --inline)       shift; INLINE="$1"; shift ;;
-        --fixtures)     shift; FIXTURES="$1"; shift ;;
-        --)             shift; EXTRA_ARGS=("$@"); break ;;
-        -*)             echo "Unknown option: $1" >&2; usage 1 ;;
-        *)              TEMPLATE_FILE="$1"; shift ;;
+        -h|--help)         usage 0 ;;
+        --inline)          shift; INLINE="$1"; shift ;;
+        --fixtures)        shift; FIXTURES="$1"; shift ;;
+        --sops-fixtures)   shift; SOPS_FIXTURES="$1"; shift ;;
+        --)                shift; EXTRA_ARGS=("$@"); break ;;
+        -*)                echo "Unknown option: $1" >&2; usage 1 ;;
+        *)                 TEMPLATE_FILE="$1"; shift ;;
     esac
 done
 
@@ -85,6 +93,8 @@ chezmoi dump-config --format json | jq \
     > "$TEST_CONFIG"
 
 export KEEPASSXC_MOCK_FIXTURES="$FIXTURES"
+export SOPS_MOCK_FIXTURES="$SOPS_FIXTURES"
+export PATH="$SCRIPT_DIR/bin:$PATH"
 
 if [[ -n "$INLINE" ]]; then
     chezmoi execute-template \
