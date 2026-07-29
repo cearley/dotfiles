@@ -66,9 +66,9 @@ Add `tests/bin/sops` (mirroring `tests/bin/keepassxc-cli`) plus a fixture return
 
 **Rollback**: revert the two `.tmpl` files and the bootstrap script to their prior `keepassxcAttachment`-based versions (preserved in git history); no data loss, since the original KeePassXC entries are never deleted.
 
-## Open Questions
+## Open Questions — Resolved (2026-07-29)
 
-- `.sops.yaml` rule granularity: keep it per-file (D3) or widen to `home/private_dot_cloudflared/**` now to reduce friction if more Cloudflare secrets are added later?
-- On-disk key location: SOPS's default `~/.config/sops/age/keys.txt`, or a path more clearly namespaced to this repo (e.g. `~/.config/chezmoi-age/keys.txt`, with `SOPS_AGE_KEY_FILE` exported from `.zshrc`)?
-- Bootstrap script semantics: `run_once_` (install the key file once) or `run_onchange_` (re-sync if the KeePassXC-stored key is ever rotated)? Leaning `run_onchange_` for rotation support, but confirm intent.
-- Should the pilot also validate multi-recipient support (a second age public key for a future second machine) now, or defer until an actual second machine needs tunnel secrets?
+- `.sops.yaml` rule granularity: **per-file (D3), unchanged.** D3 already made this call; a future capability opts in deliberately rather than being swept in by a broad glob.
+- On-disk key location: **SOPS's default `~/.config/sops/age/keys.txt`.** No custom `SOPS_AGE_KEY_FILE` env var needed — least surprising to anyone already familiar with sops, and sops auto-detects this path.
+- Bootstrap script semantics: **`run_onchange_`.** Re-syncs the key file if the KeePassXC-stored key is ever rotated, matching the original leaning.
+- Multi-recipient support: **deferred.** No second machine currently needs tunnel secrets; adding a second recipient now would be speculative scope beyond this pilot's stated goal of proving the mechanism on one capability. Revisit when an actual second machine exists (consistent with the Non-Goals section).

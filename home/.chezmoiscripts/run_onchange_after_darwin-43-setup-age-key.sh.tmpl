@@ -1,0 +1,32 @@
+{{- if and (eq .chezmoi.os "darwin") .has_keepassxc_db -}}
+{{- $ageKeySecret := keepassxcAttribute "age (dotfiles)" "private-key" -}}
+#!/bin/bash
+
+# Chezmoi script to install the age private key used to decrypt SOPS-encrypted
+# secrets (see openspec/specs/sops-age-encryption/). Must run before tunnel
+# setup (91), which depends on it via the sopsDecrypt template partial.
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools sops age; then
+    exit 1
+fi
+
+# run_onchange trigger - age key hash: {{ $ageKeySecret | sha256sum }}
+
+KEY_DIR="$HOME/.config/sops/age"
+KEY_FILE="$KEY_DIR/keys.txt"
+
+mkdir -p "$KEY_DIR"
+chmod 700 "$KEY_DIR"
+
+cat > "$KEY_FILE" <<'AGE_KEY_EOF'
+{{ $ageKeySecret }}
+AGE_KEY_EOF
+
+chmod 600 "$KEY_FILE"
+
+print_message "success" "age private key installed at $KEY_FILE"
+{{ end -}}
