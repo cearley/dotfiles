@@ -1,16 +1,33 @@
 ---
 name: save-session
-description: Append today's decisions, findings, and next steps to the __PROJECT__ basic-memory note. Run at end of every coding session.
+description: Save today's session to basic-memory. Run at end of every coding session.
 ---
 <!-- setup-memory-workflow-version:__SMW_VERSION__ -->
+
+## Step 1 — Append to the session log
 
 Search basic-memory project "__PROJECT__" for the most recent session note using search_notes with query "__PROJECT__ session".
 
 Append an update with edit_note (operation="append") including:
 - Date (use the currentDate value from context)
-- What was changed or decided today
-- Any new open items or next steps discovered
-- Any resolved items that can be checked off
+- What was changed or decided today (decisions, findings, discoveries)
+- Any items resolved this session
 
+Do NOT include open items or next steps here — those go in Step 2.
 Never overwrite the existing note — always append.
-Confirm the note title and permalink after saving.
+
+## Step 2 — Update the current status note
+
+Read the current status note:
+  identifier: "__PROJECT__/status/__PROJECT__-current-status"
+  project: "__PROJECT__"
+
+Then update it with edit_note (operation="find_replace" or "replace_section") to reflect:
+- Any items resolved this session — move from Open to Resolved
+- Any new open items or next steps discovered
+- Any environment facts that changed (new deployments, confirmed config, etc.)
+- Update the "Last updated" date at the top
+
+This note is the authoritative source for current state. Keep it accurate and tidy.
+
+Confirm both note titles and permalinks after saving.
