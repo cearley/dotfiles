@@ -28,6 +28,13 @@ Then update it with edit_note (operation="find_replace" or "replace_section") to
 - Any environment facts that changed (new deployments, confirmed config, etc.)
 - Update the "Last updated" date at the top
 
+Treat the existing Open list as the baseline, not a blank page. Preserve every item
+already there — remove or move one to Resolved only if it was actually addressed this
+session, by name. Never regenerate the Open section from scratch based only on what this
+session touched; unrelated open work must survive untouched. If the project tracks
+in-flight work in a machine-readable form (issue tracker, OpenSpec changes, TODO file),
+spot-check that every still-active item there has a matching Open entry before saving.
+
 This note is the authoritative source for current state. Keep it accurate and tidy.
 
 Confirm both note titles and permalinks after saving.
