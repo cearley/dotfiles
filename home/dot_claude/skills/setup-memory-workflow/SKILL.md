@@ -45,6 +45,8 @@ If the user confirms an update, apply it with:
 ~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply save-session-skill
 ~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply mcp-config
 ~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply hook-config
+~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply sync-memory-skill
+~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply sync-memory-script
 ```
 
 ## Step 3: Confirm
@@ -57,6 +59,8 @@ repaired (user approved), or drift found and left as-is (user declined):
 ✓ .claude/skills/save-session/SKILL.md — <created | up to date | repaired (was vN) | left as-is (user declined update)>
 ✓ .mcp.json — <configured | already registered globally | up to date | repaired | left as-is>
 ✓ .claude/settings.local.json — <hook added | up to date | repaired (was vN) | left as-is>
+✓ .claude/skills/sync-memory/SKILL.md — <created | up to date | repaired (was vN) | left as-is (user declined update)>
+✓ .claude/skills/sync-memory/scripts/sync-memory.py — <created | up to date | drift found (left as-is unless user confirms overwrite)>
 ```
 
 Remind the user that:
@@ -65,6 +69,12 @@ Remind the user that:
 - `.claude/settings.local.json` is personal to this machine — add it to `.gitignore` if
   it's not already there
 - At the end of each session, run `/save-session` to persist decisions and next steps
+- `sync-memory` is user-invoked only (it's marked `disable-model-invocation: true`) — run
+  `/sync-memory` explicitly whenever you want to distill unsynced SpecStory session logs
+  into basic-memory; it never runs on the model's own initiative
+- For unattended/cron use, `sync-memory.py --standalone` calls the Anthropic API directly
+  and requires `ANTHROPIC_API_KEY` in the environment — this skill does not configure any
+  scheduling itself
 - Notes are stored outside the repo at `~/.local/share/basic-memory/<project-name>/`
 - This skill is safe to re-run any time to check the setup is still healthy — nothing gets
   overwritten without asking first
@@ -72,7 +82,17 @@ Remind the user that:
 ## Updating the canonical templates
 
 The canonical save-session skill body lives in `assets/save-session-skill.md.template`; the
-canonical hook message lives in `assets/hook-message.txt.template`. Both use `__PROJECT__`
-and `__SMW_VERSION__` placeholders that the script substitutes at render time. Whenever you
-edit either template, bump the `SMW_VERSION` constant at the top of
-`scripts/check-drift.sh` so existing installs get flagged as drifted on their next check.
+canonical hook message lives in `assets/hook-message.txt.template`; the canonical
+sync-memory skill body lives in `assets/sync-memory-skill.md.template`; the canonical
+sync-memory script lives in `scripts/sync-memory.py.template`. All four use `__PROJECT__`
+and `__SMW_VERSION__` placeholders substituted at render time via the shared
+`check_templated_file()`/`apply_templated_file()` helpers in `scripts/check-drift.sh`.
+Whenever you edit any of these four canonical assets, bump the `SMW_VERSION` constant at
+the top of `scripts/check-drift.sh` so existing installs get flagged as drifted on their
+next check.
+
+If you add a self-referential check inside the script template (e.g. "fail if this looks
+un-rendered"), don't compare literally against the placeholder string itself — `render()`'s
+`sed` substitution is a blind global replace and will rewrite that literal occurrence too,
+silently inverting the check. Use a pattern check instead (see
+`PROJECT_NAME.startswith("__")` in the template for the existing example).

@@ -13,16 +13,18 @@
 #     overwritten here. Showing the user that diff and asking before
 #     overwriting is the model's job, not this script's.
 #
-#   check-drift.sh apply <save-session-skill|mcp-config|hook-config>
+#   check-drift.sh apply <save-session-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script>
 #     Overwrites the named piece with the canonical version. Only run this
 #     after the user has confirmed they want the drifted item replaced.
 #
-# Bump SMW_VERSION whenever the canonical templates in assets/ change, so
-# existing installs get flagged as drifted on their next check.
+# Bump SMW_VERSION whenever any canonical asset changes — the three
+# __PROJECT__/__SMW_VERSION__-templated assets (assets/*.template) plus
+# scripts/sync-memory.py.template — so existing installs get flagged as
+# drifted on their next check.
 
 set -euo pipefail
 
-SMW_VERSION=2
+SMW_VERSION=6
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS_DIR="$SKILL_DIR/assets"
 
@@ -32,6 +34,43 @@ cd "$PROJECT_ROOT"
 
 render() {
   sed -e "s/__PROJECT__/$PROJECT/g" -e "s/__SMW_VERSION__/$SMW_VERSION/g" "$1"
+}
+
+# Checks an installed file that was rendered from a __PROJECT__/__SMW_VERSION__
+# template. Reports CREATED (and creates it) if missing, UP-TO-DATE, DRIFT (shows
+# current vs. canonical, never overwrites), or NAME-MISMATCH (marker is current but
+# the project name in the file doesn't match — likely renamed, never overwrites).
+check_templated_file() {
+  local installed="$1" template="$2" executable="${3:-no}"
+  if [ ! -f "$installed" ]; then
+    render "$template" > "$installed"
+    [ "$executable" = "yes" ] && chmod +x "$installed"
+    echo "CREATED: $installed"
+    return
+  fi
+  local marker name_match
+  marker=$(grep -o 'setup-memory-workflow-version:[0-9]*' "$installed" | grep -o '[0-9]*$' || true)
+  name_match=$(grep -qF "$PROJECT" "$installed" && echo yes || echo no)
+  if [ "$marker" = "$SMW_VERSION" ] && [ "$name_match" = "yes" ]; then
+    echo "UP-TO-DATE: $installed"
+  elif [ -z "$marker" ] || [ "$marker" -lt "$SMW_VERSION" ]; then
+    echo "DRIFT (version ${marker:-none} -> $SMW_VERSION): $installed"
+    echo "--- current ---"
+    cat "$installed"
+    echo "--- canonical ---"
+    render "$template"
+  else
+    echo "NAME-MISMATCH: $installed still refers to a different project name — was this directory renamed?"
+  fi
+}
+
+# Renders template over an installed file unconditionally — only call after the
+# user has confirmed they want a DRIFT or NAME-MISMATCH repaired.
+apply_templated_file() {
+  local installed="$1" template="$2" executable="${3:-no}"
+  render "$template" > "$installed"
+  [ "$executable" = "yes" ] && chmod +x "$installed"
+  echo "APPLIED: $installed"
 }
 
 cmd_check() {
@@ -50,26 +89,17 @@ cmd_check() {
 
   echo
   echo "== save-session skill =="
-  local ss=".claude/skills/save-session/SKILL.md"
-  if [ ! -f "$ss" ]; then
-    render "$ASSETS_DIR/save-session-skill.md.template" > "$ss"
-    echo "CREATED: $ss"
-  else
-    local marker name_match
-    marker=$(grep -o 'setup-memory-workflow-version:[0-9]*' "$ss" | grep -o '[0-9]*$' || true)
-    name_match=$(grep -qF "$PROJECT" "$ss" && echo yes || echo no)
-    if [ "$marker" = "$SMW_VERSION" ] && [ "$name_match" = "yes" ]; then
-      echo "UP-TO-DATE: $ss"
-    elif [ -z "$marker" ] || [ "$marker" -lt "$SMW_VERSION" ]; then
-      echo "DRIFT (version ${marker:-none} -> $SMW_VERSION): $ss"
-      echo "--- current ---"
-      cat "$ss"
-      echo "--- canonical ---"
-      render "$ASSETS_DIR/save-session-skill.md.template"
-    else
-      echo "NAME-MISMATCH: $ss still refers to a different project name — was this directory renamed?"
-    fi
-  fi
+  check_templated_file ".claude/skills/save-session/SKILL.md" "$ASSETS_DIR/save-session-skill.md.template"
+
+  mkdir -p .claude/skills/sync-memory/scripts
+
+  echo
+  echo "== sync-memory skill =="
+  check_templated_file ".claude/skills/sync-memory/SKILL.md" "$ASSETS_DIR/sync-memory-skill.md.template"
+
+  echo
+  echo "== sync-memory script =="
+  check_templated_file ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/sync-memory.py.template" yes
 
   echo
   echo "== .mcp.json =="
@@ -135,8 +165,15 @@ cmd_apply() {
   local piece="$1"
   case "$piece" in
     save-session-skill)
-      render "$ASSETS_DIR/save-session-skill.md.template" > .claude/skills/save-session/SKILL.md
-      echo "APPLIED: .claude/skills/save-session/SKILL.md"
+      apply_templated_file ".claude/skills/save-session/SKILL.md" "$ASSETS_DIR/save-session-skill.md.template"
+      ;;
+    sync-memory-skill)
+      mkdir -p .claude/skills/sync-memory
+      apply_templated_file ".claude/skills/sync-memory/SKILL.md" "$ASSETS_DIR/sync-memory-skill.md.template"
+      ;;
+    sync-memory-script)
+      mkdir -p .claude/skills/sync-memory/scripts
+      apply_templated_file ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/sync-memory.py.template" yes
       ;;
     mcp-config)
       [ -f .mcp.json ] || echo '{}' > .mcp.json
@@ -159,7 +196,7 @@ cmd_apply() {
       echo "APPLIED: hook in .claude/settings.local.json"
       ;;
     *)
-      echo "Unknown piece: $piece (expected save-session-skill|mcp-config|hook-config)" >&2
+      echo "Unknown piece: $piece (expected save-session-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script)" >&2
       exit 1
       ;;
   esac
@@ -167,6 +204,6 @@ cmd_apply() {
 
 case "${1:-}" in
   check) cmd_check ;;
-  apply) cmd_apply "${2:?Usage: check-drift.sh apply <save-session-skill|mcp-config|hook-config>}" ;;
+  apply) cmd_apply "${2:?Usage: check-drift.sh apply <save-session-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script>}" ;;
   *) echo "Usage: check-drift.sh <check|apply PIECE>" >&2; exit 1 ;;
 esac
