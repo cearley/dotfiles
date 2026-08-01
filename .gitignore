@@ -12,6 +12,7 @@ __pycache__/
 !.claude/skills/
 !.claude/agents/
 !.claude/settings.json
+.claude/skills/*-workspace/
 .continue/
 PROJECT_REVIEW.md
 

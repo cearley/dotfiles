@@ -1,0 +1,67 @@
+{
+  "skill_name": "migrate-secret-to-sops",
+  "evals": [
+    {
+      "id": 1,
+      "eval_name": "localstack-token",
+      "prompt": "I want to migrate my LocalStack auth token to SOPS. Right now it's a KeePassXC entry called 'LocalStack (dev)' with a custom attribute 'auth-token', and there's a template at home/private_dot_config/localstack/private_auth-token.tmpl that calls {{ keepassxcAttribute \"LocalStack (dev)\" \"auth-token\" }} guarded by {{- if has \"dev\" .tags -}} since it should only apply on machines with the dev tag. It's just a plain opaque string, nothing structured. Can you do the migration?",
+      "expected_output": "Adds a narrowly-scoped .sops.yaml creation rule for the new ciphertext path; uses the bundled extract-and-encrypt.sh script with 'attribute' mode and the correct entry/attribute names (or clearly presents the equivalent command for the user to run); rewrites the .tmpl to call sopsDecrypt via includeTemplate without a 'type' param (binary default), while preserving the {{- if has \"dev\" .tags -}} conditional gate exactly as it was; checks whether home/private_dot_config/localstack/ needs a .chezmoiignore entry for the new .sops file and adds one if the directory isn't already covered; adds a tests/fixtures/sops.json entry keyed by the ciphertext's basename; attempts to verify via tests/run-template pointed at the correct source dir.",
+      "files": [],
+      "assertions": [
+        "A .sops.yaml creation rule (path_regex) exists matching the new ciphertext file's path",
+        "The updated .tmpl calls includeTemplate \"sopsDecrypt\" instead of keepassxcAttribute",
+        "The updated .tmpl does not pass \"type\" \"json\" or \"type\" \"yaml\" (binary/opaque default is correct here)",
+        "The {{- if has \"dev\" .tags -}} conditional gate is preserved verbatim in the updated .tmpl",
+        "home/.chezmoiignore.tmpl contains a target-relative entry for the new ciphertext file (e.g. .config/localstack/auth-token.sops)",
+        "tests/fixtures/sops.json contains a new key matching the ciphertext file's basename",
+        "SUMMARY.md shows an extraction command using --filename-override matching the real target path",
+        "SUMMARY.md includes actual tests/run-template output showing the template rendered without error"
+      ]
+    },
+    {
+      "id": 2,
+      "eval_name": "aws-sso-json",
+      "prompt": "We need to move the AWS SSO cache credentials to SOPS. There's a KeePassXC entry 'AWS SSO Cache (work)' with an attachment named 'sso-cache.json' containing {client_id, client_secret, refresh_token} — it's genuine structured JSON. The template is home/private_dot_config/aws-sso/private_sso-cache.json.tmpl, currently {{ keepassxcAttachment \"AWS SSO Cache (work)\" \"sso-cache.json\" }} gated on {{- if has \"work\" .tags -}}. Migrate it to sops+age please.",
+      "expected_output": "Recognizes the plaintext is structured JSON and uses type \"json\" (not binary) both for the extraction/encryption command and the sopsDecrypt partial call, so the migration actually benefits from SOPS's partial-value encryption rather than treating it as an opaque blob; adds the .sops.yaml rule; preserves the {{- if has \"work\" .tags -}} gate; checks/adds a .chezmoiignore entry for home/private_dot_config/aws-sso/; adds a realistic structured JSON fixture (not a flat mock string) to tests/fixtures/sops.json; verifies via tests/run-template.",
+      "files": [],
+      "assertions": [
+        "A .sops.yaml creation rule exists matching the new ciphertext file's path",
+        "The updated .tmpl's sopsDecrypt call passes \"type\" \"json\" (structured mode correctly chosen, not left at binary default)",
+        "The {{- if has \"work\" .tags -}} conditional gate is preserved verbatim in the updated .tmpl",
+        "home/.chezmoiignore.tmpl contains a target-relative entry for the new ciphertext file",
+        "tests/fixtures/sops.json's new entry is valid JSON containing client_id, client_secret, and refresh_token keys (realistic structured fixture, not a flat placeholder string)",
+        "SUMMARY.md shows an extraction/encryption command using --input-type json --output-type json and --filename-override",
+        "SUMMARY.md includes actual tests/run-template output showing the template rendered without error"
+      ]
+    },
+    {
+      "id": 3,
+      "eval_name": "gcp-oauth-pair",
+      "prompt": "Our GCP OAuth client id and secret are currently two separate KeePassXC attributes on an entry called 'GCP OAuth (dotfiles)' — attribute 'client-id' used in home/private_dot_config/gcloud/private_client_id.tmpl, and attribute 'client-secret' used in home/private_dot_config/gcloud/private_client_secret.tmpl. Both apply to every machine (no tag gating on either — GCP OAuth is used everywhere). Please migrate both of these to sops.",
+      "expected_output": "Before creating two separate one-off ciphertext files, raises the option to consolidate both small key/value secrets into a single shared SOPS-encrypted data file (per the repo's documented consolidation pattern for future key/value secrets) rather than creating client_id.sops + client_secret.sops as two independent pairs; if no consolidated file exists yet, asks the user whether to create one or proceeds with the simpler per-secret approach only after flagging the tradeoff — does not silently create two separate ciphertext+.chezmoiignore pairs without at least surfacing the consolidation option. Also separately notes (per skill Step 0) that since both secrets apply unconditionally with no tag gating, native chezmoi age encryption is a plausible alternative worth mentioning, without switching away from SOPS unprompted.",
+      "files": [],
+      "assertions": [
+        "SUMMARY.md explicitly discusses or proposes consolidating both secrets into one shared SOPS data file, rather than silently creating two independent one-off ciphertext pairs",
+        "SUMMARY.md mentions native chezmoi age encryption as a consideration given both secrets apply unconditionally with no tag gating",
+        "Whatever approach was taken, both resulting templates render correctly via tests/run-template (evidence shown in SUMMARY.md)",
+        "SUMMARY.md states whether the user was asked before a consolidated file was created (should not fabricate a design decision on the user's behalf without at least flagging it)"
+      ]
+    },
+    {
+      "id": 4,
+      "eval_name": "aws-credentials-modify",
+      "prompt": "Can you migrate home/dot_aws/modify_private_credentials.tmpl to sops? It's got four separate KeePassXC entries (AWS (DI Dev), AWS (CES), AWS (DI Prod), AWS (Personal)) feeding keepassxcAttribute calls across five AWS CLI profiles (some profiles reuse the same entry), plus a hardcoded [localstack] section using the well-known test/test placeholder credentials, and it's a modify_ script so it merges with whatever's already in ~/.aws/credentials below a '# --- end managed ---' marker. Read the file yourself to see the exact call count and structure.",
+      "expected_output": "Recognizes this is a modify_ script (bash heredoc + stdin-merge logic), not a plain private_ template, and calls sopsDecrypt via includeTemplate inside the Go-template-rendered heredoc the same way regardless; given several entries and many keepassxcAttribute call sites co-located in one file, proposes (or at least strongly raises) consolidating all the real AWS credentials into a single structured SOPS data file (e.g. keyed by underlying KeePassXC entry identity: di-dev, ces, di-prod, personal) decrypted once, rather than one independent ciphertext file per keepassxcAttribute call; correctly leaves the [localstack] section's literal test/test placeholder values untouched (not a real secret, nothing to migrate); preserves the file's {{ if .has_keepassxc_db }} outer gate, the {{ if has \"dev\" .tags }} inner branching, and the existing stdin-merge/marker logic exactly as they are; does not lose the aws_session_token field specific to the di-prod profile.",
+      "files": [],
+      "assertions": [
+        "SUMMARY.md discusses or implements consolidating the real AWS credentials into a single structured SOPS data file rather than one ciphertext file per keepassxcAttribute call",
+        "The [localstack] section's literal test/test placeholder values are left untouched in the final modify_ script (not encrypted, not removed)",
+        "The outer {{ if .has_keepassxc_db }} gate is preserved in the final modify_ script",
+        "The {{ if has \"dev\" .tags }} branching structure is preserved in the final modify_ script",
+        "The stdin-merge logic (existing=$(cat), the '# --- end managed ---' marker handling, tail preservation) is preserved unchanged in the final modify_ script",
+        "The di-prod profile's aws_session_token field is still present somewhere in the final modify_ script (not silently dropped)",
+        "SUMMARY.md includes actual tests/run-template output showing the modify_ script rendered without error"
+      ]
+    }
+  ]
+}
