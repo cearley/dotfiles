@@ -15,6 +15,12 @@ ZSH_THEME="powerlevel10k/powerlevel10k"
 # refresh the downloaded archives.
 zstyle ':omz:update' mode disabled  # disable automatic updates
 
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $claudeDefault := default "" (index $settings "claude_default") }}
+{{- if $claudeDefault }}
+export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
+{{- end }}
+
 plugins=(
     aws
     direnv
@@ -22,6 +28,7 @@ plugins=(
     fzf
     git
     zsh-autosuggestions
+    zsh-claude-env
     #zsh-defer # Powerlevel10k handles defered loading itself
 )
 
@@ -46,7 +53,20 @@ fi
 # Compilation flags
 export ARCHFLAGS="-arch $(uname -m)"
 
-{{ includeTemplate "claude-environments" . }}
+{{ if has "ai" .tags -}}
+# SpecStory https://specstory.com/specstory-cli
+claude-spec() {
+    specstory run claude --no-cloud-sync "$@"
+}
+codex-spec() {
+    specstory run codex --no-cloud-sync "$@"
+}
+gemini-spec() {
+    specstory run gemini --no-cloud-sync "$@"
+}
+# OpenSpecUI
+alias openspecui='npx openspecui@latest'
+{{- end }}
 
 # lsd - A modern replacement for ls command with lots of features and better defaults
 alias ls='lsd'

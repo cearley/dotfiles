@@ -45,7 +45,7 @@ chezmoi execute-template < filename.tmpl
 
 ### Template Best Practices
 
-The `claude-environments` partial defines the `prompt_claude_env` p10k segment. Its registration in `dot_p10k.zsh` is wrapped in `# === BEGIN/END claude-env segment registration ===` markers — preserve these if regenerating p10k config.
+The `prompt_claude_env` p10k segment is defined by the external `zsh-claude-env` oh-my-zsh plugin (https://github.com/cearley/zsh-claude-env), pulled via `.chezmoiexternal.toml.tmpl`. Its registration in `dot_p10k.zsh` is wrapped in `# === BEGIN/END claude-env segment registration ===` markers — preserve these if regenerating p10k config. The plugin's own `CLAUDE_ENV_COLORS`/`CLAUDE_ENV_SHOW_DEFAULT` settings live as plain hand-edited `typeset` lines just below that array, not chezmoi-templated.
 
 **Partial file management (modify_ scripts):**
 Use `modify_` prefix for files where you only manage specific keys (e.g., JSON configs modified by applications at runtime).

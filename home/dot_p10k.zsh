@@ -81,8 +81,8 @@
     # terraform_version     # terraform version (https://www.terraform.io)
     aws                     # aws profile (https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html)
     aws_eb_env              # aws elastic beanstalk environment (https://aws.amazon.com/elasticbeanstalk/)
-    # === BEGIN claude-env segment registration (managed by partial) ===
-    claude_env             # active Claude Code config dir (chezmoi-managed)
+    # === BEGIN claude-env segment registration (managed by plugin) ===
+    claude_env             # active Claude Code config dir (zsh-claude-env plugin)
     # === END ===
     azure                   # azure account name (https://docs.microsoft.com/en-us/cli/azure)
     gcloud                  # google cloud cli account and project (https://cloud.google.com/)
@@ -120,6 +120,11 @@
     # wifi                  # wifi speed
     # example               # example user-defined segment (see prompt_example function below)
   )
+
+  # zsh-claude-env plugin settings for the claude_env segment above — see
+  # https://github.com/cearley/zsh-claude-env, hand-edited (not chezmoi-templated).
+  typeset -gA CLAUDE_ENV_COLORS=(work 33 personal 76 bedrock 208)
+  CLAUDE_ENV_SHOW_DEFAULT=false
 
   # Defines character set used by powerlevel10k. It's best to let `p10k configure` set it for you.
   typeset -g POWERLEVEL9K_MODE=nerdfont-v3

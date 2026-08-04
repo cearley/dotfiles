@@ -110,16 +110,6 @@ syncthing_shared_folders: &laptop_desktop_syncthing_folders
 #                     If omitted, no default export is created and `claude` uses whatever
 #                     CLAUDE_CONFIG_DIR is already set in the shell.
 #
-# claude_env_colors - Optional p10k color overrides for the claude_env prompt segment.
-#                     Maps environment names to p10k color numbers. Omitted envs use color 244 (grey).
-#                     Built-in defaults: work=33 (blue), personal=76 (green), bedrock=208 (orange).
-#                     Example:
-#                       claude_env_colors:
-#                         work: 33
-#                         personal: 76
-#                         bedrock: 208
-#                         client: 155
-#
 # syncthing_folders - List of Syncthing shared folders to configure on this machine. Uses the
 #                     same entry schema as `syncthing_shared_folders` above; a machine MAY alias
 #                     that shared list (`syncthing_folders: *anchor-name`) or declare its own
