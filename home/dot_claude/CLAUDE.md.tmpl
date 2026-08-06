@@ -38,29 +38,7 @@ These skills are installed and should be used proactively:
 - Background subagents (via Agent tool) cannot respond to interactive permission prompts — Bash commands already approved in settings.json work fine, but unapproved commands are silently denied. For shell tasks not yet pre-approved, use foreground agents instead.
 
 ## Basic Memory
-
-When basic-memory MCP server is available, follow these rules:
-
-### Proactive Usage
-- At conversation start: use `search_notes()` or `recent_activity()` to check for prior knowledge on the user's topic before responding
-- Before creating any note: ALWAYS `search_notes()` first to check for existing content on that topic
-- When an existing note covers the topic: use `edit_note(operation="append")` instead of creating a duplicate with `write_note()`
-- At conversation end: offer to save key decisions, insights, or action items
-- Use `build_context()` to follow relation links and understand connected knowledge
-
-### Note Quality
-- Every note: 3+ observations with `[category]` prefixes, 2+ relations with `[[wikilinks]]`
-- Categories: `[decision]`, `[fact]`, `[technique]`, `[requirement]`, `[insight]`, `[problem]`, `[solution]` — avoid generic `[note]` or `[info]`
-- Relation types: `implements`, `requires`, `part_of`, `extends`, `contrasts_with`, `caused_by`, `leads_to` — avoid overusing `relates_to`
-- Use exact entity titles from search results in `[[relations]]`
-
-### Search Strategy
-- If few results: try broader terms, synonyms, or partial words
-- Try `search_type="title"` for name-based matching
-- Use `build_context(depth=2)` to find indirect connections
-- Check `recent_activity()` for recently modified content
-
-### Permission
-- Always ask before recording conversations to Basic Memory
-- Confirm after saving with the note title and location
+- At conversation start and before creating any note, search_notes()/recent_activity() first — check for prior context and avoid duplicates.
+- At conversation end, offer to save key decisions, insights, or action items.
+- Always ask before recording a conversation to Basic Memory, and confirm the note title/location after saving.
 {{ end -}}
