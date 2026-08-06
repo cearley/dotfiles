@@ -20,11 +20,14 @@
 # Bump SMW_VERSION whenever any canonical asset changes — the three
 # __PROJECT__/__SMW_VERSION__-templated assets (assets/*.template) plus
 # scripts/sync-memory.py.template — so existing installs get flagged as
-# drifted on their next check.
+# drifted on their next check. When a change also leaves behind a legacy
+# artifact from a prior version (not just new canonical content), add a
+# migrate_<piece> cleanup function to migrations.sh and a CHANGELOG.md
+# entry — see migrations.sh's header for the contract.
 
 set -euo pipefail
 
-SMW_VERSION=7
+SMW_VERSION=8
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS_DIR="$SKILL_DIR/assets"
 
@@ -35,6 +38,12 @@ cd "$PROJECT_ROOT"
 render() {
   sed -e "s/__PROJECT__/$PROJECT/g" -e "s/__SMW_VERSION__/$SMW_VERSION/g" "$1"
 }
+
+source "$SKILL_DIR/scripts/migrations.sh"
+
+# Cleans up legacy artifacts from prior versions of this skill, unconditionally,
+# before any check/apply logic runs — see migrations.sh's header for the contract.
+migrate_hook_config
 
 # Checks an installed file that was rendered from a __PROJECT__/__SMW_VERSION__
 # template. Reports CREATED (and creates it) if missing, UP-TO-DATE, DRIFT (shows
@@ -126,15 +135,15 @@ cmd_check() {
   fi
 
   echo
-  echo "== UserPromptSubmit hook =="
+  echo "== SessionStart hook =="
   [ -f .claude/settings.local.json ] || echo '{}' > .claude/settings.local.json
   local existing_cmd canonical_msg canonical_cmd
-  existing_cmd=$(jq -r '[.hooks.UserPromptSubmit[]?.hooks[]?.command // empty] | map(select(contains("basic-memory")))[0] // empty' .claude/settings.local.json)
+  existing_cmd=$(jq -r '[.hooks.SessionStart[]?.hooks[]?.command // empty] | map(select(contains("basic-memory")))[0] // empty' .claude/settings.local.json)
   canonical_msg=$(render "$ASSETS_DIR/hook-message.txt.template")
   canonical_cmd="echo '${canonical_msg}'"
   if [ -z "$existing_cmd" ]; then
     jq --arg cmd "$canonical_cmd" \
-      '.hooks.UserPromptSubmit += [{"matcher": "", "hooks": [{"type": "command", "command": $cmd}]}]' \
+      '.hooks.SessionStart += [{"matcher": "", "hooks": [{"type": "command", "command": $cmd}]}]' \
       .claude/settings.local.json > .claude/settings.local.json.tmp \
       && mv .claude/settings.local.json.tmp .claude/settings.local.json
     echo "CREATED: hook in .claude/settings.local.json"
@@ -158,7 +167,7 @@ cmd_check() {
   else
     jq '{mcp: .mcpServers["basic-memory"]}' .mcp.json || { echo "ERROR: malformed .mcp.json"; exit 1; }
   fi
-  jq '{hook_commands: [.hooks.UserPromptSubmit[]?.hooks[]?.command // ""]}' .claude/settings.local.json || { echo "ERROR: malformed settings.local.json"; exit 1; }
+  jq '{hook_commands: [.hooks.SessionStart[]?.hooks[]?.command // ""]}' .claude/settings.local.json || { echo "ERROR: malformed settings.local.json"; exit 1; }
 }
 
 cmd_apply() {
@@ -186,7 +195,7 @@ cmd_apply() {
       canonical_msg=$(render "$ASSETS_DIR/hook-message.txt.template")
       canonical_cmd="echo '${canonical_msg}'"
       jq --arg cmd "$canonical_cmd" '
-        .hooks.UserPromptSubmit |= map(
+        .hooks.SessionStart |= map(
           .hooks |= map(
             if (.command // "" | contains("basic-memory")) then .command = $cmd else . end
           )

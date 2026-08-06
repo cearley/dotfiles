@@ -1,7 +1,7 @@
 # setup-memory-workflow Specification
 
 ## Purpose
-Bootstraps the basic-memory session workflow in any project: registers the project with basic-memory, installs the save-session skill, wires a UserPromptSubmit hook, and (if not already globally registered) adds the MCP server to `.mcp.json`.
+Bootstraps the basic-memory session workflow in any project: registers the project with basic-memory, installs the save-session skill, wires a SessionStart hook, and (if not already globally registered) adds the MCP server to `.mcp.json`.
 
 ## Requirements
 
@@ -67,10 +67,10 @@ The skill SHALL inform the user that `.mcp.json` may be committed or gitignored,
 - **THEN** the output notes that `.mcp.json` was created at the project root and reminds the user to decide whether to add it to `.gitignore` based on team preference
 
 ### Requirement: Idempotent, drift-checked hook installation via version marker
-The skill SHALL extract any existing UserPromptSubmit hook command containing `"basic-memory"` from `settings.local.json`, then compare an embedded `setup-memory-workflow-version:N` marker (and whether it still names the current project) against the skill's current `SMW_VERSION` to decide whether the hook is up to date, needs the user's confirmation to repair, or should be left alone.
+The skill SHALL extract any existing SessionStart hook command containing `"basic-memory"` from `settings.local.json`, then compare an embedded `setup-memory-workflow-version:N` marker (and whether it still names the current project) against the skill's current `SMW_VERSION` to decide whether the hook is up to date, needs the user's confirmation to repair, or should be left alone. This logic has no knowledge of any prior hook location or version — that is exclusively the concern of the migrations described below, which run first and unconditionally on every invocation.
 
 #### Scenario: Hook absent
-- **WHEN** no hook command in `settings.local.json` contains the string `"basic-memory"`
+- **WHEN** no hook command in `settings.local.json` contains the string `"basic-memory"` under `SessionStart`
 - **THEN** the skill appends a fresh hook entry with the canonical command, embedding the current `SMW_VERSION` marker
 
 #### Scenario: Hook present and current
@@ -84,6 +84,29 @@ The skill SHALL extract any existing UserPromptSubmit hook command containing `"
 #### Scenario: Malformed JSON
 - **WHEN** `settings.local.json` is malformed
 - **THEN** `jq` exits non-zero; the outer guard prevents a corrupt write, and the skill stops and reports the error before proceeding further
+
+### Requirement: Legacy artifacts are cleaned up by unconditional migrations
+Cleanup of this skill's own prior-version artifacts — never management of any *current* canonical shape — SHALL be codified as idempotent `migrate_<piece>` functions in `scripts/migrations.sh`, sourced by `check-drift.sh` and invoked unconditionally, once, before any check or apply logic runs, rather than gated behind a specific `apply <piece>` confirmation or embedded inline elsewhere in `check-drift.sh`. Each such function SHALL also get a `CHANGELOG.md` entry.
+
+#### Scenario: Migrations run before check/apply logic, every invocation
+- **WHEN** `check-drift.sh` runs, in either `check` or `apply` mode, regardless of which piece (if any) is being checked or applied
+- **THEN** every `migrate_<piece>` function in `migrations.sh` runs once, unconditionally, before any check or apply logic executes
+
+#### Scenario: Legacy UserPromptSubmit hook is silently cleaned up
+- **WHEN** `check-drift.sh` runs and a legacy basic-memory hook still exists under `UserPromptSubmit` (from a pre-v8 install)
+- **THEN** `migrate_hook_config()` removes that command from `UserPromptSubmit` before check/apply logic runs — no DRIFT is reported and no user confirmation is required, since this only ever removes a hook this skill itself created (matched by the literal `"basic-memory"` substring), never something a user might have added by hand; if removing it empties a hook's command list that whole matcher entry is dropped, and if no `UserPromptSubmit` entries remain the key itself is deleted — entries under `UserPromptSubmit` unrelated to basic-memory are left untouched
+
+#### Scenario: Migration functions have no knowledge of current canonical shape
+- **WHEN** `migrate_hook_config()` runs
+- **THEN** it has no knowledge of `.hooks.SessionStart` or the canonical hook message — creating or updating the current hook is entirely the concern of the hook installation requirement above, never a migration function's
+
+#### Scenario: Migration functions are idempotent
+- **WHEN** `migrate_hook_config()` runs against an install with no legacy `UserPromptSubmit` basic-memory hook (already migrated, or never had one)
+- **THEN** it exits without modifying `settings.local.json` or printing anything
+
+#### Scenario: Whole-file template pieces do not use migrations.sh
+- **WHEN** `save-session-skill`, `sync-memory-skill`, or `sync-memory-script` drift is repaired
+- **THEN** `apply_templated_file()` renders the current template and overwrites the installed file directly — no `migrate_<piece>` function is involved, since these pieces leave no legacy artifact behind for a migration to clean up
 
 ### Requirement: Hook command built via jq --arg
 The skill SHALL pass the hook command string to jq via `--arg`, keeping the command string and the jq filter syntactically separate.
@@ -101,7 +124,7 @@ The skill SHALL verify `.mcp.json` (if written) and `.claude/settings.local.json
 
 #### Scenario: Successful verification of hook in settings.local.json
 - **WHEN** all jq mutations to `.claude/settings.local.json` have completed
-- **THEN** a jq query extracts all UserPromptSubmit hook commands and shows the result to the user
+- **THEN** a jq query extracts all SessionStart hook commands and shows the result to the user
 
 #### Scenario: MCP registration skipped (already global)
 - **WHEN** the global registration check found basic-memory already registered
