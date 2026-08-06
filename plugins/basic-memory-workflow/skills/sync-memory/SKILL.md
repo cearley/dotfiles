@@ -3,14 +3,22 @@ name: sync-memory
 description: Distill unsynced SpecStory session logs into basic-memory. User-invoked only — run explicitly with /sync-memory when you want to capture insights from recent sessions.
 disable-model-invocation: true
 ---
-<!-- setup-memory-workflow-version:__SMW_VERSION__ -->
+
+## Step 0 — Resolve the project
+
+Run:
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/resolve-project-name.sh"
+```
+Use its stdout as `$PROJECT` for every step below. If it exits non-zero, stop — this
+project has no git root to derive an identity from.
 
 ## Step 1 — Find unsynced logs
 
-Run (from the project root — this skill and its script are installed per-project, not
-under `~/.claude`):
+Run (this skill and its script are bundled in the `basic-memory-workflow` plugin, not
+installed per-project):
 ```bash
-.claude/skills/sync-memory/scripts/sync-memory.py
+"${CLAUDE_PLUGIN_ROOT}/scripts/sync-memory.py"
 ```
 
 This prints the content of any SpecStory session logs (`.specstory/history/`) modified
@@ -21,7 +29,7 @@ markers. If it reports "No unsynced logs found.", stop here — there's nothing 
 
 Run:
 ```bash
-.claude/skills/sync-memory/scripts/sync-memory.py --print-extraction-prompt
+"${CLAUDE_PLUGIN_ROOT}/scripts/sync-memory.py" --print-extraction-prompt
 ```
 
 Apply exactly those criteria to each log printed in Step 1 — this is the same prompt
@@ -32,7 +40,7 @@ apart. Format each item as an observation with a `[category]` prefix (`[decision
 
 ## Step 3 — Append to the dedicated insights note
 
-Search basic-memory project "__PROJECT__" for a note titled "__PROJECT__ Distilled
+Search basic-memory project "$PROJECT" for a note titled "$PROJECT Distilled
 SpecStory Insights" using search_notes.
 
 Get the current timestamp for the section heading — run `date +"%Y-%m-%d %H:%M"` and use
@@ -40,7 +48,7 @@ its output verbatim; don't compose it from memory.
 
 - If it exists, append the distilled content with `edit_note(operation="append")` under
   a new heading `## Synced <timestamp>`.
-- If it doesn't exist yet, create it with `write_note` (title: "__PROJECT__ Distilled
+- If it doesn't exist yet, create it with `write_note` (title: "$PROJECT Distilled
   SpecStory Insights"), using the same heading structure.
 
 Never write this content into the session-notes note that `/save-session` maintains —
@@ -56,8 +64,10 @@ no Claude Code session running (e.g. a cron job): it calls the Anthropic API dir
 (requires `ANTHROPIC_API_KEY` in the environment) and writes straight to the vault file
 itself. This skill does not configure any scheduling — if you want unattended syncing,
 wire up your own cron entry or LaunchAgent. Unlike the steps above, cron doesn't start
-with the project as its working directory, so `cd` into it explicitly:
+with the project as its working directory, so `cd` into it explicitly, and reference the
+script by its absolute installed path rather than `${CLAUDE_PLUGIN_ROOT}` (which is only
+expanded inside Claude Code's own hook/skill execution context):
 
 ```bash
-cd /path/to/this/project && .claude/skills/sync-memory/scripts/sync-memory.py --standalone
+cd /path/to/this/project && /path/to/plugin/cache/basic-memory-workflow/scripts/sync-memory.py --standalone
 ```

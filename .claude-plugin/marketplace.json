@@ -1,0 +1,15 @@
+{
+  "name": "chezmoi-personal",
+  "owner": {
+    "name": "Craig Earley",
+    "email": "craig@craigearley.software",
+    "url": "https://github.com/cearley/dotfiles"
+  },
+  "plugins": [
+    {
+      "name": "basic-memory-workflow",
+      "source": "./plugins/basic-memory-workflow",
+      "description": "Bootstraps and runs the basic-memory session workflow (save-session, sync-memory, SessionStart reminder) in any project that enables it."
+    }
+  ]
+}

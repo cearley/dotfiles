@@ -1,8 +1,59 @@
-# setup-memory-workflow Specification
+## REMOVED Requirements
 
-## Purpose
-Bootstraps and runs the basic-memory session workflow in any project via the `basic-memory-workflow` Claude Code plugin (save-session, sync-memory, and a SessionStart reminder hook, bundled as one canonical copy referenced from a local plugin marketplace — see the `claude-plugin-marketplace` capability). A project opts in explicitly via `enabledPlugins`; project identity resolves at runtime rather than being baked in at install time.
-## Requirements
+### Requirement: Install-time project name detection
+**Reason**: There is no longer an install step to detect a project name once and bake it into generated artifacts — the skill/script bundle is no longer copied per project at all.
+**Migration**: Project identity is now resolved at runtime by the shared `resolve-project-name.sh` script (see the new "Runtime project identity resolution via shared script" requirement below), called fresh on every invocation rather than once at install time.
+
+### Requirement: Global MCP registration check
+**Reason**: basic-memory MCP server registration is handled entirely by this machine's pre-existing global `claude-extend` tools.json mechanism, independent of this capability. This capability no longer touches MCP server config at all.
+**Migration**: None needed — this check has had nothing left to do since basic-memory is registered globally on every machine this workflow targets.
+
+### Requirement: MCP server written to .mcp.json
+**Reason**: Same as above — MCP server registration is entirely out of this capability's scope now.
+**Migration**: A project relying on a previously-written per-project `.mcp.json` basic-memory entry can leave that file as-is; nothing in this capability manages it going forward.
+
+### Requirement: MCP server command uses uvx with Python 3.12
+**Reason**: This capability no longer writes any MCP server entry, so the entry's shape is no longer this capability's concern.
+**Migration**: None.
+
+### Requirement: User decides .mcp.json gitignore status
+**Reason**: This capability no longer creates or modifies `.mcp.json`.
+**Migration**: None.
+
+### Requirement: Idempotent, drift-checked hook installation via version marker
+**Reason**: The `SessionStart` hook is now declared once inside the plugin's own `hooks/hooks.json` and referenced, not copied into each project's `settings.local.json` — there is nothing left to drift-check.
+**Migration**: `scripts/migrate-to-plugin.sh` removes any pre-existing per-project hook entry as part of its one-time cleanup (see the new "One-time migration script for pre-plugin installs" requirement below).
+
+### Requirement: Legacy artifacts are cleaned up by unconditional migrations
+**Reason**: The permanent, unconditionally-run-on-every-invocation `migrations.sh` mechanism existed to clean up prior-version artifacts left behind by the old copy-based installer. With no more recurring "run the skill to install/repair" invocation, there is nothing for a permanent migration layer to run before.
+**Migration**: A single, explicitly-run `scripts/migrate-to-plugin.sh` (bundled in the plugin) performs the equivalent one-time cleanup for any project still carrying old artifacts, using the same check/apply, never-silently-overwrite discipline.
+
+### Requirement: Hook command built via jq --arg
+**Reason**: This capability no longer constructs or writes a hook command string into any project's settings file — the hook command lives statically inside the plugin's `hooks/hooks.json`.
+**Migration**: None.
+
+### Requirement: Settings file post-write verification
+**Reason**: This combined `.mcp.json` + hook verification step no longer applies — `.mcp.json` is out of scope entirely, and the hook is never written per-project. The narrower verification that's still meaningful (did `enabledPlugins` actually get set, were old artifacts actually removed) is covered by the new migration-script requirement's own scenarios instead of a separate generic verification requirement.
+**Migration**: None — see "One-time migration script for pre-plugin installs" below.
+
+### Requirement: Idempotent, drift-checked sync-memory skill installation via version marker
+**Reason**: `sync-memory` ships as a single canonical skill bundled directly in the plugin. Nothing is copied into any project, so nothing can drift from canonical.
+**Migration**: `scripts/migrate-to-plugin.sh` removes any pre-existing per-project copy of this skill.
+
+### Requirement: Idempotent, drift-checked sync-memory script installation via version marker
+**Reason**: Same as above — `sync-memory.py` is a single canonical file bundled in the plugin, not copied per project.
+**Migration**: `scripts/migrate-to-plugin.sh` removes any pre-existing per-project copy of this script.
+
+### Requirement: sync-memory script uses the same install-time templating as the other canonical assets
+**Reason**: Superseded by the `sync-memory` capability's own requirement change: the script now resolves project identity at runtime via the shared `resolve-project-name.sh`, not via install-time template rendering.
+**Migration**: None — see the `sync-memory` capability's modified requirements.
+
+### Requirement: SMW_VERSION bump surfaces new pieces on existing installs
+**Reason**: The `SMW_VERSION` marker system is retired in full. Claude Code's own plugin versioning (declared `version`, or git-commit-SHA fallback) governs when a project sees updated plugin content — there is no longer a hand-rolled marker to bump.
+**Migration**: None — see the "Plugin bundles the full basic-memory session workflow" requirement below.
+
+## MODIFIED Requirements
+
 ### Requirement: basic-memory project registration
 The workflow SHALL ensure the current project is registered with basic-memory at `$HOME/.local/share/basic-memory/$PROJECT` before any note is written, performed idempotently on every `save-session` invocation rather than once during a dedicated install step.
 
@@ -20,6 +71,8 @@ The workflow SHALL check for a working `basic-memory` installation on each `save
 #### Scenario: basic-memory not found
 - **WHEN** `save-session` runs and `which basic-memory` returns no result
 - **THEN** it tells the user to run `uv tool install basic-memory` and stops before attempting project registration or any note write
+
+## ADDED Requirements
 
 ### Requirement: Plugin bundles the full basic-memory session workflow
 The `save-session` skill, the `sync-memory` skill and script, and the `SessionStart` reminder hook SHALL be distributed as a single Claude Code plugin, `basic-memory-workflow`, referenced from one shared install location rather than copied into each project.
@@ -76,4 +129,3 @@ Enabling the `basic-memory-workflow` plugin for a given project SHALL always be 
 #### Scenario: Not hardcoded to any specific project
 - **WHEN** `migrate-to-plugin.sh` runs in any git repository, known or not previously encountered
 - **THEN** it operates purely on what it finds in that project's own `.claude/` state — it maintains no built-in list of target projects
-
