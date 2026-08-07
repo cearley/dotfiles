@@ -28,12 +28,6 @@ For tasks spanning many files or exceeding context capacity, use subagents or to
 
 When executing a named skill workflow, mandatory steps must not be silently skipped — even when the outcome seems obvious. If skipping a step, explicitly state the rationale before proceeding (e.g., "Skipping month-calendar — week header already present and date confirmed as 2026-03-20"). This makes deviations visible and auditable in retrospectives.
 
-## Local Skills
-
-These skills are installed and should be used proactively:
-- **parallel-worktrees** — Set up sibling worktrees (`../project-feature`) for parallel feature development; use when user mentions developing multiple features simultaneously
-- **integrate-worktrees** — Safely merge parallel feature branches via an integration branch before touching main; use when user is ready to combine parallel work
-
 ## Environment Notes
 - Background subagents (via Agent tool) cannot respond to interactive permission prompts — Bash commands already approved in settings.json work fine, but unapproved commands are silently denied. For shell tasks not yet pre-approved, use foreground agents instead.
 

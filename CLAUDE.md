@@ -20,61 +20,7 @@ Standard chezmoi commands (`apply`, `diff`, `status`, `add`, `managed`, ...) and
 
 ## Practical Quick Reference
 
-### Script Naming Pattern
-
-Naming grammar and position assignment are covered by the `/new-script` skill. Current execution order is authoritative in the filenames themselves — run `ls home/.chezmoiscripts/` rather than trusting a hand-maintained table (one drifted out of sync in commit `6f3790c`). Each position number must be unique.
-
-### Shared Utilities
-
-**Source shared utilities in all scripts:**
-```bash
-source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
-```
-
-See `.serena/memories/code-style-quick-reference.md` for the function reference and extended examples.
-
-### Template Testing
-```bash
-# Test any template (works with or without keepassxcAttribute calls)
-tests/run-template home/private_dot_zsh_secrets.tmpl
-tests/run-template --inline '{{ keepassxcAttribute "GitHub" "Access Token" }}'
-
-# Raw chezmoi (only use for templates with no keepassxcAttribute calls)
-chezmoi execute-template < filename.tmpl
-```
-
-### Template Best Practices
-
-The `prompt_claude_env` p10k segment is defined by the external `zsh-claude-env` oh-my-zsh plugin (https://github.com/cearley/zsh-claude-env), pulled via `.chezmoiexternal.toml.tmpl`. Its registration in `dot_p10k.zsh` is wrapped in `# === BEGIN/END claude-env segment registration ===` markers — preserve these if regenerating p10k config. The plugin's own `CLAUDE_ENV_COLORS`/`CLAUDE_ENV_SHOW_DEFAULT` settings live as plain hand-edited `typeset` lines just below that array, not chezmoi-templated.
-
-**Partial file management (modify_ scripts):**
-Use `modify_` prefix for files where you only manage specific keys (e.g., JSON configs modified by applications at runtime).
-- `modify_<filename>.tmpl` — bash script receiving current file on stdin, outputs merged result
-- Use jq for JSON merging: `echo "$existing" | jq --argjson servers "$managed" '.mcpServers = $servers'`
-- `modify_` scripts CAN use `.tmpl` extension (for chezmoi template expansion)
-- `chezmoi:modify-template` directive files must NOT use `.tmpl` extension (different mechanism)
-- Example: `modify_claude_desktop_config.json.tmpl` manages only `mcpServers`, preserves app-managed `preferences`
-
-**Command validation:**
-```go-template
-{{- if lookPath "rustup" }}
-  source "$HOME/.cargo/env"
-{{- end }}
-```
-⚠️ **Never** use `output "command" "-v"` - it fails if command doesn't exist. Use `lookPath` instead.
-
-**Architecture detection:**
-```go-template
-{{- if and (eq .chezmoi.os "darwin") (eq .chezmoi.arch "arm64") -}}
-```
-
-**Platform-specific scripts:**
-```go-template
-{{- if eq .chezmoi.os "darwin" -}}
-#!/bin/bash
-# script content
-{{ end -}}
-```
+Script naming, shared utilities, template testing, and template-editing gotchas moved to `home/CLAUDE.md` (loads automatically when working under `home/`).
 
 ### Reusable Templates
 
@@ -94,12 +40,6 @@ Catalog and usage examples moved to `home/.chezmoitemplates/CLAUDE.md` (loads au
 - **Target OS**: macOS 11.0+ (Big Sur or later)
 - **Architectures**: ARM64 (Apple Silicon) primary, x64 (Intel) secondary
 - **Bootstrap dependencies**: Xcode CLI Tools, KeePassXC (secrets), Homebrew (packages)
-
-### Tag Combinations
-- **Minimal**: `core`
-- **Developer**: `core,dev,ai`
-- **Work machine**: `core,dev,work`
-- **Personal machine**: `core,dev,ai,personal,datascience`
 
 ## Non-Interactive Limitations
 - `chezmoi diff` fails without a TTY (KeePassXC requires interactive prompt); use `chezmoi status` or `chezmoi managed` instead
@@ -133,17 +73,6 @@ Catalog and usage examples moved to `home/.chezmoitemplates/CLAUDE.md` (loads au
 
 > `openspec archive <name> --yes` — note: positional arg, not `--change` (that flag errors)
 
-
 ## Session Completion
 
-**When ending a work session**, complete these steps. Committing and pushing each still require explicit user confirmation per the global Git Workflow gates — this checklist does not override that.
-
-1. **Run quality gates** (if code changed) - Tests, linters, builds
-2. **Offer to push to remote** (only after the user confirms):
-   ```bash
-   git pull --rebase
-   git push
-   git status  # MUST show "up to date with origin"
-   ```
-3. **Save session notes** - Use `/save-session` to persist key decisions to basic-memory
-4. **Hand off** - Provide context for next session
+End-of-session checklist (quality gates, push, save session notes, handoff) moved to the `session-completion` skill.
