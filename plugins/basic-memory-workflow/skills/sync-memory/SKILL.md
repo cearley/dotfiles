@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Run:
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/resolve-project-name.sh"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-project-name.sh"
 ```
 Use its stdout as `$PROJECT` for every step below. If it exits non-zero, stop — this
 project has no git root to derive an identity from.

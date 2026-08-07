@@ -8,7 +8,7 @@ description: Save today's session to basic-memory. Run at end of every coding se
 Run (this skill and its scripts are bundled in the `basic-memory-workflow` plugin, not
 copied per-project):
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/resolve-project-name.sh"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-project-name.sh"
 ```
 Use its stdout as `$PROJECT` for every step below. If it exits non-zero, stop — this
 project has no git root to derive an identity from.
