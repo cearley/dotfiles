@@ -1,10 +1,24 @@
+{{- /* Merges session-topic-capture hooks into a Claude settings.json, plus any
+     per-environment extra top-level settings the caller wants chezmoi-managed.
+
+     Params (merge with the chezmoi context before calling):
+       claudeExtraSettings: optional dict, default {}. Recursively merged over
+                    the existing settings.json (jq `*`) after the hooks merge —
+                    e.g. skillOverrides, enabledPlugins, permissions. Only pass
+                    this for an environment whose skill/plugin/permission
+                    posture has actually been analyzed for that environment;
+                    other callers get {} and are unaffected.
+
+     Example:
+       {{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" (dict "permissions" (dict "defaultMode" "auto"))) .) }}
+*/ -}}
 {{- if not (and (eq .chezmoi.os "darwin") (has "ai" .tags)) -}}
 #!/bin/bash
 # Not a darwin+ai machine — pass through unchanged
 cat
 {{- else -}}
 #!/bin/bash
-# Merge session-topic-capture hooks; preserve all other settings managed by Claude Code.
+# Merge session-topic-capture hooks and any extra settings; preserve everything else managed by Claude Code.
 set -euo pipefail
 
 existing=$(cat)
@@ -16,7 +30,9 @@ managed_hooks='{
   "SessionEnd":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture SessionEnd"}]}]
 }'
 
-echo "$existing" | jq --argjson managed "$managed_hooks" '
+extra_settings='{{ get . "claudeExtraSettings" | default (dict) | toJson }}'
+
+echo "$existing" | jq --argjson managed "$managed_hooks" --argjson extra "$extra_settings" '
   reduce ($managed | keys[]) as $event (
     .;
     ((.hooks[$event] // []) | map(.hooks[]?.command)) as $existing_cmds |
@@ -28,5 +44,6 @@ echo "$existing" | jq --argjson managed "$managed_hooks" '
       ))
     )
   )
+  | . * $extra
 '
 {{- end }}

@@ -1,1 +1,15 @@
-{{ includeTemplate "claude-settings-hooks-modifier" . }}
+{{- /* Skill/plugin/permission posture below was derived from a /doctor run analyzing
+     this environment's own transcripts (2026-08-06) — do not copy verbatim into
+     dot_claude-work or dot_claude-bedrock without re-running that analysis there. */ -}}
+{{- $extra := dict
+      "skillOverrides" (dict
+        "integrate-worktrees" "off"
+        "parallel-worktrees" "off"
+        "memory-recall" "off"
+        "memory-save" "off")
+      "enabledPlugins" (dict
+        "claude-code-setup@claude-plugins-official" false
+        "claude-md-management@claude-plugins-official" false)
+      "permissions" (dict "defaultMode" "auto")
+-}}
+{{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}
