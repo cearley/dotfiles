@@ -31,7 +31,25 @@ basic-memory project add "$PROJECT" "$HOME/.local/share/basic-memory/$PROJECT"
 Search basic-memory project "$PROJECT" for the most recent session note using
 search_notes with query "$PROJECT session".
 
-Append an update with edit_note (operation="append") including:
+Before appending, check that note's size (read_note, or `wc -l` on its file under
+`~/.local/share/basic-memory/$PROJECT/`). If it is at or over 300 lines, roll it over
+first — large session logs get skipped by agents that would otherwise read them:
+1. Find the note's earliest dated entry (its first `## YYYY-MM-DD` header) — that date
+   names the archived copy.
+2. Create a new note titled `Session Log — <earliest-date>` in the project's
+   `sessions/` directory, with the same frontmatter style as the project's other
+   session logs (title/type/permalink/tags) and the full body of the note being rolled
+   over. Give it a one-line banner: "Archived, <earliest-date> → <today>. Continues
+   from [[<prior archived log>]]" (only if a prior one exists) "— continuation lives in
+   [[<active note's title>]]."
+3. If a prior archived log already links forward to this note (a "continuation lives
+   in" banner or a `leads_to` relation), repoint it at the new archived note instead of
+   skipping ahead to the active one — keep the chain unbroken.
+4. Replace the active note's body with just a short banner: "Continues from
+   [[<new archived note>]]." Keep its title and permalink exactly as they were, so this
+   same search keeps finding it as "the most recent session note."
+
+Then append today's update with edit_note (operation="append") including:
 - Date (use the currentDate value from context)
 - What was changed or decided today (decisions, findings, discoveries)
 - Any items resolved this session
