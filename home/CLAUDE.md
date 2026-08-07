@@ -13,7 +13,7 @@ Naming grammar and position assignment are covered by the `/new-script` skill. C
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 ```
 
-See `.serena/memories/code-style-quick-reference.md` for the function reference and extended examples.
+See the "Code Style Quick Reference" note in the `chezmoi` basic-memory project for the function reference and extended examples.
 
 ### Template Testing
 ```bash

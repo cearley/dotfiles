@@ -7,7 +7,7 @@ Quick reference guide for AI assistants working with this chezmoi dotfiles repos
 
 ### Essential Files
 - **OpenSpec specs**: `openspec/specs/` - Capability specifications and design
-- **Code style examples**: `.serena/memories/code-style-quick-reference.md` - Extended cookbook
+- **Code style examples**: "Code Style Quick Reference" note in the `chezmoi` basic-memory project - Extended cookbook
 
 ## Common Commands
 
