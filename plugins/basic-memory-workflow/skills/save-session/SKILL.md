@@ -8,10 +8,14 @@ description: Save today's session to basic-memory. Run at end of every coding se
 Run (this skill and its scripts are bundled in the `basic-memory-workflow` plugin, not
 copied per-project):
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/resolve-project-name.sh"
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-project-registered.sh"
 ```
-Use its stdout as `$PROJECT` for every step below. If it exits non-zero, stop — this
-project has no git root to derive an identity from.
+Use its stdout as `$PROJECT` for every step below. This also guarantees `$PROJECT` is
+registered with basic-memory, rather than assuming the `SessionStart` hook already did
+it — the plugin can become active mid-session (e.g. via `/reload-plugins`), in which case
+`SessionStart` never fires and registration would otherwise be skipped. If it exits
+non-zero, stop — either this project has no git root to derive an identity from, or the
+`basic-memory` CLI isn't installed (see the check below).
 
 Check basic-memory is installed:
 ```bash
@@ -19,10 +23,6 @@ which basic-memory
 ```
 If missing, tell the user to run `uv tool install basic-memory` (not `uvx` or `pip`) and
 stop — nothing else can proceed without it.
-
-The project itself is already registered with basic-memory by this point — the
-`SessionStart` hook (`ensure-project-registered.sh`) guarantees that before any skill or
-MCP tool call happens in this session, so there is nothing to do here.
 
 ## Step 2 — Append to the session log
 

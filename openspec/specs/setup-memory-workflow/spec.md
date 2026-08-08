@@ -4,7 +4,7 @@
 Bootstraps and runs the basic-memory session workflow in any project via the `basic-memory-workflow` Claude Code plugin (save-session, sync-memory, and a SessionStart reminder hook, bundled as one canonical copy referenced from a local plugin marketplace — see the `claude-plugin-marketplace` capability). A project opts in explicitly via `enabledPlugins`; project identity resolves at runtime rather than being baked in at install time.
 ## Requirements
 ### Requirement: basic-memory project registration
-The workflow SHALL ensure the current project is registered with basic-memory at `$HOME/.local/share/basic-memory/$PROJECT` before any MCP tool call happens in the session, performed once by the `SessionStart` hook via `ensure-project-registered.sh` rather than by `save-session` on each invocation.
+The workflow SHALL ensure the current project is registered with basic-memory at `$HOME/.local/share/basic-memory/$PROJECT` before any MCP tool call happens in the session. The `SessionStart` hook performs this via `ensure-project-registered.sh` as the normal, first-to-run path; `save-session` and `sync-memory`'s own Step 0/Step 1 also call `ensure-project-registered.sh` directly (idempotently) rather than assuming the hook already ran, since a plugin enabled after session start (e.g. via `/reload-plugins`) never gets a `SessionStart` firing for that session.
 
 #### Scenario: First-time setup
 - **WHEN** the `SessionStart` hook fires in a project with no existing basic-memory registration
@@ -17,6 +17,10 @@ The workflow SHALL ensure the current project is registered with basic-memory at
 #### Scenario: basic-memory not installed at session start
 - **WHEN** the `SessionStart` hook fires and the `basic-memory` CLI is not on `PATH`
 - **THEN** `ensure-project-registered.sh` exits non-zero and the hook silently no-ops, emitting no reminder — `save-session`'s own `which basic-memory` check (see the separate installation requirement) is what surfaces this to the user if they run `/save-session` later in the same session
+
+#### Scenario: Plugin enabled mid-session, SessionStart never fires
+- **WHEN** `basic-memory-workflow` becomes active in a project after session start (e.g. via `/reload-plugins`), so the `SessionStart` hook never runs during that session
+- **THEN** the first invocation of `save-session` or `sync-memory` still registers the project, because their own Step 0/Step 1 calls `ensure-project-registered.sh` directly rather than relying solely on the hook having already run
 
 ### Requirement: basic-memory installed via uv tool install
 The workflow SHALL check for a working `basic-memory` installation on each `save-session` invocation (not once at install time) and instruct the user to install it with `uv tool install basic-memory`, not `uvx` or `pip`, if missing.
@@ -37,7 +41,7 @@ The `save-session` skill, the `sync-memory` skill and script, and the `SessionSt
 - **THEN** every project with the plugin enabled sees the new content on its next load (or after `/reload-plugins`), with no per-project drift-check or repair step involved
 
 ### Requirement: Runtime project identity resolution via shared script
-A single shared script, `scripts/resolve-project-name.sh`, SHALL be the sole mechanism by which any part of the plugin determines the current project's basic-memory identity, computed fresh on each invocation and free of side effects. `save-session`'s own instructions and `sync-memory.py`/`sync-memory`'s Step 0 call it directly for pure identity resolution; the `SessionStart` hook instead calls `ensure-project-registered.sh`, a wrapper that resolves identity via this script and additionally guarantees the project is registered with basic-memory (see the registration requirement above).
+A single shared script, `scripts/resolve-project-name.sh`, SHALL be the sole mechanism by which any part of the plugin determines the current project's basic-memory identity, computed fresh on each invocation and free of side effects. `sync-memory.py`'s own internal identity lookups (used by `--standalone` mode and default vault-dir resolution) call it directly for pure resolution with no registration side effect. Every consumer that goes on to make basic-memory MCP tool calls in a session — the `SessionStart` hook, and `save-session`'s and `sync-memory`'s own Step 0/Step 1 — instead calls `ensure-project-registered.sh`, a wrapper that resolves identity via this script and additionally guarantees the project is registered with basic-memory (see the registration requirement above).
 
 #### Scenario: Default resolution
 - **WHEN** `resolve-project-name.sh` runs inside a git repository with no override file present
@@ -53,7 +57,7 @@ A single shared script, `scripts/resolve-project-name.sh`, SHALL be the sole mec
 
 #### Scenario: Not inside a git repository
 - **WHEN** `resolve-project-name.sh` runs outside any git repository
-- **THEN** it exits non-zero with a clear error to stderr; `ensure-project-registered.sh` propagates that failure and the `SessionStart` hook treats it as a silent no-op rather than failing session start
+- **THEN** it exits non-zero with a clear error to stderr; every `ensure-project-registered.sh` caller propagates that failure — the `SessionStart` hook treats it as a silent no-op rather than failing session start, while `save-session` and `sync-memory` instead stop and report it, since their own Step 0/Step 1 call `ensure-project-registered.sh` directly
 
 ### Requirement: Per-project explicit opt-in
 Enabling the `basic-memory-workflow` plugin for a given project SHALL always be an explicit, individual decision — the plugin SHALL NOT become active in a project merely because the marketplace is registered or the plugin is enabled elsewhere.
