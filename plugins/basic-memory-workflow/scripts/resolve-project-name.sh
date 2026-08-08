@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Resolves the current project's basic-memory identity. Sole source of truth for this
-# across the whole basic-memory-workflow plugin (the SessionStart hook, sync-memory.py,
+# across the whole basic-memory-workflow plugin (ensure-project-registered.sh, sync-memory.py,
 # and save-session's own instructions all call this instead of each deriving it their
-# own way) - resolved fresh on every invocation, never baked in at install time.
+# own way) - resolved fresh on every invocation, never baked in at install time. Pure
+# query only, no side effects — see ensure-project-registered.sh for the wrapper that
+# also guarantees the project is registered with basic-memory.
 #
 # Resolution order:
 #   1. <project-root>/.claude/basic-memory-project.txt, if present and non-blank

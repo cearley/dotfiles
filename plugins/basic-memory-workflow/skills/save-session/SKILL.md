@@ -20,11 +20,9 @@ which basic-memory
 If missing, tell the user to run `uv tool install basic-memory` (not `uvx` or `pip`) and
 stop — nothing else can proceed without it.
 
-Register the project (safe to run every time — exits 0 with a notice if already
-registered, never re-creates anything):
-```bash
-basic-memory project add "$PROJECT" "$HOME/.local/share/basic-memory/$PROJECT"
-```
+The project itself is already registered with basic-memory by this point — the
+`SessionStart` hook (`ensure-project-registered.sh`) guarantees that before any skill or
+MCP tool call happens in this session, so there is nothing to do here.
 
 ## Step 2 — Append to the session log
 
