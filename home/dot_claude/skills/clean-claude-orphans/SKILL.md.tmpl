@@ -1,0 +1,113 @@
+{{- if has "ai" .tags -}}
+---
+name: clean-claude-orphans
+description: >
+  Use when `audit-packages` reports Claude Code MCP servers, plugins, plugin marketplaces,
+  or skills installed but not declared in packages.yaml, or when the user asks to "clean up
+  my Claude plugins/skills/MCP servers", "remove orphaned Claude installs", "uninstall unused
+  Claude Code plugins", "prune my Claude environment", or wants installed Claude Code state
+  reconciled with packages.yaml. Also use when deciding whether an orphaned Claude Code item
+  is safe to remove versus should be kept or declared instead, or when unsure which
+  CLAUDE_CONFIG_DIR environment an installed item actually lives in.
+disable-model-invocation: true
+---
+
+# Clean Claude Orphans
+
+Reconciles installed Claude Code state (MCP servers, plugins, plugin marketplaces, skills)
+against `home/.chezmoidata/packages.yaml`, starting from `audit-packages`'s findings. For
+every orphan, decide **REMOVE**, **KEEP**, or **DECLARE** — never remove anything without
+confirming the full plan with the user first.
+
+Use the `chezmoi` skill to add a DECLARE item back into `packages.yaml`.
+
+## Step 1: Gather orphans and environment context
+
+```bash
+~/.claude/skills/clean-claude-orphans/scripts/list-claude-orphans.sh
+```
+
+Runs `audit-packages` and extracts just the four Claude Code sections as clean
+`<category>\t<item>` lines (`mcp_server`, `plugin`, `marketplace`, `skill`), plus every
+`~/.claude*` environment directory found on disk. Read-only — changes nothing.
+
+If the user already pasted `audit-packages` output, use that instead of re-running it.
+`audit-packages` doesn't dedupe its comparison lists, so the same plugin can appear once
+per project that enables it — collapse identical lines to one item before presenting a plan.
+
+## Step 2: Know the environment model before touching anything
+
+- A machine may have several Claude Code environments (`~/.claude`, `~/.claude-work`,
+  `~/.claude-personal`, ...) selected via `$CLAUDE_CONFIG_DIR`
+  (`openspec/specs/claude-environments/spec.md`).
+- **Skills are shared** across every environment via a symlink
+  (`~/.claude-<name>/skills -> ~/.claude/skills`) — removing one removes it from all of them.
+- **MCP servers and plugins are NOT shared** — each environment has independent state, and
+  a `claude` invocation only sees the environment named by its own `$CLAUDE_CONFIG_DIR`. To
+  check or clean a non-current environment, prefix every `claude` command with
+  `CLAUDE_CONFIG_DIR=<env_dir>` (e.g. `CLAUDE_CONFIG_DIR=~/.claude-work claude plugins list
+  --json`), using the environment dirs Step 1 found. Don't declare a machine "clean" after
+  only checking the current environment.
+- Plugins also have an **enablement scope** separate from install scope: installed at user
+  scope, but a project can *enable* it independently via `.claude/settings.json`
+  (`enabledPlugins`, tracked/shared) or `.claude/settings.local.json` (gitignored,
+  personal). `packages.yaml` only records the user-scope install baseline — it says nothing
+  about project/local enablement. Before uninstalling a plugin, check whether any project
+  you know of still enables it; if so, uninstalling breaks that project's next session.
+
+## Step 3: Classify each orphan
+
+Work marketplaces last — removing one can orphan the plugins installed from it.
+
+### MCP servers
+| Check | Verdict |
+|---|---|
+| Still declared in a project's own `.mcp.json` you use | **DECLARE** in packages.yaml |
+| Duplicates a server a chezmoi-personal marketplace plugin already registers (e.g. `browser-tools`, `aws-local-dev`, `openspec-dashboard` — see `.claude-plugin/marketplace.json`) | **REMOVE** the manual entry; point the user at enabling that plugin instead |
+| Genuinely unused | **REMOVE**: `claude mcp remove <name>` |
+
+### Plugins
+| Check | Verdict |
+|---|---|
+| Still enabled in any project's `.claude/settings.json` or `.claude/settings.local.json` | **KEEP** (or **DECLARE** if it should be standard) |
+| A chezmoi-personal marketplace plugin already covers the same functionality under a different name/marketplace | **REMOVE**, recommend switching to the chezmoi-personal one |
+| Genuinely unused | **REMOVE**: `claude plugins uninstall <id>` |
+
+### Plugin marketplaces
+| Check | Verdict |
+|---|---|
+| Name is `chezmoi-personal`, or its `source` is a local directory (no `repo`/`url`) resolving to this repo's root | **NEVER an orphan** — it's this repo's own marketplace, registered outside packages.yaml's `plugin_marketplaces` list (see `openspec/specs/claude-plugin-marketplace/spec.md`). `audit-packages` reports it as a literal `null` orphan line (its jq query has no `repo`/`url` field to read for a local-directory source) — ignore any `null` line rather than acting on it. |
+| Still has any KEPT plugin installed from it (`claude plugins list --json`, `.id` ends `@<marketplace>`) | **KEEP** until those plugins are removed first |
+| No remaining plugins, not chezmoi-personal | **REMOVE**: `claude plugins marketplace remove <name>` |
+
+### Skills
+| Check | Verdict |
+|---|---|
+| Referenced by name inside another skill or plugin you're keeping | **KEEP** — it's a dependency, not an orphan |
+| Duplicates a skill a chezmoi-personal marketplace plugin bundles (e.g. `code-quality`, `systems-design`) | **REMOVE** the standalone copy, keep the plugin-provided one |
+| `audit-packages`'s wildcard-prefix match is a heuristic, not ground truth | Skim the skill's own `SKILL.md`/README before trusting a "covered by collection spec" note |
+| Genuinely unused | **REMOVE**: `rm -rf ~/.claude/skills/<name>` (affects every environment — Step 2) |
+
+## Step 4: Present the plan, confirm, then execute
+
+List every orphan with its verdict and a one-line reason. Ask the user to confirm the whole
+plan, or adjust specific items, before running anything destructive.
+
+Within a category, remove plugins sourced from a marketplace before removing that
+marketplace. For DECLARE items, edit `packages.yaml` (via the `chezmoi` skill) instead of
+touching installed state.
+
+## Step 5: Verify
+
+Re-run `audit-packages` (or the Step 1 script). Anything still listed should have an
+explanation — most often a plugin still enabled by a project that wasn't checked.
+
+## Common mistakes
+
+- Uninstalling a plugin without checking project-level `enabledPlugins` first.
+- Removing the `chezmoi-personal` marketplace, or acting on its literal `null` orphan line.
+- Treating a skill orphan as machine-local — removing it removes it from every
+  `CLAUDE_CONFIG_DIR` environment at once.
+- Checking only the current `$CLAUDE_CONFIG_DIR` and calling the machine clean while
+  sibling environments still carry orphans.
+{{ end -}}
