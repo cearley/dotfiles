@@ -135,20 +135,76 @@ Additional packages SHALL be defined in machine-specific Brewfiles located in th
 - **AND** SHALL be accessible for manual `brew bundle` operations
 
 ### Requirement: User Confirmation for Additional Packages
-Machine-specific Brewfile packages SHALL require explicit user confirmation before installation.
+Homebrew cask and Mac App Store (`mas`) package installations SHALL require explicit user confirmation before installation. For the core package set (`run_onchange_before_darwin-23-install-packages.sh.tmpl`), casks and `mas` packages SHALL be confirmed via two independent prompts, so a user can choose either, both, or neither. For machine-specific Brewfile packages (`run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl`), a single combined prompt SHALL gate the whole Brewfile, since its contents are not parsed by package type. Homebrew taps and formulae (`brews`) SHALL install unconditionally without prompting, in both scripts.
+
+#### Scenario: Confirmation prompt for core casks
+- **WHEN** `packages.yaml` resolves one or more cask entries for the active tag set
+- **THEN** the script SHALL prompt the user for confirmation before running the cask `brew bundle` invocation
+- **AND** tap and formula installation SHALL proceed without waiting for that confirmation
+- **AND** this prompt SHALL be independent of any `mas` confirmation
+
+#### Scenario: Confirmation prompt for core mas
+- **WHEN** `packages.yaml` resolves one or more `mas` entries for the active tag set (and the user is signed into iCloud)
+- **THEN** the script SHALL prompt the user for confirmation before running the `mas` `brew bundle` invocation
+- **AND** tap and formula installation SHALL proceed without waiting for that confirmation
+- **AND** this prompt SHALL be independent of any cask confirmation
 
 #### Scenario: Confirmation prompt
 - **WHEN** a machine-specific Brewfile contains additional packages
 - **THEN** the script SHALL prompt the user for confirmation before running `brew bundle`
 
 #### Scenario: Confirmation denied
-- **WHEN** the user declines the Brewfile installation prompt
-- **THEN** the script SHALL skip Brewfile installation
+- **WHEN** the user declines a cask, mas, or machine-specific installation prompt
+- **THEN** the script SHALL skip only that declined installation, independent of any other prompt's answer
 - **AND** SHALL continue with other setup tasks
+- **AND** SHALL exit 0 so chezmoi records the script as successfully run, not as failed
 
 #### Scenario: Confirmation accepted
-- **WHEN** the user confirms the Brewfile installation prompt
-- **THEN** the script SHALL execute `brew bundle --file ~/Brewfile`
+- **WHEN** the user confirms a cask, mas, or machine-specific installation prompt
+- **THEN** the script SHALL execute the corresponding `brew bundle` command for that prompt only
+
+#### Scenario: No cask packages to install
+- **WHEN** the resolved cask bundle for the active tag set is empty
+- **THEN** the script SHALL NOT display the cask confirmation prompt
+- **AND** SHALL skip the cask bundle step silently
+
+#### Scenario: No mas packages to install
+- **WHEN** the resolved `mas` bundle for the active tag set is empty (including when excluded because the user is not signed into iCloud)
+- **THEN** the script SHALL NOT display the `mas` confirmation prompt
+- **AND** SHALL skip the `mas` bundle step silently
+
+#### Scenario: Confirmation prompts are asked fresh every run
+- **WHEN** the script runs on a subsequent `chezmoi apply` invocation
+- **THEN** it SHALL display each applicable confirmation prompt again if there is still corresponding work pending
+- **AND** SHALL NOT read or write any cached decision from a previous run
+
+#### Scenario: No TTY attached
+- **WHEN** stdin is not a TTY when the script reaches a cask or mas confirmation prompt
+- **THEN** `read` SHALL return an empty reply immediately
+- **AND** the script SHALL treat that as a decline and skip that installation
+- **AND** SHALL NOT hang waiting for input
+
+### Requirement: Homebrew Core Bundle Split
+`run_onchange_before_darwin-23-install-packages.sh.tmpl` SHALL install taps and formulae (`brews`) via a `brew bundle` invocation separate from casks, which SHALL in turn be separate from `mas` packages, so formula/tap installation is never gated by either confirmation prompt and a cask answer never affects `mas` installation or vice versa.
+
+#### Scenario: Three independent bundle invocations
+- **WHEN** the script resolves taps, brews, casks, and mas entries for the active tag set
+- **THEN** it SHALL run one `brew bundle` invocation containing only tap and brew entries, unconditionally
+- **AND** SHALL run a second `brew bundle` invocation containing only cask entries, gated by the cask confirmation prompt defined in "User Confirmation for Additional Packages"
+- **AND** SHALL run a third `brew bundle` invocation containing only `mas` entries, gated by the independent `mas` confirmation prompt defined in "User Confirmation for Additional Packages"
+
+#### Scenario: Pre-tap step still precedes all three bundles
+- **WHEN** the script's existing pre-tap loop runs
+- **THEN** it SHALL continue to run before all three bundle invocations, so taps are registered before any bundle checks casks from those taps
+
+#### Scenario: iCloud gating still applies to the mas bundle
+- **WHEN** the user is not signed into iCloud
+- **THEN** mas entries SHALL continue to be excluded from the generated bundle content via the existing `$icloudSignedIn` gating, independent of the confirmation prompt (and the mas prompt itself is suppressed per "No mas packages to install")
+
+#### Scenario: Each bundle's partial failure is independent
+- **WHEN** one of the three `brew bundle` invocations exits non-zero
+- **THEN** the script SHALL emit a warning scoped to that bundle only
+- **AND** SHALL NOT affect whether the other two bundles run or how their outcomes are reported
 
 ### Requirement: Idempotent Package Installation
 Package installation SHALL be idempotent and safe to re-run.
@@ -869,91 +925,6 @@ The `ai.agents` namespace SHALL document the schema for not-yet-active coding ag
 #### Scenario: Activating a stubbed agent
 - **WHEN** the user starts using a previously-stubbed agent
 - **THEN** uncommenting the placeholder block and populating its lists SHALL be the entire opt-in action at the data layer
-
-### Requirement: Homebrew Layer Skip Gate
-The Homebrew package installation scripts (`run_onchange_before_darwin-23-install-packages.sh.tmpl` and `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl`) SHALL consult the shared package-update skip decision for the `homebrew` layer before performing any tap, install, or upgrade work.
-
-#### Scenario: Homebrew layer skipped
-- **WHEN** the shared skip decision indicates the `homebrew` layer should be skipped
-- **THEN** the script SHALL emit a `print_message "skip"` message
-- **AND** SHALL exit 0 without running `brew update`, `brew tap`, or `brew bundle`
-
-#### Scenario: Homebrew layer not skipped
-- **WHEN** the shared skip decision indicates the `homebrew` layer should run
-- **THEN** the script SHALL proceed exactly as it does today
-
-#### Scenario: Skip gate precedes the existing Brewfile confirmation prompt
-- **WHEN** `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl` runs
-- **AND** the `homebrew` layer is marked skipped
-- **THEN** the script SHALL exit before reaching its existing "Install additional packages from your brewfile? (y/N)" confirmation prompt
-
-### Requirement: SDKMAN Layer Skip Gate
-The SDKMAN scripts (`run_onchange_before_darwin-20-install-sdkman.sh.tmpl` and `run_onchange_before_darwin-24-install-sdks.sh.tmpl`) SHALL consult the shared package-update skip decision for the `sdkman` layer before installing SDKMAN itself or any SDK.
-
-#### Scenario: SDKMAN layer skipped
-- **WHEN** the shared skip decision indicates the `sdkman` layer should be skipped
-- **THEN** the script SHALL emit a `print_message "skip"` message and exit 0
-- **AND** SHALL NOT invoke the SDKMAN installer or `sdk install`
-
-#### Scenario: SDKMAN layer not skipped
-- **WHEN** the shared skip decision indicates the `sdkman` layer should run
-- **THEN** the script SHALL proceed exactly as it does today, including the existing `dev`-tag gating
-
-### Requirement: UV Layer Skip Gate
-The UV scripts (`run_onchange_before_darwin-21-install-uv.sh.tmpl` and `run_onchange_before_darwin-25-install-tools.sh.tmpl`) SHALL consult the shared package-update skip decision for the `uv` layer before installing or upgrading `uv` itself or any UV tool.
-
-#### Scenario: UV layer skipped
-- **WHEN** the shared skip decision indicates the `uv` layer should be skipped
-- **THEN** the script SHALL emit a `print_message "skip"` message and exit 0
-- **AND** SHALL NOT invoke the UV installer or `uv tool install`
-
-#### Scenario: UV layer not skipped
-- **WHEN** the shared skip decision indicates the `uv` layer should run
-- **THEN** the script SHALL proceed exactly as it does today
-
-### Requirement: Bun Layer Skip Gate
-The Bun global package installation script (`run_onchange_before_darwin-26-install-bun-packages.sh.tmpl`) SHALL consult the shared package-update skip decision for the `bun` layer before installing any package.
-
-#### Scenario: Bun layer skipped
-- **WHEN** the shared skip decision indicates the `bun` layer should be skipped
-- **THEN** the script SHALL emit a `print_message "skip"` message and exit 0
-- **AND** SHALL NOT invoke `bun add -g`
-
-#### Scenario: Bun layer not skipped
-- **WHEN** the shared skip decision indicates the `bun` layer should run
-- **THEN** the script SHALL proceed exactly as it does today
-
-### Requirement: Cargo Layer Skip Gate
-The Cargo package installation script (`run_onchange_before_darwin-27-install-cargo-packages.sh.tmpl`) SHALL consult the shared package-update skip decision for the `cargo` layer before installing any crate.
-
-#### Scenario: Cargo layer skipped
-- **WHEN** the shared skip decision indicates the `cargo` layer should be skipped
-- **THEN** the script SHALL emit a `print_message "skip"` message and exit 0
-- **AND** SHALL NOT invoke `cargo install`
-
-#### Scenario: Cargo layer not skipped
-- **WHEN** the shared skip decision indicates the `cargo` layer should run
-- **THEN** the script SHALL proceed exactly as it does today, including the existing `dev`-tag requirement
-
-### Requirement: Claude Skills/MCP/Plugins Layer Skip Gate
-The Claude Code skills, MCP server, and plugins installation scripts (positions 37, 38, and 39) SHALL consult the shared package-update skip decision for the `claude` layer before installing or registering any skill, MCP server, or plugin.
-
-#### Scenario: Claude layer skipped
-- **WHEN** the shared skip decision indicates the `claude` layer should be skipped
-- **THEN** each of the three scripts SHALL emit a `print_message "skip"` message and exit 0
-- **AND** SHALL NOT install skills, register MCP servers, or install plugins
-
-#### Scenario: Claude layer not skipped
-- **WHEN** the shared skip decision indicates the `claude` layer should run
-- **THEN** each script SHALL proceed exactly as it does today, including existing `ai`-tag gating
-
-### Requirement: Skip Gates Do Not Affect Script Success Status
-Exiting early due to a layer skip gate SHALL be treated as a successful script run by chezmoi, distinct from an actual failure.
-
-#### Scenario: Skipped script still marked successful
-- **WHEN** a script exits early because its layer is marked skipped
-- **THEN** it SHALL exit with status 0
-- **AND** chezmoi SHALL record the script as successfully run, not as failed
 
 ### Requirement: Single Source of Category Eligibility Resolution
 Category/tag eligibility resolution — determining which `packages.yaml` categories contribute items for a given key on this machine — SHALL be implemented in exactly one reusable template partial, `home/.chezmoitemplates/package-layer-items`. The partial SHALL accept a `key` parameter (the `packages.yaml` key to resolve, e.g. `bun`, `uv`, `sdkman`, `cargo`, `taps`, `brews`, `casks`, `mas`, `brew_env`) and an optional `coreAlwaysEligible` parameter (default `true`), and SHALL return a JSON array of `{"category": <name>, "items": <value>}` objects.
