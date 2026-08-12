@@ -529,12 +529,23 @@ audit_claude_skills() {
             matched=true
         fi
 
-        # --skill <name> flag (may appear multiple times in one spec)
-        local tmp="$spec"
-        while [[ "$tmp" =~ --skill[[:space:]]+([^[:space:]]+) ]]; do
-            known_skills="${known_skills}${BASH_REMATCH[1]}"$'\n'
-            tmp="${tmp/"${BASH_REMATCH[0]}"/ }"
-            matched=true
+        # --skill <name...> flag: the `skills` CLI's -s/--skill option is
+        # variadic, taking one or more space-separated names before the next
+        # -flag or end of spec. May appear multiple times in one spec.
+        local -a spec_toks
+        read -ra spec_toks <<< "$spec"
+        local ti=0
+        while [[ $ti -lt ${#spec_toks[@]} ]]; do
+            if [[ "${spec_toks[$ti]}" == "--skill" ]]; then
+                matched=true
+                ti=$((ti + 1))
+                while [[ $ti -lt ${#spec_toks[@]} && "${spec_toks[$ti]}" != -* ]]; do
+                    known_skills="${known_skills}${spec_toks[$ti]}"$'\n'
+                    ti=$((ti + 1))
+                done
+            else
+                ti=$((ti + 1))
+            fi
         done
 
         if [[ "$matched" == false ]]; then

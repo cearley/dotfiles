@@ -206,7 +206,7 @@ packages:
               CREATE_BACKUP_FILES: "true"
             command: npx -y fast-filesystem-mcp
           skills: # Installed via `npx skills add <args> -g`
-          - 'basicmachines-co/basic-memory-skills --skill --skill memory-defrag memory-notes --kill memory-reflect --skill memory-schema'
+          - 'basicmachines-co/basic-memory-skills --skill memory-defrag memory-notes memory-schema'
           - 'cearley/claude-session-index --skill session-index'
           - 'specstoryai/agent-skills -all'
           # Install specific skills with arguments

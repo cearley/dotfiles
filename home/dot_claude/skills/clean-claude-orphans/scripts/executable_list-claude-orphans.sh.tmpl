@@ -1,0 +1,100 @@
+#!/bin/bash
+# list-claude-orphans.sh — Structured view of audit-packages' Claude Code findings, plus
+# the environment, marketplace, and plugin-scope context clean-claude-orphans needs to
+# classify each orphan safely and spot decluttering candidates without re-deriving any of
+# this by hand. Read-only: never installs, removes, or modifies any Claude Code state.
+set -euo pipefail
+
+# .chezmoi.sourceDir resolves to the *chezmoiroot-relative* source dir (this repo's
+# home/, per .chezmoiroot), not the repo root — marketplace.json and dot_claude/skills/
+# live one level up and inside it respectively, so the repo root is what this script needs.
+CHEZMOI_SOURCE="{{ dir .chezmoi.sourceDir }}"
+
+if ! command -v audit-packages >/dev/null 2>&1; then
+    echo "error: audit-packages not found on PATH" >&2
+    exit 1
+fi
+
+# ---------------------------------------------------------------------------
+# Claude Code environments present on this machine (openspec/specs/claude-environments)
+# ---------------------------------------------------------------------------
+echo "## environments"
+printf 'current\t%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+for dir in "$HOME"/.claude "$HOME"/.claude-*; do
+    [[ -d "$dir" ]] || continue
+    printf 'found\t%s\n' "$dir"
+done
+
+# ---------------------------------------------------------------------------
+# This repo's own marketplace catalog. Plugins installed from chezmoi-personal are
+# already declared here, outside packages.yaml — never suggest DECLAREing them. Bundled
+# skills are listed too (col 2), so a skill orphan that duplicates a bundle can be spotted
+# without re-reading marketplace.json by hand.
+# ---------------------------------------------------------------------------
+echo ""
+echo "## chezmoi-personal-plugins"
+marketplace_json="${CHEZMOI_SOURCE}/.claude-plugin/marketplace.json"
+if [[ -f "$marketplace_json" ]]; then
+    jq -r '.plugins[] | [.name, ((.skills // []) | join(","))] | @tsv' "$marketplace_json" \
+        | awk -F'\t' '{ printf "%s\t%s\n", $1, ($2 == "" ? "-" : $2) }'
+else
+    echo "error: marketplace.json not found at ${marketplace_json}" >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Skills managed by this repo's own chezmoi source (deployed via `chezmoi apply`),
+# never installed through `npx skills add` — not orphans of that mechanism, and
+# packages.yaml's `skills:` list was never meant to track them.
+# ---------------------------------------------------------------------------
+echo ""
+echo "## chezmoi-managed-skills"
+skills_src="${CHEZMOI_SOURCE}/home/dot_claude/skills"
+if [[ -d "$skills_src" ]]; then
+    for dir in "$skills_src"/*/; do
+        [[ -e "$dir" ]] || continue
+        basename "$dir"
+    done
+else
+    echo "error: skills source dir not found at ${skills_src}" >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Every currently installed plugin's scope and (for project/local scope) owning
+# project, sourced from the current environment's own install record. This is what
+# uninstalling actually needs: user-scope plugins uninstall directly; project/local-scope
+# plugins require clearing the `enabledPlugins` entry from the owning project's settings
+# file first, then `claude plugins uninstall <id> --scope <project|local>` run with cwd
+# inside that project. Without this, both facts have to be rediscovered by trial and error.
+# ---------------------------------------------------------------------------
+echo ""
+echo "## installed-plugins"
+installed_json="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json"
+if [[ -f "$installed_json" ]]; then
+    jq -r '.plugins | to_entries[] | .key as $id | .value[] | [$id, .scope, (.projectPath // "-")] | @tsv' "$installed_json"
+else
+    echo "error: installed_plugins.json not found at ${installed_json}" >&2
+fi
+
+# ---------------------------------------------------------------------------
+# Orphans from the four Claude Code sections of `audit-packages`, as clean
+# <category>\t<item> lines. Forcing LANG=C/LC_ALL=C makes print_message emit its
+# ASCII "[INFO]"-style prefixes instead of emoji, so section/noise lines are
+# trivial to filter regardless of the invoking shell's locale. The per-line
+# uninstall hint ("   claude plugins uninstall ...") is indented with leading
+# whitespace; real orphan names never are, so that's also filtered out.
+# ---------------------------------------------------------------------------
+echo ""
+echo "## orphans"
+LC_ALL=C LANG=C audit-packages 2>&1 | awk '
+    /=== Claude Code MCP Servers ===/         { section = "mcp_server"; next }
+    /=== Claude Code Plugins ===/             { section = "plugin"; next }
+    /=== Claude Code Plugin Marketplaces ===/ { section = "marketplace"; next }
+    /=== Claude Code Skills ===/              { section = "skill"; next }
+    /^===/                                    { section = ""; next }
+    !section                                  { next }
+    /No orphans/                              { next }
+    /^\[/                                     { next }
+    /^[[:space:]]/                            { next }
+    /^$/                                      { next }
+    { print section "\t" $0 }
+'
