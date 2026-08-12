@@ -1,0 +1,8 @@
+{
+  "name": "openspec-dashboard",
+  "description": "Registers the OpenSpec MCP server (openspec-mcp, with --with-dashboard) for projects using OpenSpec's spec-driven workflow.",
+  "author": {
+    "name": "Craig Earley",
+    "email": "craig@craigearley.software"
+  }
+}

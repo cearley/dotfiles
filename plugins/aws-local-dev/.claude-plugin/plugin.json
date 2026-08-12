@@ -1,0 +1,8 @@
+{
+  "name": "aws-local-dev",
+  "description": "Registers the LocalStack MCP server (@localstack/localstack-mcp-server) for projects doing local AWS cloud development.",
+  "author": {
+    "name": "Craig Earley",
+    "email": "craig@craigearley.software"
+  }
+}

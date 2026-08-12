@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "openspec": {
+      "command": "npx",
+      "args": ["openspec-mcp", "--with-dashboard"]
+    }
+  }
+}

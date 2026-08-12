@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "localstack-mcp-server": {
+      "command": "mcp-env-wrapper",
+      "args": ["localstack-mcp-server", "npx", "-y", "@localstack/localstack-mcp-server"]
+    }
+  }
+}

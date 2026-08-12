@@ -1,5 +1,6 @@
 {
   "name": "chezmoi-personal",
+  "description": "Personal catalog of MCP servers, skills, and plugins for per-project opt-in install, curated from this dotfiles repo.",
   "owner": {
     "name": "Craig Earley",
     "email": "craig@craigearley.software",
@@ -10,6 +11,80 @@
       "name": "basic-memory-workflow",
       "source": "./plugins/basic-memory-workflow",
       "description": "Bootstraps and runs the basic-memory session workflow (save-session, sync-memory, SessionStart reminder) in any project that enables it."
+    },
+    {
+      "name": "aws-local-dev",
+      "source": "./plugins/aws-local-dev",
+      "description": "Registers the LocalStack MCP server (@localstack/localstack-mcp-server) for projects doing local AWS cloud development."
+    },
+    {
+      "name": "browser-tools",
+      "source": "./plugins/browser-tools",
+      "description": "Registers the Playwright (@playwright/mcp) and Safari (safari-mcp) MCP servers for projects doing browser automation or testing."
+    },
+    {
+      "name": "openspec-dashboard",
+      "source": "./plugins/openspec-dashboard",
+      "description": "Registers the OpenSpec MCP server (openspec-mcp, with --with-dashboard) for projects using OpenSpec's spec-driven workflow."
+    },
+    {
+      "name": "code-quality",
+      "description": "Clean Code, refactoring patterns, clean architecture, software design philosophy, and pragmatic programming skills from wondelai/skills.",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/wondelai/skills.git",
+        "sha": "6bac1534f9f256a56fc2b4dd0e70b9a692758966"
+      },
+      "skills": [
+        "./clean-code",
+        "./refactoring-patterns",
+        "./clean-architecture",
+        "./software-design-philosophy",
+        "./pragmatic-programmer"
+      ]
+    },
+    {
+      "name": "systems-design",
+      "description": "Domain-driven design, designing data-intensive applications, and system design skills from wondelai/skills.",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/wondelai/skills.git",
+        "sha": "6bac1534f9f256a56fc2b4dd0e70b9a692758966"
+      },
+      "skills": [
+        "./domain-driven-design",
+        "./ddia-systems",
+        "./system-design"
+      ]
+    },
+    {
+      "name": "atlassian",
+      "description": "Connect to Atlassian products including Jira and Confluence. Search and create issues, access documentation, manage sprints, and integrate your development workflow with Atlassian's collaboration tools. MCP server and skills from atlassian/atlassian-mcp-server.",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/atlassian/atlassian-mcp-server.git",
+        "sha": "94a30436435fb526a29f820f5f46250870eb75a0"
+      }
+    },
+    {
+      "name": "aws-core",
+      "description": "Build, deploy, and operate applications on AWS. Skills to author infrastructure-as-code, use core services, and complete common tasks. From aws/agent-toolkit-for-aws.",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/aws/agent-toolkit-for-aws.git",
+        "path": "plugins/aws-core",
+        "ref": "main",
+        "sha": "e2588f4b494416e68c5a991e51b21c2d99038de3"
+      }
+    },
+    {
+      "name": "cloudflare",
+      "description": "Skills for the Cloudflare developer platform: Workers, Durable Objects, Agents SDK, MCP servers, Wrangler CLI, and web performance. From cloudflare/skills.",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/cloudflare/skills.git",
+        "sha": "f96bff754e428838818017f75817f0f9428acd48"
+      }
     }
   ]
 }
