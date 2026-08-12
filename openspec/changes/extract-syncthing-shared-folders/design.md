@@ -30,8 +30,8 @@ A machine's `syncthing_folders` property is either a YAML list (inline, as alrea
 **3. Fail-loud on an unresolved reference.**
 If the string value doesn't match any top-level chezmoi data key, the script calls Go template's `fail` with a message naming the missing key, aborting `chezmoi apply`. Considered leaving it as a silent empty list (matching the existing "no `syncthing_folders` key → skip gracefully" path for machines that opt out entirely). Rejected: an *absent* key and a *misspelled reference* are different failure modes with different causes — one is intentional opt-out, the other is very likely a typo that should surface immediately. This also matches the project's existing convention of hard-failing on malformed machine config at render time (e.g. `claude_envs`/`claude_default` mismatches), rather than degrading silently.
 
-**4. New file name: `home/.chezmoidata/syncthing_shared_folders.yaml`.**
-Matches the top-level key it declares 1:1, so the mapping from data key to source file is immediately discoverable without reading file contents — consistent with `config.yaml` and `packages.yaml` already being descriptively named for what they contain.
+**4. New file name: `home/.chezmoidata/syncthing.yaml`.**
+Named for the domain (Syncthing) rather than matching the `syncthing_shared_folders` top-level key verbatim — shorter, and still immediately discoverable given the single key it declares, consistent with `config.yaml` and `packages.yaml` already being descriptively named for what they contain.
 
 ## Risks / Trade-offs
 
@@ -41,7 +41,7 @@ Matches the top-level key it declares 1:1, so the mapping from data key to sourc
 
 ## Migration Plan
 
-1. Add `home/.chezmoidata/syncthing_shared_folders.yaml` with the `syncthing_shared_folders` list and its doc comment, moved verbatim from `config.yaml`.
+1. Add `home/.chezmoidata/syncthing.yaml` with the `syncthing_shared_folders` list and its doc comment, moved verbatim from `config.yaml`.
 2. Remove the `syncthing_shared_folders` block and anchor from `config.yaml`; update the file's own top-of-file section comment (lines 1-5) accordingly.
 3. Change `syncthing_folders: *laptop_desktop_syncthing_folders` to `syncthing_folders: syncthing_shared_folders` for MacBook Pro and Mac Studio; update the `syncthing_folders` doc comment in the `machines:` section to describe the string-reference form alongside the inline-list form.
 4. Update `run_onchange_after_darwin-94-setup-syncthing-folders.sh.tmpl` to resolve a string `syncthing_folders` value against the root template data, with `fail` on no match.

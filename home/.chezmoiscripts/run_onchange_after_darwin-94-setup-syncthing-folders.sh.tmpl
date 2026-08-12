@@ -25,6 +25,13 @@ fi
 
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
 {{- $stFolders := index $settings "syncthing_folders" }}
+{{- if kindIs "string" $stFolders }}
+{{-   $refName := $stFolders }}
+{{-   $stFolders = index . $refName }}
+{{-   if not $stFolders }}
+{{-     fail (printf "syncthing_folders references unknown top-level data key %q" $refName) }}
+{{-   end }}
+{{- end }}
 {{- if not $stFolders }}
 print_message "skip" "No syncthing_folders configured for this machine"
 exit 0

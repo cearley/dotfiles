@@ -4,7 +4,7 @@
 
 ## What Changes
 
-- Add `home/.chezmoidata/syncthing_shared_folders.yaml`, containing the `syncthing_shared_folders` list moved verbatim (with its documentation comment) out of `config.yaml`.
+- Add `home/.chezmoidata/syncthing.yaml`, containing the `syncthing_shared_folders` list moved verbatim (with its documentation comment) out of `config.yaml`.
 - Remove the `syncthing_shared_folders` block and its YAML anchor from `home/.chezmoidata/config.yaml`.
 - **BREAKING** (internal data format only, no user-facing effect): change the per-machine `syncthing_folders` value from a YAML alias (`*laptop_desktop_syncthing_folders`) to a bare string naming the shared top-level data key (`syncthing_folders: syncthing_shared_folders`) for MacBook Pro and Mac Studio. A machine MAY still declare its own inline list instead of a reference — that form is unchanged.
 - Update `home/.chezmoiscripts/run_onchange_after_darwin-94-setup-syncthing-folders.sh.tmpl` to resolve `syncthing_folders` after reading it from `machine-settings`: if the value is a string, treat it as the name of a top-level chezmoi data key and look it up dynamically (`kindIs "string"` vs `kindIs "slice"` dispatch); if the referenced key doesn't resolve to a list, fail the template render with a clear error instead of silently skipping folder setup.
@@ -21,12 +21,12 @@
 ## Impact
 
 - `home/.chezmoidata/config.yaml` — remove shared-folder literal block and anchor; update `syncthing_folders` values for MacBook Pro and Mac Studio to string references.
-- `home/.chezmoidata/syncthing_shared_folders.yaml` — new file, sole source of the shared folder list.
+- `home/.chezmoidata/syncthing.yaml` — new file, sole source of the shared folder list.
 - `home/.chezmoiscripts/run_onchange_after_darwin-94-setup-syncthing-folders.sh.tmpl` — add reference-resolution and fail-loud validation logic.
 - `openspec/specs/machine-config/spec.md` — requirement delta for the new sharing mechanism.
 - Machines affected: MacBook Pro, Mac Studio (both currently alias the shared list). Mac mini has no `syncthing_folders` key and is unaffected.
 - Tags affected: none (machine-config and syncthing-folder-setup are not tag-gated capabilities).
-- Security: none — no secrets or permissions involved; `syncthing_shared_folders.yaml` contains the same non-sensitive folder metadata (paths, versioning, ignore patterns) already committed today.
+- Security: none — no secrets or permissions involved; `syncthing.yaml` contains the same non-sensitive folder metadata (paths, versioning, ignore patterns) already committed today.
 
 ## Non-goals
 
