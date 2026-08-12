@@ -27,5 +27,5 @@
 - [x] 5.1 Run `tests/run-template home/.chezmoiscripts/run_onchange_after_darwin-94-setup-syncthing-folders.sh.tmpl` (or `chezmoi execute-template <`) and confirm the rendered script is unchanged for a machine matching "MacBook Pro" or "Mac Studio" (folder list, IDs, versioning, ignores all identical to before)
 - [x] 5.2 Render the same template for a hypothetical unmatched/Mac-mini-like machine and confirm it still prints "No syncthing_folders configured for this machine" and exits 0
 - [x] 5.3 Temporarily typo the string reference (e.g. `syncthing_folers`) in a scratch copy and confirm template rendering fails loudly with a clear error, then revert the typo
-- [ ] 5.4 Run `chezmoi diff` (interactive TTY) or `chezmoi status` on a real MacBook Pro/Mac Studio machine to confirm no unexpected changes are proposed
+- [x] 5.4 Run `chezmoi diff` (interactive TTY) or `chezmoi status` on a real MacBook Pro/Mac Studio machine to confirm no unexpected changes are proposed
 - [x] 5.5 Run `openspec validate --change extract-syncthing-shared-folders --strict` before archiving
