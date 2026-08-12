@@ -7,11 +7,6 @@ set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-if package_layer_should_skip "homebrew"; then
-    print_message "skip" "Skipping Homebrew package updates for this run"
-    exit 0
-fi
-
 if ! require_tools brew; then
     exit 1
 fi
@@ -59,12 +54,6 @@ export {{ $k }}={{ $v | quote }}
   {{- end }}
 {{- end }}
 
-brew_exit=0
-brew bundle --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
-{{- range .packages.darwin.taps }}
-tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
-{{- end }}
-
 {{- $tapByCategory := dict }}
 {{- range $tapGroups }}
   {{- $tapByCategory = set $tapByCategory .category .items }}
@@ -81,12 +70,30 @@ tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end
 {{- range $masGroups }}
   {{- $masByCategory = set $masByCategory .category .items }}
 {{- end }}
+{{- $hasCasks := false }}
+{{- $hasMas := false }}
+{{- range $category := prepend .tag_choices "core" }}
+  {{- $caskItems := index $caskByCategory $category }}
+  {{- $masItems := index $masByCategory $category }}
+  {{- if $caskItems }}
+    {{- $hasCasks = true }}
+  {{- end }}
+  {{- if and $icloudSignedIn $masItems }}
+    {{- $hasMas = true }}
+  {{- end }}
+{{- end }}
+
+# Taps and formulae install unconditionally — fast, no confirmation needed.
+brew_exit=0
+brew bundle --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
+{{- range .packages.darwin.taps }}
+tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{- end }}
+
 {{- range $category := prepend .tag_choices "core" }}
   {{- $tapItems := index $tapByCategory $category }}
   {{- $brewItems := index $brewByCategory $category }}
-  {{- $caskItems := index $caskByCategory $category }}
-  {{- $masItems := index $masByCategory $category }}
-  {{- if or $tapItems $brewItems $caskItems $masItems }}
+  {{- if or $tapItems $brewItems }}
 
 # Install {{ $category }} packages
     {{- if $tapItems }}
@@ -100,18 +107,6 @@ tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end
 brew {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{ end -}}
     {{- end }}
-
-    {{- if $caskItems }}
-{{ range $caskItems -}}
-cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
-{{ end -}}
-    {{- end }}
-
-    {{- if and $icloudSignedIn $masItems }}
-{{ range $masItems -}}
-mas {{ . }}
-{{ end -}}
-    {{- end }}
   {{- end }}
 {{- end }}
 BUNDLE_EOF
@@ -120,6 +115,64 @@ if [ "$brew_exit" -ne 0 ]; then
     print_message "warning" "brew bundle completed with errors — some packages may not be installed."
     print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
 fi
+
+{{ if not $hasCasks -}}
+print_message "skip" "No cask packages to install for this tag set"
+{{ else -}}
+read -p "🍺 Install cask packages? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    print_message "skip" "Skipping cask package installation"
+else
+    cask_exit=0
+    brew bundle --file=/dev/stdin <<'CASK_EOF' || cask_exit=$?
+{{- range $category := prepend .tag_choices "core" }}
+  {{- $caskItems := index $caskByCategory $category }}
+  {{- if $caskItems }}
+
+# Install {{ $category }} cask packages
+{{ range $caskItems -}}
+cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{ end -}}
+  {{- end }}
+{{- end }}
+CASK_EOF
+
+    if [ "$cask_exit" -ne 0 ]; then
+        print_message "warning" "brew bundle (casks) completed with errors — some packages may not be installed."
+        print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
+    fi
+fi
+{{ end }}
+
+{{ if not $hasMas -}}
+print_message "skip" "No Mac App Store packages to install for this tag set"
+{{ else -}}
+read -p "🍺 Install Mac App Store packages? (y/N): " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    print_message "skip" "Skipping Mac App Store package installation"
+else
+    mas_exit=0
+    brew bundle --file=/dev/stdin <<'MAS_EOF' || mas_exit=$?
+{{- range $category := prepend .tag_choices "core" }}
+  {{- $masItems := index $masByCategory $category }}
+  {{- if and $icloudSignedIn $masItems }}
+
+# Install {{ $category }} Mac App Store packages
+{{ range $masItems -}}
+mas {{ . }}
+{{ end -}}
+  {{- end }}
+{{- end }}
+MAS_EOF
+
+    if [ "$mas_exit" -ne 0 ]; then
+        print_message "warning" "brew bundle (mas) completed with errors — some packages may not be installed."
+        print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
+    fi
+fi
+{{ end }}
 
 {{ if not $icloudSignedIn -}}
 print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"

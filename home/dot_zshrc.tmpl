@@ -155,6 +155,12 @@ export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
 [ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
 
 # ------------------------------------------------------------------------------
+# Wasmtime - WebAssembly runtime
+# ------------------------------------------------------------------------------
+export WASMTIME_HOME="$HOME/.wasmtime"
+export PATH="$WASMTIME_HOME/bin:$PATH"
+
+# ------------------------------------------------------------------------------
 # Shell integrations for Homebrew-installed packages
 # ------------------------------------------------------------------------------
 
