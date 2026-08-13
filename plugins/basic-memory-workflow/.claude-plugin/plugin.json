@@ -1,6 +1,7 @@
 {
   "name": "basic-memory-workflow",
-  "description": "Bootstraps and runs the basic-memory session workflow (save-session, sync-memory, SessionStart reminder) in any project that enables it. No version field: every commit auto-propagates to consumers, so there is nothing to manually bump.",
+  "description": "Bootstraps and runs the basic-memory session workflow (save-session, sync-memory, SessionStart reminder) in any project that enables it.",
+  "version": "1.0.0",
   "author": {
     "name": "Craig Earley",
     "email": "craig@craigearley.software"

@@ -1,6 +1,7 @@
 {
   "name": "browser-tools",
   "description": "Registers the Playwright (@playwright/mcp) and Safari (safari-mcp) MCP servers for projects doing browser automation or testing.",
+  "version": "1.0.0",
   "author": {
     "name": "Craig Earley",
     "email": "craig@craigearley.software"
