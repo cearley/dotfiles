@@ -2,6 +2,10 @@
 //{{ .gh_npm_registry }}/:_authToken={{ keepassxcAttribute "GitHub" "Access Token" }}
 @{{ .gh_packages_owner }}:registry=https://{{ .gh_npm_registry }}
 {{- end }}
+{{- if and .has_keepassxc_db (has "work" .tags) (ne .azure_devops_org "") (ne .azure_npm_registry "") }}
+# Azure Artifacts (work account only; personal account package manager support is future work)
+//{{ .azure_npm_registry }}/:_authToken={{ keepassxcAttribute "Azure DevOps (Willdan)" "Access Token" }}
+{{- end }}
 registry=https://registry.npmjs.org/
 {{- if and .has_keepassxc_db (ne .gh_packages_owner "") (ne .gh_npm_registry "") }}
 

@@ -1,4 +1,5 @@
 ﻿{{- if and (has "dev" .tags) .has_keepassxc_db -}}
+{{- $azure_nuget := and (has "work" .tags) (ne .azure_devops_org "") (ne .azure_nuget_source "") -}}
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <packageSources>
@@ -6,16 +7,27 @@
 {{- if and (ne .gh_packages_owner "") (ne .gh_nuget_source "") }}
     <add key="github" value="{{ .gh_nuget_source }}" />
 {{- end }}
+{{- if $azure_nuget }}
+    <add key="azure" value="{{ .azure_nuget_source }}" />
+{{- end }}
   </packageSources>
   <activePackageSource>
     <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
   </activePackageSource>
-{{- if and (ne .gh_packages_owner "") (ne .gh_nuget_source "") }}
+{{- if or (and (ne .gh_packages_owner "") (ne .gh_nuget_source "")) $azure_nuget }}
   <packageSourceCredentials>
+{{- if and (ne .gh_packages_owner "") (ne .gh_nuget_source "") }}
     <github>
       <add key="Username" value="{{ .gh_username }}" />
       <add key="ClearTextPassword" value="{{ keepassxcAttribute "GitHub" "Access Token" }}" />
     </github>
+{{- end }}
+{{- if $azure_nuget }}
+    <azure>
+      <add key="Username" value="{{ .azure_devops_username }}" />
+      <add key="ClearTextPassword" value="{{ keepassxcAttribute "Azure DevOps (Willdan)" "Access Token" }}" />
+    </azure>
+{{- end }}
   </packageSourceCredentials>
 {{- end }}
 </configuration>

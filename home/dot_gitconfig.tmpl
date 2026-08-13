@@ -15,6 +15,14 @@
 [credential "https://github.com"]
 	username = {{ .gh_username }}
 
+{{- if and (has "work" .tags) .has_keepassxc_db (ne .azure_devops_org "") }}
+
+[credential "https://dev.azure.com"]
+	username = {{ .azure_devops_username }}
+[credential "https://{{ .azure_devops_org }}.visualstudio.com"]
+	username = {{ .azure_devops_username }}
+{{- end }}
+
 {{ if has "dev" .tags -}}
 [interactive]
     diffFilter = delta --color-only
@@ -44,6 +52,11 @@
 
 [includeIf "gitdir:~/work/cearley/"]
     path = ~/.gitconfig-personal
+
+{{- if and (has "dev" .tags) .has_keepassxc_db (ne .azure_devops_org_personal "") }}
+[includeIf "gitdir:~/personal/azure/"]
+    path = ~/.gitconfig-azure-personal
+{{- end }}
 {{ if has "ai" .tags -}}
 [gitbutler]
 	aiModelProvider = anthropic

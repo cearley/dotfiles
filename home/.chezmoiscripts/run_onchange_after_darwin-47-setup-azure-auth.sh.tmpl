@@ -1,0 +1,91 @@
+{{- if and (eq .chezmoi.os "darwin") .has_keepassxc_db (has "work" .tags) (ne .azure_devops_org "") -}}
+#!/bin/bash
+
+# Chezmoi script to configure Azure DevOps authentication (work account).
+# This script runs whenever the work Azure DevOps token changes, after chezmoi applies other changes on macOS.
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools git; then
+    exit 1
+fi
+
+# Get credentials from KeePassXC
+AZURE_ORG={{ .azure_devops_org | quote }}
+AZURE_USERNAME={{ .azure_devops_username | quote }}
+AZURE_PAT={{ keepassxcAttribute "Azure DevOps (Willdan)" "Access Token" | quote }}
+AZURE_ACR_REGISTRIES={{ .azure_acr_registries | quote }}
+
+print_message "info" "Setting up Azure DevOps authentication (work account)..."
+
+setup_git_credentials() {
+    print_message "info" "Configuring git credential helper for Azure DevOps (work)"
+
+    # credential.helper osxkeychain is already set globally in ~/.gitconfig
+    git config --global credential.https://dev.azure.com.username "$AZURE_USERNAME"
+    git config --global credential.https://"$AZURE_ORG".visualstudio.com.username "$AZURE_USERNAME"
+
+    # Pre-populate the Azure DevOps token in macOS Keychain to avoid password prompts
+    print_message "info" "Storing Azure DevOps (work) token in macOS Keychain"
+    printf "protocol=https\nhost=dev.azure.com\nusername=%s\npassword=%s\n" \
+        "$AZURE_USERNAME" "$AZURE_PAT" | git credential approve
+    printf "protocol=https\nhost=%s.visualstudio.com\nusername=%s\npassword=%s\n" \
+        "$AZURE_ORG" "$AZURE_USERNAME" "$AZURE_PAT" | git credential approve
+
+    print_message "success" "Git credential helper configured and token stored in Keychain (work)"
+}
+
+setup_azure_cli() {
+    if ! command_exists az; then
+        print_message "skip" "Azure CLI not installed, skipping az devops configuration"
+        return 0
+    fi
+
+    if ! az extension show --name azure-devops >/dev/null 2>&1; then
+        print_message "info" "Installing Azure DevOps CLI extension"
+        az extension add --name azure-devops --only-show-errors
+    fi
+
+    print_message "info" "Configuring Azure CLI DevOps defaults (work org: $AZURE_ORG)"
+    az devops configure --defaults organization="https://dev.azure.com/$AZURE_ORG" --only-show-errors
+
+    print_message "success" "Azure CLI configured (uses AZURE_DEVOPS_EXT_PAT from environment)"
+}
+
+setup_acr_login() {
+    if [ -z "$AZURE_ACR_REGISTRIES" ]; then
+        print_message "skip" "No ACR registries configured (skipping)"
+        return 0
+    fi
+
+    if ! command_exists az; then
+        print_message "skip" "Azure CLI not installed, skipping ACR login"
+        return 0
+    fi
+
+    print_message "info" "Logging into Azure Container Registries"
+    IFS=',' read -ra REGISTRY_ARRAY <<< "$AZURE_ACR_REGISTRIES"
+    for registry in "${REGISTRY_ARRAY[@]}"; do
+        registry="$(echo "$registry" | xargs)"
+        [ -z "$registry" ] && continue
+        if az acr login --name "$registry" --only-show-errors 2>/dev/null; then
+            print_message "success" "Logged into ACR: $registry"
+        else
+            print_message "warning" "Failed to log into ACR: $registry (run 'az login' first, then re-run chezmoi apply)"
+        fi
+    done
+}
+
+main() {
+    setup_git_credentials
+    setup_azure_cli
+    setup_acr_login
+
+    print_message "success" "Azure DevOps (work) authentication setup completed successfully"
+}
+
+main "$@"
+
+{{ end -}}

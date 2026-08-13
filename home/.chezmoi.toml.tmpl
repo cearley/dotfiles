@@ -30,6 +30,40 @@
     $tag_choices (list "work")
 -}}
 
+{{- /* Azure DevOps work account configuration (optional, gated by work tag) */ -}}
+{{- $azure_devops_org := "" -}}
+{{- $azure_devops_username := "" -}}
+{{- $azure_devops_email := "" -}}
+{{- $azure_npm_registry := "" -}}
+{{- $azure_nuget_source := "" -}}
+{{- $azure_maven_repository := "" -}}
+{{- $azure_pip_index := "" -}}
+{{- $azure_acr_registries := "" -}}
+{{- if has "work" $tags -}}
+{{-   $azure_devops_org = promptStringOnce . "azure_devops_org" "Azure DevOps organization (work, e.g., Willdan-WLE, press enter to skip)" "" -}}
+{{-   if ne $azure_devops_org "" -}}
+{{-     $azure_devops_username = promptStringOnce . "azure_devops_username" "Azure DevOps username (work)" "" -}}
+{{-     $azure_devops_email = promptStringOnce . "azure_devops_email" "Azure DevOps commit email (work, optional)" "" -}}
+{{-     $azure_npm_registry = promptStringOnce . "azure_npm_registry" "Azure Artifacts npm registry URL (work, optional)" "" -}}
+{{-     $azure_nuget_source = promptStringOnce . "azure_nuget_source" "Azure Artifacts NuGet source URL (work, optional)" "" -}}
+{{-     $azure_maven_repository = promptStringOnce . "azure_maven_repository" "Azure Artifacts Maven repository URL (work, optional)" "" -}}
+{{-     $azure_pip_index = promptStringOnce . "azure_pip_index" "Azure Artifacts pip index URL (work, optional)" "" -}}
+{{-     $azure_acr_registries = promptStringOnce . "azure_acr_registries" "Azure Container Registry names, comma-separated (work, optional)" "" -}}
+{{-   end -}}
+{{- end -}}
+
+{{- /* Azure DevOps personal account configuration (optional, gated by dev tag) */ -}}
+{{- $azure_devops_org_personal := "" -}}
+{{- $azure_devops_username_personal := "" -}}
+{{- $azure_devops_email_personal := "" -}}
+{{- if has "dev" $tags -}}
+{{-   $azure_devops_org_personal = promptStringOnce . "azure_devops_org_personal" "Azure DevOps organization (personal, e.g., CES, press enter to skip)" "" -}}
+{{-   if ne $azure_devops_org_personal "" -}}
+{{-     $azure_devops_username_personal = promptStringOnce . "azure_devops_username_personal" "Azure DevOps username (personal)" "" -}}
+{{-     $azure_devops_email_personal = promptStringOnce . "azure_devops_email_personal" "Azure DevOps commit email (personal, optional)" "" -}}
+{{-   end -}}
+{{- end -}}
+
 [data]
 aws_secrets_manager_profile = {{ $aws_secrets_manager_profile | quote }}
 aws_secrets_manager_region = {{ $aws_secrets_manager_region | quote }}
@@ -48,6 +82,17 @@ has_keepassxc_db = {{ if and (ne $keepassxc_db "") (stat $keepassxc_db) }}true{{
 microsoft_email = {{ $microsoft_email | quote }}
 tags = {{ $tags | toToml }}
 tag_choices = {{ $tag_choices | toToml }}
+azure_devops_org = {{ $azure_devops_org | quote }}
+azure_devops_username = {{ $azure_devops_username | quote }}
+azure_devops_email = {{ $azure_devops_email | quote }}
+azure_npm_registry = {{ $azure_npm_registry | quote }}
+azure_nuget_source = {{ $azure_nuget_source | quote }}
+azure_maven_repository = {{ $azure_maven_repository | quote }}
+azure_pip_index = {{ $azure_pip_index | quote }}
+azure_acr_registries = {{ $azure_acr_registries | quote }}
+azure_devops_org_personal = {{ $azure_devops_org_personal | quote }}
+azure_devops_username_personal = {{ $azure_devops_username_personal | quote }}
+azure_devops_email_personal = {{ $azure_devops_email_personal | quote }}
 
 [scriptEnv]
 GITHUB_USERNAME = {{ $gh_username | quote }}

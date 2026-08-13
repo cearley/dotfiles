@@ -74,8 +74,8 @@ This change brings Azure DevOps authentication to parity with GitHub authenticat
     - `home/dot_gitconfig.tmpl` (modify - add Azure credential config with includeIf)
     - `home/dot_gitconfig-azure-personal.tmpl` (create - personal account overrides)
     - `home/private_dot_zsh_secrets.tmpl` (modify - add AZURE_DEVOPS_EXT_PAT for both accounts)
-  - **Documentation**:
-    - `.serena/memories/azure-devops-authentication.md` (create)
-    - `.serena/memories/chezmoi-quick-reference.md` (modify)
+  - **Documentation** (redirected 2026-08-13: Serena was demoted from a global tool to an opt-in `chezmoi-personal` plugin in commit `2692a03`, and `.serena/memories/` no longer exists on this machine — both `CLAUDE.md` files now point documentation at the `chezmoi` Basic Memory project instead):
+    - Basic Memory note "Azure DevOps Authentication" in the `chezmoi` project (create)
+    - Basic Memory note "Chezmoi Dotfiles Project Architecture" in the `chezmoi` project (modify — add pointer)
 - **Dependencies**: Azure CLI (already in packages.yaml), docker, git
 - **Breaking changes**: None (purely additive)

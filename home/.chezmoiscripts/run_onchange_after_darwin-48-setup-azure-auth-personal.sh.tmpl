@@ -1,0 +1,71 @@
+{{- if and (eq .chezmoi.os "darwin") .has_keepassxc_db (has "dev" .tags) (ne .azure_devops_org_personal "") -}}
+#!/bin/bash
+
+# Chezmoi script to configure Azure DevOps authentication (personal account).
+# This script runs whenever the personal Azure DevOps token changes, after chezmoi applies other changes on macOS.
+# Git-only + optional Azure CLI; package managers and ACR are reserved for future implementation.
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools git; then
+    exit 1
+fi
+
+# Get credentials from KeePassXC
+AZURE_ORG_PERSONAL={{ .azure_devops_org_personal | quote }}
+AZURE_USERNAME_PERSONAL={{ .azure_devops_username_personal | quote }}
+AZURE_PAT_PERSONAL={{ keepassxcAttribute "Azure DevOps (CES)" "Access Token" | quote }}
+
+print_message "info" "Setting up Azure DevOps authentication (personal account)..."
+
+setup_git_credentials() {
+    print_message "info" "Configuring git credential helper for Azure DevOps (personal)"
+
+    # credential.helper osxkeychain is set in ~/.gitconfig-azure-personal,
+    # scoped to ~/personal/azure/ via includeIf in ~/.gitconfig
+    git config --file "$HOME/.gitconfig-azure-personal" credential.helper osxkeychain
+
+    # Pre-populate the Azure DevOps token in macOS Keychain to avoid password prompts
+    print_message "info" "Storing Azure DevOps (personal) token in macOS Keychain"
+    printf "protocol=https\nhost=dev.azure.com\nusername=%s\npassword=%s\n" \
+        "$AZURE_USERNAME_PERSONAL" "$AZURE_PAT_PERSONAL" | git credential approve
+    printf "protocol=https\nhost=%s.visualstudio.com\nusername=%s\npassword=%s\n" \
+        "$AZURE_ORG_PERSONAL" "$AZURE_USERNAME_PERSONAL" "$AZURE_PAT_PERSONAL" | git credential approve
+
+    print_message "success" "Git credential helper configured and token stored in Keychain (personal)"
+}
+
+setup_azure_cli() {
+    if ! command_exists az; then
+        print_message "skip" "Azure CLI not installed, skipping az devops configuration (personal, optional)"
+        return 0
+    fi
+
+    if ! az extension show --name azure-devops >/dev/null 2>&1; then
+        print_message "info" "Installing Azure DevOps CLI extension"
+        az extension add --name azure-devops --only-show-errors
+    fi
+
+    print_message "info" "Configuring Azure CLI DevOps defaults (personal org: $AZURE_ORG_PERSONAL)"
+    az devops configure --defaults organization="https://dev.azure.com/$AZURE_ORG_PERSONAL" --only-show-errors
+
+    print_message "success" "Azure CLI configured for personal account (uses AZURE_DEVOPS_EXT_PAT_PERSONAL from environment)"
+}
+
+# Package manager (npm/NuGet/Maven/pip) and Azure Container Registry support for the
+# personal account are reserved for future implementation — see "Non-Goals / Future Work"
+# in the Azure DevOps Authentication Basic Memory note. Most personal Azure DevOps usage
+# is git-only (learning/hobby projects).
+
+main() {
+    setup_git_credentials
+    setup_azure_cli
+
+    print_message "success" "Azure DevOps (personal) authentication setup completed successfully"
+}
+
+main "$@"
+
+{{ end -}}

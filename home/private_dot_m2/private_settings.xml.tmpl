@@ -1,14 +1,25 @@
-{{- if and .has_keepassxc_db (ne .gh_packages_owner "") (ne .gh_maven_repository "") -}}
+{{- $gh_maven := and (ne .gh_packages_owner "") (ne .gh_maven_repository "") -}}
+{{- $azure_maven := and (has "work" .tags) (ne .azure_devops_org "") (ne .azure_maven_repository "") -}}
+{{- if and .has_keepassxc_db (or $gh_maven $azure_maven) -}}
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
                               http://maven.apache.org/xsd/settings-1.0.0.xsd">
   <servers>
+{{- if $gh_maven }}
     <server>
       <id>github</id>
       <username>{{ .gh_username }}</username>
       <password>{{ keepassxcAttribute "GitHub" "Access Token" }}</password>
     </server>
+{{- end }}
+{{- if $azure_maven }}
+    <server>
+      <id>azure</id>
+      <username>{{ .azure_devops_username }}</username>
+      <password>{{ keepassxcAttribute "Azure DevOps (Willdan)" "Access Token" }}</password>
+    </server>
+{{- end }}
   </servers>
 </settings>
 {{ end -}}

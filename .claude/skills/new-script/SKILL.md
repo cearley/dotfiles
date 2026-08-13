@@ -2,7 +2,7 @@
 name: new-script
 description: Create a new chezmoi setup script following all project conventions
 argument-hint: "<description> [--frequency run_once|run_onchange] [--timing before|after] [--order NN]"
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read, Write, Bash, Glob, Grep
 ---
 

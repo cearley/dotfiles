@@ -1,4 +1,12 @@
-{{- if and .has_keepassxc_db (ne .gh_packages_owner "") (ne .gh_pip_index "") -}}
+{{- $gh_pip := and (ne .gh_packages_owner "") (ne .gh_pip_index "") -}}
+{{- $azure_pip := and (has "work" .tags) (ne .azure_devops_org "") (ne .azure_pip_index "") -}}
+{{- if and .has_keepassxc_db (or $gh_pip $azure_pip) -}}
 [global]
-extra-index-url = https://{{ .gh_username }}:{{ keepassxcAttribute "GitHub" "Access Token" }}@{{ .gh_pip_index }}
+extra-index-url =
+{{- if $gh_pip }}
+    https://{{ .gh_username }}:{{ keepassxcAttribute "GitHub" "Access Token" }}@{{ .gh_pip_index }}
+{{- end }}
+{{- if $azure_pip }}
+    https://{{ .azure_devops_username }}:{{ keepassxcAttribute "Azure DevOps (Willdan)" "Access Token" }}@{{ .azure_pip_index }}
+{{- end }}
 {{ end -}}

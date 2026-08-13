@@ -1,0 +1,12 @@
+{{- if ne .azure_devops_org_personal "" }}
+[user]
+	name = {{ .fullname }}
+	email = {{ .azure_devops_email_personal }}
+[commit]
+	gpgsign = true
+
+[credential "https://dev.azure.com"]
+	username = {{ .azure_devops_username_personal }}
+[credential "https://{{ .azure_devops_org_personal }}.visualstudio.com"]
+	username = {{ .azure_devops_username_personal }}
+{{ end -}}
