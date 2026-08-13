@@ -1,3 +1,8 @@
+---
+paths:
+  - "home/**"
+---
+
 # Working in home/ (chezmoi source for dotfiles)
 
 Guidance specific to editing scripts and templates under this directory.
