@@ -27,7 +27,5 @@
       }
     ]
   },
-  "enabledPlugins": {
-    "narsil@narsil-mcp": true
-  }
+  "enabledPlugins": {}
 }

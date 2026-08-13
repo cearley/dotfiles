@@ -194,7 +194,6 @@ packages:
       - "git+https://github.com/cearley/claude-extend@latest"
       - 'git+https://github.com/cearley/claude-session-index'
       - "git+https://github.com/cearley/zsh-llm-suggestions"
-      - "-p 3.13 serena-agent@latest --prerelease=allow"
       agents:
         claude_code:
           mcp_servers: # Registered via `claude mcp add --scope user <name> -- <command...>`
@@ -215,7 +214,6 @@ packages:
           - 'anthropics/claude-plugins-official'
           - 'anthropics/skills'
           - 'aws/agent-toolkit-for-aws'
-          - 'cloudflare/skills'
           - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev'
           - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
           plugins: # Installed via `claude plugins install`

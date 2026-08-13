@@ -28,6 +28,11 @@
       "description": "Registers the OpenSpec MCP server (openspec-mcp, with --with-dashboard) for projects using OpenSpec's spec-driven workflow."
     },
     {
+      "name": "serena",
+      "source": "./plugins/serena",
+      "description": "Registers the Serena MCP server (oraios/serena) for projects wanting semantic code analysis and LSP-based IDE assistance."
+    },
+    {
       "name": "code-quality",
       "description": "Clean Code, refactoring patterns, clean architecture, software design philosophy, and pragmatic programming skills from wondelai/skills.",
       "source": {
