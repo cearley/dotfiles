@@ -4,6 +4,20 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v10 (2026-08-17)
+`assets/save-session-skill.md.template`'s Step 3 (current status note) had a rollover
+guard for the session log (Step 2, 300-line trigger) but nothing analogous for the status
+note itself — it was edited in place forever with no size check, and one real install's
+status note grew to 69,086 characters before a `read_note` call hit the MCP server's
+output-token ceiling and failed outright. Adds Step 3b: at or over 200 lines, triage the
+note instead of just editing it — delegate to the `memory-defrag` skill when installed
+(its audit → plan → execute → verify → log workflow already targets exactly this failure
+mode), falling back to manual reference/known-issues/archive triage otherwise, and prefer
+the `memory-lifecycle` skill's `move_note`-based archive-never-delete pattern (preserves
+permalinks, so existing `[[wiki-links]]` keep resolving) over copy-and-delete when moving
+content out. Both are optional companion skills, not new hard dependencies — Step 3b
+degrades to manual triage if neither is installed.
+
 ## v9 (2026-08-17)
 This skill briefly went dormant while a Claude Code plugin (`basic-memory-workflow`)
 distributed this workflow instead — that plugin is now deprecated in favor of this

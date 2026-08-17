@@ -3,7 +3,7 @@ name: sync-memory
 description: Distill unsynced SpecStory session logs into basic-memory. User-invoked only — run explicitly with /sync-memory when you want to capture insights from recent sessions.
 disable-model-invocation: true
 ---
-<!-- setup-memory-workflow-version:9 -->
+<!-- setup-memory-workflow-version:10 -->
 
 ## Step 1 — Find unsynced logs
 

@@ -44,7 +44,7 @@
 
 set -euo pipefail
 
-SMW_VERSION=9
+SMW_VERSION=10
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS_DIR="$SKILL_DIR/assets"
 

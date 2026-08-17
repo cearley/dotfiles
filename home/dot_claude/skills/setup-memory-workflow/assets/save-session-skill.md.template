@@ -65,4 +65,32 @@ spot-check that every still-active item there has a matching Open entry before s
 
 This note is the authoritative source for current state. Keep it accurate and tidy.
 
+## Step 3b — Triage if oversized
+
+Unlike the session log (Step 2), this note is edited in place forever, so it has no
+natural rollover point — check its size after the update above (read_note, or `wc -l` on
+its file under `~/.local/share/basic-memory/__PROJECT__/`). If it is at or over 200
+lines, it's carrying more than "current state" and needs triage, not just editing.
+
+If the `memory-defrag` skill is installed, invoke it against this note instead of
+triaging by hand — that's exactly its job ("bloated file >300 lines → split into focused
+files", "stale entries → remove or archive"), and its audit → plan → execute → verify →
+log workflow gives repeatable, logged output instead of ad hoc per-session judgment
+calls. Point it at this note specifically; don't let it wander into unrelated memory
+files during a save-session run.
+
+If `memory-defrag` isn't installed, triage manually using the same split: content that's
+stable reference material or a still-real known issue moves to an existing or new note
+under `reference/` or `known-issues/`, with a one-line `See [[Note Title]]` pointer left
+behind; content of uncertain future value gets archived rather than deleted.
+
+Either way, for anything leaving this note, prefer the `memory-lifecycle` skill's
+archive-never-delete pattern if installed: `move_note` into an `archive/`-style location
+rather than copy-and-delete — it preserves the permalink, so any existing
+`[[wiki-links]]` into that content keep resolving. Reserve outright deletion for content
+that's flatly wrong or superseded, not merely old.
+
+Repeat until the note is at or under 200 lines. Confirm the final line count alongside
+the note titles below.
+
 Confirm both note titles and permalinks after saving.
