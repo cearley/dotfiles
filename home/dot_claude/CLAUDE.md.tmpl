@@ -1,4 +1,6 @@
 {{- if has "ai" .tags -}}
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $claudeEnvs := default (list) (index $settings "claude_envs") -}}
 # Global Preferences
 
 ## Code Style
@@ -30,6 +32,13 @@ When executing a named skill workflow, mandatory steps must not be silently skip
 
 ## Environment Notes
 - Background subagents (via Agent tool) cannot respond to interactive permission prompts — Bash commands already approved in settings.json work fine, but unapproved commands are silently denied. For shell tasks not yet pre-approved, use foreground agents instead.
+{{- if $claudeEnvs }}
+- This machine runs multiple named Claude Code profiles ("personas"), each with its own `CLAUDE_CONFIG_DIR`. This file and `skills/` are symlinked from `~/.claude` into every persona, but `settings.json`, `.claude.json`, `plugins/`, and session history (`projects/`) are separate per persona. Before diagnosing installation health, editing settings/plugins, or reasoning about skill/MCP usage (e.g. `/doctor`), confirm which persona this session is actually running under — don't assume it matches the shell's default or the current working directory:
+  ```bash
+  echo "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  ```
+  Known personas on this machine: {{ join ", " $claudeEnvs }} (plus the unnamed default, `~/.claude`, used whenever `CLAUDE_CONFIG_DIR` is unset).
+{{- end }}
 
 ## Basic Memory
 - At conversation start and before creating any note, search_notes()/recent_activity() first — check for prior context and avoid duplicates.
