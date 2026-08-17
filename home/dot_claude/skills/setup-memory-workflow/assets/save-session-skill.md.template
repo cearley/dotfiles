@@ -1,0 +1,40 @@
+---
+name: save-session
+description: Save today's session to basic-memory. Run at end of every coding session.
+---
+<!-- setup-memory-workflow-version:__SMW_VERSION__ -->
+
+## Step 1 — Append to the session log
+
+Search basic-memory project "__PROJECT__" for the most recent session note using search_notes with query "__PROJECT__ session".
+
+Append an update with edit_note (operation="append") including:
+- Date (use the currentDate value from context)
+- What was changed or decided today (decisions, findings, discoveries)
+- Any items resolved this session
+
+Do NOT include open items or next steps here — those go in Step 2.
+Never overwrite the existing note — always append.
+
+## Step 2 — Update the current status note
+
+Read the current status note:
+  identifier: "__PROJECT__/status/__PROJECT__-current-status"
+  project: "__PROJECT__"
+
+Then update it with edit_note (operation="find_replace" or "replace_section") to reflect:
+- Any items resolved this session — move from Open to Resolved
+- Any new open items or next steps discovered
+- Any environment facts that changed (new deployments, confirmed config, etc.)
+- Update the "Last updated" date at the top
+
+Treat the existing Open list as the baseline, not a blank page. Preserve every item
+already there — remove or move one to Resolved only if it was actually addressed this
+session, by name. Never regenerate the Open section from scratch based only on what this
+session touched; unrelated open work must survive untouched. If the project tracks
+in-flight work in a machine-readable form (issue tracker, OpenSpec changes, TODO file),
+spot-check that every still-active item there has a matching Open entry before saving.
+
+This note is the authoritative source for current state. Keep it accurate and tidy.
+
+Confirm both note titles and permalinks after saving.
