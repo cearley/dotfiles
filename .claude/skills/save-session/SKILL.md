@@ -2,22 +2,11 @@
 name: save-session
 description: Save today's session to basic-memory. Run at end of every coding session.
 ---
+<!-- setup-memory-workflow-version:9 -->
 
-## Step 1 — Resolve the project and ensure prerequisites
+## Step 1 — Check basic-memory is installed
 
-Run (this skill and its scripts are bundled in the `basic-memory-workflow` plugin, not
-copied per-project):
-```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-project-registered.sh"
-```
-Use its stdout as `$PROJECT` for every step below. This also guarantees `$PROJECT` is
-registered with basic-memory, rather than assuming the `SessionStart` hook already did
-it — the plugin can become active mid-session (e.g. via `/reload-plugins`), in which case
-`SessionStart` never fires and registration would otherwise be skipped. If it exits
-non-zero, stop — either this project has no git root to derive an identity from, or the
-`basic-memory` CLI isn't installed (see the check below).
-
-Check basic-memory is installed:
+Run:
 ```bash
 which basic-memory
 ```
@@ -26,11 +15,11 @@ stop — nothing else can proceed without it.
 
 ## Step 2 — Append to the session log
 
-Search basic-memory project "$PROJECT" for the most recent session note using
-search_notes with query "$PROJECT session".
+Search basic-memory project "chezmoi" for the most recent session note using
+search_notes with query "chezmoi session".
 
 Before appending, check that note's size (read_note, or `wc -l` on its file under
-`~/.local/share/basic-memory/$PROJECT/`). If it is at or over 300 lines, roll it over
+`~/.local/share/basic-memory/chezmoi/`). If it is at or over 300 lines, roll it over
 first — large session logs get skipped by agents that would otherwise read them:
 1. Find the note's earliest dated entry (its first `## YYYY-MM-DD` header) — that date
    names the archived copy.
@@ -58,8 +47,8 @@ Never overwrite the existing note — always append.
 ## Step 3 — Update the current status note
 
 Read the current status note:
-  identifier: "$PROJECT/status/$PROJECT-current-status"
-  project: "$PROJECT"
+  identifier: "chezmoi/status/chezmoi-current-status"
+  project: "chezmoi"
 
 Then update it with edit_note (operation="find_replace" or "replace_section") to reflect:
 - Any items resolved this session — move from Open to Resolved

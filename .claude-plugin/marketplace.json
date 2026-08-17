@@ -8,11 +8,6 @@
   },
   "plugins": [
     {
-      "name": "basic-memory-workflow",
-      "source": "./plugins/basic-memory-workflow",
-      "description": "Bootstraps and runs the basic-memory session workflow (save-session, sync-memory, SessionStart reminder) in any project that enables it."
-    },
-    {
       "name": "aws-local-dev",
       "source": "./plugins/aws-local-dev",
       "description": "Registers the LocalStack MCP server (@localstack/localstack-mcp-server) for projects doing local AWS cloud development."

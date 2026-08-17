@@ -4,19 +4,47 @@ description: Save today's session to basic-memory. Run at end of every coding se
 ---
 <!-- setup-memory-workflow-version:__SMW_VERSION__ -->
 
-## Step 1 — Append to the session log
+## Step 1 — Check basic-memory is installed
 
-Search basic-memory project "__PROJECT__" for the most recent session note using search_notes with query "__PROJECT__ session".
+Run:
+```bash
+which basic-memory
+```
+If missing, tell the user to run `uv tool install basic-memory` (not `uvx` or `pip`) and
+stop — nothing else can proceed without it.
 
-Append an update with edit_note (operation="append") including:
+## Step 2 — Append to the session log
+
+Search basic-memory project "__PROJECT__" for the most recent session note using
+search_notes with query "__PROJECT__ session".
+
+Before appending, check that note's size (read_note, or `wc -l` on its file under
+`~/.local/share/basic-memory/__PROJECT__/`). If it is at or over 300 lines, roll it over
+first — large session logs get skipped by agents that would otherwise read them:
+1. Find the note's earliest dated entry (its first `## YYYY-MM-DD` header) — that date
+   names the archived copy.
+2. Create a new note titled `Session Log — <earliest-date>` in the project's
+   `sessions/` directory, with the same frontmatter style as the project's other
+   session logs (title/type/permalink/tags) and the full body of the note being rolled
+   over. Give it a one-line banner: "Archived, <earliest-date> → <today>. Continues
+   from [[<prior archived log>]]" (only if a prior one exists) "— continuation lives in
+   [[<active note's title>]]."
+3. If a prior archived log already links forward to this note (a "continuation lives
+   in" banner or a `leads_to` relation), repoint it at the new archived note instead of
+   skipping ahead to the active one — keep the chain unbroken.
+4. Replace the active note's body with just a short banner: "Continues from
+   [[<new archived note>]]." Keep its title and permalink exactly as they were, so this
+   same search keeps finding it as "the most recent session note."
+
+Then append today's update with edit_note (operation="append") including:
 - Date (use the currentDate value from context)
 - What was changed or decided today (decisions, findings, discoveries)
 - Any items resolved this session
 
-Do NOT include open items or next steps here — those go in Step 2.
+Do NOT include open items or next steps here — those go in Step 3.
 Never overwrite the existing note — always append.
 
-## Step 2 — Update the current status note
+## Step 3 — Update the current status note
 
 Read the current status note:
   identifier: "__PROJECT__/status/__PROJECT__-current-status"

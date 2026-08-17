@@ -3,26 +3,14 @@ name: sync-memory
 description: Distill unsynced SpecStory session logs into basic-memory. User-invoked only — run explicitly with /sync-memory when you want to capture insights from recent sessions.
 disable-model-invocation: true
 ---
-
-## Step 0 — Resolve and register the project
-
-Run:
-```bash
-bash "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-project-registered.sh"
-```
-Use its stdout as `$PROJECT` for every step below. This also guarantees `$PROJECT` is
-registered with basic-memory — don't rely on the `SessionStart` hook having already done
-this; the plugin can become active mid-session (e.g. via `/reload-plugins`), in which case
-`SessionStart` never fires and registration would otherwise be skipped. If it exits
-non-zero, stop — either this project has no git root to derive an identity from, or the
-`basic-memory` CLI isn't installed (`which basic-memory` to confirm).
+<!-- setup-memory-workflow-version:9 -->
 
 ## Step 1 — Find unsynced logs
 
-Run (this skill and its script are bundled in the `basic-memory-workflow` plugin, not
-installed per-project):
+Run (from the project root — this skill and its script are installed per-project, not
+under `~/.claude`):
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/sync-memory.py"
+.claude/skills/sync-memory/scripts/sync-memory.py
 ```
 
 This prints the content of any SpecStory session logs (`.specstory/history/`) modified
@@ -37,7 +25,7 @@ silently lost.
 
 Run:
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/sync-memory.py" --print-extraction-prompt
+.claude/skills/sync-memory/scripts/sync-memory.py --print-extraction-prompt
 ```
 
 Apply exactly those criteria to each log printed in Step 1 — this is the same prompt
@@ -48,12 +36,12 @@ apart. Format each item as an observation with a `[category]` prefix (`[decision
 
 ## Step 3 — Append to the dedicated insights note
 
-Pass `project="$PROJECT"` explicitly on every basic-memory MCP call in this step —
+Pass `project="chezmoi"` explicitly on every basic-memory MCP call in this step —
 `search_notes`, `write_note`, and `edit_note` all silently default to whatever project
 the server considers current (commonly a shared personal vault, not this project's) if
 `project` is omitted. Omitting it is a silent misfile, not an error, so always pass it.
 
-Search basic-memory project "$PROJECT" for a note titled "$PROJECT Distilled
+Search basic-memory project "chezmoi" for a note titled "chezmoi Distilled
 SpecStory Insights" using search_notes.
 
 Get the current timestamp for the section heading — run `date +"%Y-%m-%d %H:%M"` and use
@@ -61,7 +49,7 @@ its output verbatim; don't compose it from memory.
 
 - If it exists, append the distilled content with `edit_note(operation="append")` under
   a new heading `## Synced <timestamp>`.
-- If it doesn't exist yet, create it with `write_note` (title: "$PROJECT Distilled
+- If it doesn't exist yet, create it with `write_note` (title: "chezmoi Distilled
   SpecStory Insights"), using the same heading structure.
 
 Never write this content into the session-notes note that `/save-session` maintains —
@@ -69,8 +57,8 @@ the two notes are kept separate by design, so automated output never mixes with 
 manually-curated log.
 
 Read the tool result's own `project:`/`permalink:` fields back and confirm the project
-matches `$PROJECT` before treating the write as successful — a mismatch means it went to
-the wrong vault and needs to be deleted there (`delete_note`) and retried with an
+matches `chezmoi` before treating the write as successful — a mismatch means it went
+to the wrong vault and needs to be deleted there (`delete_note`) and retried with an
 explicit `project` before continuing to Step 4. Confirm the note title and permalink to
 the user once the project match is verified.
 
@@ -78,7 +66,7 @@ the user once the project match is verified.
 
 Only after Step 3's write is confirmed against the correct project, run:
 ```bash
-"${CLAUDE_PLUGIN_ROOT}/scripts/sync-memory.py" --mark-synced <mtime>
+.claude/skills/sync-memory/scripts/sync-memory.py --mark-synced <mtime>
 ```
 using the `<mtime>` value from Step 1's `--- CURSOR: ... ---` line. This is what advances
 the sync cursor — do not skip it, and do not run it before Step 3 has actually succeeded,
@@ -91,10 +79,8 @@ no Claude Code session running (e.g. a cron job): it calls the Anthropic API dir
 (requires `ANTHROPIC_API_KEY` in the environment) and writes straight to the vault file
 itself. This skill does not configure any scheduling — if you want unattended syncing,
 wire up your own cron entry or LaunchAgent. Unlike the steps above, cron doesn't start
-with the project as its working directory, so `cd` into it explicitly, and reference the
-script by its absolute installed path rather than `${CLAUDE_PLUGIN_ROOT}` (which is only
-expanded inside Claude Code's own hook/skill execution context):
+with the project as its working directory, so `cd` into it explicitly:
 
 ```bash
-cd /path/to/this/project && /path/to/plugin/cache/basic-memory-workflow/scripts/sync-memory.py --standalone
+cd /path/to/this/project && .claude/skills/sync-memory/scripts/sync-memory.py --standalone
 ```

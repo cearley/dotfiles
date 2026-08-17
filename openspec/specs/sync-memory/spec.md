@@ -2,7 +2,9 @@
 
 ## Purpose
 Provides a user-invoked `sync-memory` skill and `sync-memory.py` script that distill unsynced SpecStory session logs into the project's basic-memory vault, either interactively inside a Claude Code session (no LLM API calls, the invoking session does the distillation) or fully standalone (calling the Anthropic API directly), with cursor-based sync-state tracking so logs are never reprocessed.
+
 ## Requirements
+
 ### Requirement: User-invoked only
 The `sync-memory` skill SHALL be invocable only by explicit user action, never triggered automatically by the model's own judgment.
 
@@ -64,7 +66,7 @@ Separately from project identity, the script SHALL continue to resolve the *file
 
 #### Scenario: Vault directory defaults from install-time identity
 - **WHEN** the script runs without `--vault-dir`
-- **THEN** it uses `~/.local/share/basic-memory/<PROJECT_NAME>`, where `PROJECT_NAME` is the value `resolve-project-name.sh` returns for the current invocation (runtime-resolved, not baked in at install time), not necessarily the filesystem project root's raw basename
+- **THEN** it uses `~/.local/share/basic-memory/<PROJECT_NAME>`, where `PROJECT_NAME` is the literal value baked in at apply-time (not runtime-resolved), not necessarily the filesystem project root's raw basename
 
 #### Scenario: Explicit vault override
 - **WHEN** the script runs with `--vault-dir <path>`
@@ -125,21 +127,6 @@ The script SHALL cap the number of logs processed in a single run, to bound API 
 - **WHEN** the number of unsynced logs exceeds `--max-logs-per-run`
 - **THEN** only the oldest `--max-logs-per-run` logs are processed this run, a notice is printed to stderr naming how many are deferred, and the remainder are picked up on a subsequent run — the cursor only advances past the logs actually processed, not the full backlog
 
-### Requirement: Project identity is resolved at runtime via a shared script
-`sync-memory.py` SHALL be a single canonical file with no install-time template rendering. It SHALL resolve its project identity (`PROJECT_NAME`) at runtime by invoking the shared `resolve-project-name.sh` script (see the `setup-memory-workflow` capability), and SHALL use that resolved value to derive both the default vault directory and the note title/permalink.
-
-#### Scenario: Canonical template contains the placeholder
-- **WHEN** the canonical `scripts/sync-memory.py` bundled in the plugin is inspected
-- **THEN** it contains no `__PROJECT__` or `__SMW_VERSION__` placeholder and no `.template` suffix — it is the one file every project with the plugin enabled runs directly, unlike the pre-plugin canonical template this scenario originally described
-
-#### Scenario: Installed copy has the identity baked in
-- **WHEN** `sync-memory.py` runs in a project
-- **THEN** it invokes `resolve-project-name.sh` as a subprocess to obtain `PROJECT_NAME` fresh on every run, rather than reading a value baked in at install time as this scenario originally described
-
-#### Scenario: Un-rendered template fails fast if run directly
-- **WHEN** `resolve-project-name.sh` cannot determine a project identity (e.g. `sync-memory.py` is run outside any git repository) — the closest equivalent in the new design to this scenario's original "un-rendered template" failure case
-- **THEN** `sync-memory.py` exits non-zero immediately with the underlying error printed to stderr, before attempting any log processing
-
 ### Requirement: Cursor commit is a separate, explicit step in default mode
 Because default mode has no way to know whether the invoking Claude Code session actually distilled and wrote the printed logs to the vault, the script SHALL provide a distinct `--mark-synced <mtime>` operation that is the only way the cursor advances after a default-mode run, and SHALL refuse to move the cursor backward or leave it unchanged.
 
@@ -155,3 +142,17 @@ Because default mode has no way to know whether the invoking Claude Code session
 - **WHEN** a default-mode run prints unsynced logs but `--mark-synced` is never subsequently called for that batch — for example, the session is interrupted before the vault write is confirmed
 - **THEN** those logs remain unsynced and are reported again by the next default-mode run; no content is silently dropped from the sync pipeline
 
+### Requirement: Project identity is resolved at install/apply-time, baked into the installed copy
+`sync-memory.py` SHALL be rendered from `scripts/sync-memory.py.template` by `check-drift.sh`, with `PROJECT_NAME` substituted for the `__PROJECT__` placeholder at apply-time (see the `setup-memory-workflow` capability's project identity requirement). The installed copy SHALL contain no runtime identity-resolution call — `PROJECT_NAME` is a plain string constant, used to derive both the default vault directory and the note title/permalink.
+
+#### Scenario: Canonical template contains the placeholder
+- **WHEN** the canonical `scripts/sync-memory.py.template` is inspected
+- **THEN** `PROJECT_NAME` is assigned the literal string `"__PROJECT__"`, substituted by `check-drift.sh`'s `render()` at apply-time
+
+#### Scenario: Installed copy has the identity baked in
+- **WHEN** `sync-memory.py` runs in a project after being installed by `check-drift.sh`
+- **THEN** `PROJECT_NAME` is already the project's literal resolved identity (e.g. `"chezmoi"`) — no subprocess call, no runtime resolution
+
+#### Scenario: Un-rendered template fails fast if run directly
+- **WHEN** the canonical `scripts/sync-memory.py.template` is executed directly rather than through its installed, rendered copy
+- **THEN** it detects `PROJECT_NAME` still equals the literal placeholder string and exits non-zero with an error directing the user to the installed copy instead, before attempting any log processing

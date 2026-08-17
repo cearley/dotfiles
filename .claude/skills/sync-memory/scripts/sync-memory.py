@@ -5,11 +5,6 @@ Default mode prints unsynced log content to stdout for an already-running
 Claude Code session to distill via MCP tools (no LLM API call, no vault
 write). --standalone calls the Anthropic API directly and writes straight
 to the vault file, for use with no Claude Code session running (e.g. cron).
-
-This is the single canonical copy, bundled in the basic-memory-workflow
-plugin — there is no per-project install step and no template rendering.
-Project identity is resolved at runtime via resolve-project-name.sh
-(bundled alongside this script), never baked in.
 """
 
 from __future__ import annotations
@@ -22,6 +17,13 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+# --- CONFIGURATION ---
+# setup-memory-workflow-version:9
+# Baked in at install time (unlike project_root below, which stays runtime-resolved
+# since it has to reflect wherever this script actually runs from).
+PROJECT_NAME = "chezmoi"
+BASIC_MEMORY_DIR = Path.home() / ".local" / "share" / "basic-memory" / PROJECT_NAME
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_MAX_CHARS_PER_LOG = 50_000
@@ -41,14 +43,6 @@ EXTRACTION_PROMPT = (
     "You are distilling a raw Claude Code session transcript into high-density notes "
     "for a persistent memory system. " + EXTRACTION_CRITERIA + "\n\nTRANSCRIPT:\n{content}"
 )
-
-
-def resolve_project_name() -> str:
-    script = Path(__file__).resolve().parent / "resolve-project-name.sh"
-    result = subprocess.run([str(script)], capture_output=True, text=True)
-    if result.returncode != 0:
-        sys.exit(result.stderr.strip() or "ERROR: could not resolve project name.")
-    return result.stdout.strip()
 
 
 def resolve_project_root(explicit: str | None) -> Path:
@@ -118,10 +112,10 @@ def find_unsynced_logs(
     return candidates
 
 
-def resolve_vault_dir(explicit: str | None, project_name: str) -> Path:
+def resolve_vault_dir(explicit: str | None) -> Path:
     if explicit:
         return Path(explicit).expanduser().resolve()
-    return Path.home() / ".local" / "share" / "basic-memory" / project_name
+    return BASIC_MEMORY_DIR
 
 
 def default_mode(logs: list[Path]) -> None:
@@ -139,9 +133,7 @@ def default_mode(logs: list[Path]) -> None:
     print(f"--- CURSOR: {max(log.stat().st_mtime for log in logs)} ---")
 
 
-def standalone_mode(
-    logs: list[Path], vault_dir: Path, project_name: str, model: str, max_chars: int
-) -> None:
+def standalone_mode(logs: list[Path], vault_dir: Path, model: str, max_chars: int) -> None:
     import anthropic  # deferred: only required when --standalone is used
 
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
@@ -156,10 +148,10 @@ def standalone_mode(
         text = "".join(block.text for block in response.content if block.type == "text")
         distilled_sections.append(f"### {log.name}\n\n{text.strip()}")
 
-    write_to_vault(vault_dir, project_name, distilled_sections)
+    write_to_vault(vault_dir, distilled_sections)
 
 
-def write_to_vault(vault_dir: Path, project_name: str, sections: list[str]) -> None:
+def write_to_vault(vault_dir: Path, sections: list[str]) -> None:
     vault_dir.mkdir(parents=True, exist_ok=True)
     note_path = vault_dir / "distilled-specstory-insights.md"
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -168,9 +160,9 @@ def write_to_vault(vault_dir: Path, project_name: str, sections: list[str]) -> N
     if not note_path.exists():
         header = (
             "---\n"
-            f"title: {project_name} Distilled SpecStory Insights\n"
+            f"title: {PROJECT_NAME} Distilled SpecStory Insights\n"
             "type: note\n"
-            f"permalink: {project_name}/distilled-specstory-insights\n"
+            f"permalink: {PROJECT_NAME}/distilled-specstory-insights\n"
             "---\n\n"
         )
         note_path.write_text(header + body)
@@ -180,6 +172,17 @@ def write_to_vault(vault_dir: Path, project_name: str, sections: list[str]) -> N
 
 
 def main() -> None:
+    if PROJECT_NAME.startswith("__") and PROJECT_NAME.endswith("__"):
+        # Deliberately not a literal comparison against the placeholder string itself —
+        # render()'s sed substitution is a blind global replace, so a literal occurrence
+        # of the placeholder here would get rewritten too, silently inverting this check.
+        sys.exit(
+            "ERROR: this is the canonical template — the project-name placeholder was "
+            "never substituted. Run the installed copy at "
+            ".claude/skills/sync-memory/scripts/sync-memory.py instead (installed by "
+            "check-drift.sh), not this file directly."
+        )
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-root", help="Override auto-detected project root")
     parser.add_argument("--vault-dir", help="Override the basic-memory vault directory")
@@ -263,10 +266,10 @@ def main() -> None:
             print(f"  {log}")
         return
 
+    vault_dir = resolve_vault_dir(args.vault_dir)
+
     if args.standalone:
-        project_name = resolve_project_name()
-        vault_dir = resolve_vault_dir(args.vault_dir, project_name)
-        standalone_mode(logs, vault_dir, project_name, args.model, args.max_chars_per_log)
+        standalone_mode(logs, vault_dir, args.model, args.max_chars_per_log)
         # Standalone has no external confirmation step (no Claude Code session to run
         # Step 3), so it commits its own cursor immediately after a successful write.
         save_cursor(state_file, max(log.stat().st_mtime for log in logs))

@@ -1,9 +1,11 @@
-# setup-memory-workflow Specification
+## RENAMED Requirements
 
-## Purpose
-Bootstraps and runs the basic-memory session workflow (`save-session`, `sync-memory`, and a `SessionStart` reminder hook) by copying rendered templates into each target project via `check-drift.sh`. Project identity resolves once, at apply-time, and is baked into every installed piece — there is no runtime resolution script. A version marker embedded in each installed piece lets `check-drift.sh check` report drift and `check-drift.sh update` unconditionally repair version-only drift; an identity mismatch (`NAME-MISMATCH`) is never auto-repaired and always requires an explicit `apply <piece>` after confirmation.
+- FROM: `### Requirement: Plugin bundles the full basic-memory session workflow`
+- TO: `### Requirement: Skill is distributed as per-project rendered copies, not a shared reference`
+- FROM: `### Requirement: Runtime project identity resolution via shared script`
+- TO: `### Requirement: Project identity is resolved once, at apply-time`
 
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: basic-memory project registration
 The workflow SHALL ensure the current project is registered with basic-memory at `$HOME/.local/share/basic-memory/$PROJECT` as part of `check-drift.sh check`, before any per-project piece is created or repaired.
@@ -23,24 +25,6 @@ The workflow SHALL ensure the current project is registered with basic-memory at
 #### Scenario: Plugin enabled mid-session, SessionStart never fires
 - **WHEN** considering the retired plugin-era failure mode this scenario originally described — a plugin enabled mid-session via `/reload-plugins` never getting its `SessionStart` hook to fire that session, so a second, redundant per-invocation registration check inside `save-session`/`sync-memory` was needed as a fallback
 - **THEN** it no longer applies: the workflow only ever runs when `check-drift.sh` is explicitly invoked in a project (see the "Per-project explicit opt-in" requirement) — there is no "plugin becomes active" event to race against, so registration happening once, at `check-drift.sh check` time, is sufficient with no fallback needed
-
-### Requirement: basic-memory installed via uv tool install
-The workflow SHALL check for a working `basic-memory` installation on each `save-session` invocation (not once at install time) and instruct the user to install it with `uv tool install basic-memory`, not `uvx` or `pip`, if missing.
-
-#### Scenario: basic-memory not found
-- **WHEN** `save-session` runs and `which basic-memory` returns no result
-- **THEN** it tells the user to run `uv tool install basic-memory` and stops before attempting project registration or any note write
-
-### Requirement: Per-project explicit opt-in
-Installing this workflow into a given project SHALL always be an explicit, individual action — running `check-drift.sh check` (or `update`/`apply`) directly in that project. The workflow SHALL NOT become active in a project merely because it is active elsewhere.
-
-#### Scenario: Installed in one project only
-- **WHEN** `check-drift.sh check` has been run in Project A, creating its `.claude/skills/save-session/` etc.
-- **THEN** Project B, where the script has never been run, has no `save-session`/`sync-memory` skills and no `SessionStart` hook from this workflow
-
-#### Scenario: Plugin enabled in one project only
-- **WHEN** considering the retired plugin-era mechanism this scenario originally described — enabling `basic-memory-workflow` for Project A via `enabledPlugins` in that project's `.claude/settings.json` or `.claude/settings.local.json`, leaving Project B (no such entry) with no hook or skills from the plugin
-- **THEN** the same opt-in guarantee holds under the new mechanism, just via a different action — see "Installed in one project only" above, where running `check-drift.sh check` in a project is what opts it in, instead of an `enabledPlugins` entry
 
 ### Requirement: Skill is distributed as per-project rendered copies, not a shared reference
 The `save-session` skill, the `sync-memory` skill and script, and the `SessionStart` hook configuration SHALL each be rendered from a canonical template into the target project's own `.claude/` directory (or `.claude/settings.local.json`, for the hook), with a version marker (`setup-memory-workflow-version:N`) embedded in each rendered piece.
@@ -80,6 +64,19 @@ The `save-session` skill, the `sync-memory` skill and script, and the `SessionSt
 - **WHEN** `check-drift.sh` runs outside any git repository
 - **THEN** it resolves `$PROJECT_ROOT` as the current working directory rather than exiting — this matches `git rev-parse --show-toplevel`'s own fallback behavior in the script, so the workflow degrades to treating the current directory as the project root rather than failing outright
 
+### Requirement: Per-project explicit opt-in
+Installing this workflow into a given project SHALL always be an explicit, individual action — running `check-drift.sh check` (or `update`/`apply`) directly in that project. The workflow SHALL NOT become active in a project merely because it is active elsewhere.
+
+#### Scenario: Installed in one project only
+- **WHEN** `check-drift.sh check` has been run in Project A, creating its `.claude/skills/save-session/` etc.
+- **THEN** Project B, where the script has never been run, has no `save-session`/`sync-memory` skills and no `SessionStart` hook from this workflow
+
+#### Scenario: Plugin enabled in one project only
+- **WHEN** considering the retired plugin-era mechanism this scenario originally described — enabling `basic-memory-workflow` for Project A via `enabledPlugins` in that project's `.claude/settings.json` or `.claude/settings.local.json`, leaving Project B (no such entry) with no hook or skills from the plugin
+- **THEN** the same opt-in guarantee holds under the new mechanism, just via a different action — see "Installed in one project only" above, where running `check-drift.sh check` in a project is what opts it in, instead of an `enabledPlugins` entry
+
+## ADDED Requirements
+
 ### Requirement: Version drift is unconditionally repairable via `update`
 `check-drift.sh update` SHALL unconditionally re-render and overwrite every installed piece whose version marker is stale, with no per-piece confirmation, as long as that piece's project identity still matches current resolution.
 
@@ -105,3 +102,9 @@ If an installed piece's embedded project name does not match the project's curre
 #### Scenario: Confirmed repair via `apply`
 - **WHEN** the user confirms a reported `NAME-MISMATCH` is an intentional identity change
 - **THEN** `check-drift.sh apply <piece>` overwrites that piece with canonical content rendered against current identity resolution
+
+## REMOVED Requirements
+
+### Requirement: One-time migration script for pre-plugin installs
+**Reason**: `scripts/migrate-to-plugin.sh` was deleted along with the rest of `plugins/basic-memory-workflow/` when the plugin was retired — there is no plugin to migrate *to* anymore.
+**Migration**: Moving a project off the plugin is now two plain, separately-run actions with no dedicated script: `check-drift.sh check` (creates the copy-based install) and `claude plugin uninstall basic-memory-workflow@chezmoi-personal --scope <scope>` (removes the old plugin entry).

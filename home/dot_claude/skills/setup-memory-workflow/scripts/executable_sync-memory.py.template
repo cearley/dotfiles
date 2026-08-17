@@ -26,7 +26,6 @@ PROJECT_NAME = "__PROJECT__"
 BASIC_MEMORY_DIR = Path.home() / ".local" / "share" / "basic-memory" / PROJECT_NAME
 
 DEFAULT_MODEL = "claude-haiku-4-5-20251001"
-DEFAULT_SINCE_DAYS = 1
 DEFAULT_MAX_CHARS_PER_LOG = 50_000
 DEFAULT_MAX_LOGS_PER_RUN = 20
 
@@ -74,19 +73,43 @@ def save_cursor(state_file: Path, mtime: float) -> None:
     state_file.write_text(json.dumps({"last_synced_mtime": mtime}))
 
 
-def find_unsynced_logs(history_dir: Path, cursor: float | None, since_days: int) -> list[Path]:
+def mark_synced(state_file: Path, mtime: float) -> None:
+    """Commit the cursor to `mtime`, refusing to move it backward.
+
+    This is the only way the cursor advances in default (non-`--standalone`) mode.
+    It is a separate, explicit step from log discovery so the cursor only moves once
+    the distillation has actually been written to the vault — see the "Cursor advances
+    only after a confirmed write" requirement.
+    """
+    cursor = load_cursor(state_file)
+    if cursor is not None and mtime <= cursor:
+        sys.exit(
+            f"ERROR: refusing to move cursor backward or sideways: current={cursor}, "
+            f"requested={mtime}."
+        )
+    save_cursor(state_file, mtime)
+    print(f"Cursor advanced to {mtime}.")
+
+
+def find_unsynced_logs(
+    history_dir: Path, cursor: float | None, since_days: int | None
+) -> list[Path]:
     if not history_dir.exists():
         return []
     pattern = str(history_dir / "**" / "*.md")
     candidates = [Path(p) for p in glob.glob(pattern, recursive=True)]
-    threshold = (
-        cursor
-        if cursor is not None
-        else datetime.now(timezone.utc).timestamp() - (since_days * 86400)
-    )
-    unsynced = [p for p in candidates if p.stat().st_mtime > threshold]
-    unsynced.sort(key=lambda p: p.stat().st_mtime)
-    return unsynced
+    if cursor is not None:
+        candidates = [p for p in candidates if p.stat().st_mtime > cursor]
+    elif since_days is not None:
+        # No cursor yet (first-ever sync) and the caller explicitly asked to bound how
+        # far back it reaches. Without --since-days, a first sync deliberately scans the
+        # project's FULL .specstory history — bounded per-run by --max-logs-per-run, not
+        # by recency — since a brand-new state file must not silently hide backlog older
+        # than a day.
+        threshold = datetime.now(timezone.utc).timestamp() - (since_days * 86400)
+        candidates = [p for p in candidates if p.stat().st_mtime > threshold]
+    candidates.sort(key=lambda p: p.stat().st_mtime)
+    return candidates
 
 
 def resolve_vault_dir(explicit: str | None) -> Path:
@@ -96,11 +119,18 @@ def resolve_vault_dir(explicit: str | None) -> Path:
 
 
 def default_mode(logs: list[Path]) -> None:
-    """Print raw log content for the invoking Claude Code session to distill."""
+    """Print raw log content for the invoking Claude Code session to distill.
+
+    Deliberately does not advance the cursor — see mark_synced(). The final
+    "--- CURSOR: <mtime> ---" line is the value the caller must pass to
+    `--mark-synced` once (and only once) the distillation has actually been written
+    to the vault, so an interrupted or failed write never gets marked as synced.
+    """
     for log in logs:
         print(f"--- BEGIN LOG: {log} ---")
         print(log.read_text(errors="replace"))
         print(f"--- END LOG: {log} ---\n")
+    print(f"--- CURSOR: {max(log.stat().st_mtime for log in logs)} ---")
 
 
 def standalone_mode(logs: list[Path], vault_dir: Path, model: str, max_chars: int) -> None:
@@ -165,8 +195,19 @@ def main() -> None:
     parser.add_argument(
         "--since-days",
         type=int,
-        default=DEFAULT_SINCE_DAYS,
-        help="Fallback window when no state file exists yet",
+        default=None,
+        help="Optional bound on how far back the very first sync reaches (no effect once "
+        "a cursor exists). Unset by default: a first-ever sync scans the full "
+        ".specstory history, bounded per-run by --max-logs-per-run rather than by age.",
+    )
+    parser.add_argument(
+        "--mark-synced",
+        type=float,
+        metavar="MTIME",
+        help="Commit the cursor to MTIME (the value printed on the '--- CURSOR: ... ---' "
+        "line by a prior default-mode run) after its distillation has been confirmed "
+        "written to the vault. Refuses to move the cursor backward. Not used by "
+        "--standalone, which commits its own cursor after writing.",
     )
     parser.add_argument("--max-chars-per-log", type=int, default=DEFAULT_MAX_CHARS_PER_LOG)
     parser.add_argument(
@@ -192,12 +233,16 @@ def main() -> None:
         print(EXTRACTION_CRITERIA)
         return
 
-    if args.standalone and not os.environ.get("ANTHROPIC_API_KEY"):
-        sys.exit("ERROR: ANTHROPIC_API_KEY is not set — required for --standalone mode.")
-
     project_root = resolve_project_root(args.project_root)
     history_dir = project_root / ".specstory" / "history"
     state_file = project_root / ".specstory" / ".sync-memory-state.json"
+
+    if args.mark_synced is not None:
+        mark_synced(state_file, args.mark_synced)
+        return
+
+    if args.standalone and not os.environ.get("ANTHROPIC_API_KEY"):
+        sys.exit("ERROR: ANTHROPIC_API_KEY is not set — required for --standalone mode.")
 
     cursor = load_cursor(state_file)
     logs = find_unsynced_logs(history_dir, cursor, args.since_days)
@@ -225,10 +270,14 @@ def main() -> None:
 
     if args.standalone:
         standalone_mode(logs, vault_dir, args.model, args.max_chars_per_log)
+        # Standalone has no external confirmation step (no Claude Code session to run
+        # Step 3), so it commits its own cursor immediately after a successful write.
+        save_cursor(state_file, max(log.stat().st_mtime for log in logs))
     else:
+        # Default mode deliberately does NOT advance the cursor here — the caller
+        # (the sync-memory skill) must confirm the vault write succeeded and then
+        # call --mark-synced with the "--- CURSOR: ... ---" value printed below.
         default_mode(logs)
-
-    save_cursor(state_file, max(log.stat().st_mtime for log in logs))
 
 
 if __name__ == "__main__":
