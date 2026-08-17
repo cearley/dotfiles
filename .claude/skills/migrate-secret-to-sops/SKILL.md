@@ -1,5 +1,6 @@
 ---
 name: migrate-secret-to-sops
+disable-model-invocation: true
 description: Migrate a single chezmoi-managed secret from a KeePassXC attachment or attribute to SOPS+age encryption, so the repo itself (not an external database) becomes that secret's source of truth. Use this whenever the user wants to "migrate a secret to sops", "move X to sops+age", "convert this KeePassXC entry to sops", "encrypt this secret in the repo instead of keepassxc", or names a specific repo-scoped secret (an API key, token, credentials file, OAuth client) they want committed as SOPS ciphertext instead of pulled from KeePassXC at apply time. Assumes this repo's SOPS+age scaffolding (age key bootstrap script, .sops.yaml, the sopsDecrypt partial, sops/age packages) already exists — this skill migrates one additional secret into that existing system, it does not bootstrap the system itself.
 ---
 
