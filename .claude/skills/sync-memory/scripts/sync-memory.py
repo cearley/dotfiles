@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # --- CONFIGURATION ---
-# setup-memory-workflow-version:10
+# setup-memory-workflow-version:11
 # Baked in at install time (unlike project_root below, which stays runtime-resolved
 # since it has to reflect wherever this script actually runs from).
 PROJECT_NAME = "chezmoi"

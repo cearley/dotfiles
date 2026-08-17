@@ -4,6 +4,25 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v11 (2026-08-17)
+v10's Step 3b triage trigger (≥200 lines) was itself confirmed insufficient the same day
+it shipped: running `/save-session` against a real status note found it broke
+`read_note`/`read_content` outright at 70,270 characters while sitting at only ~117
+lines — comfortably under the trigger. Inspecting the raw content (via the local temp
+file the MCP server's own error message pointed to) showed the actual failure mode:
+a single "Last updated" line had grown to 9,196 characters by having a new "(latest:
+...)" paragraph prepended every session instead of ever being condensed, with several
+Resolved bullets showing the same pattern at 1,500–3,300 characters each. Line count
+never catches "a few entries growing forever" — only "many distinct entries."
+
+Step 3b now checks three independent signals instead of one: a failed read itself
+(treated as the strongest signal, since a note past the read ceiling can't be inspected
+to check any threshold), total size at or over ~8,000 characters (a conservative margin
+below the ~70K point observed to break reads), and any single line/paragraph over ~800
+characters (the direct anti-pattern signal, independent of overall note size). Step 3
+also now tells the agent to skip straight to Step 3b's read-failure handling rather than
+retrying a failed read.
+
 ## v10 (2026-08-17)
 `assets/save-session-skill.md.template`'s Step 3 (current status note) had a rollover
 guard for the session log (Step 2, 300-line trigger) but nothing analogous for the status

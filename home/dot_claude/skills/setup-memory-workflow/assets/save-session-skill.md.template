@@ -50,6 +50,10 @@ Read the current status note:
   identifier: "__PROJECT__/status/__PROJECT__-current-status"
   project: "__PROJECT__"
 
+If the read fails with a size/token-limit error, don't retry it — that failure is itself
+the strongest possible oversized-note signal, worth more than any threshold in Step 3b.
+Skip straight to Step 3b's read-failure handling before attempting any further edits.
+
 Then update it with edit_note (operation="find_replace" or "replace_section") to reflect:
 - Any items resolved this session — move from Open to Resolved
 - Any new open items or next steps discovered
@@ -68,9 +72,33 @@ This note is the authoritative source for current state. Keep it accurate and ti
 ## Step 3b — Triage if oversized
 
 Unlike the session log (Step 2), this note is edited in place forever, so it has no
-natural rollover point — check its size after the update above (read_note, or `wc -l` on
-its file under `~/.local/share/basic-memory/__PROJECT__/`). If it is at or over 200
-lines, it's carrying more than "current state" and needs triage, not just editing.
+natural rollover point. Line count alone doesn't catch this note's real failure mode: a
+note can sit at a small, unremarkable line count while a handful of individual
+lines/paragraphs each grow without bound (a "Last updated" field re-prepended every
+session instead of condensed is the classic case) until a read against the whole note
+fails outright — confirmed in practice: one real status note broke `read_note` at 70K+
+characters while sitting at only ~117 lines, comfortably under any line-count trigger.
+Check for all three independent signals after the update above — any one of them means
+triage, not just editing:
+
+1. **Read failure.** If Step 3's read already failed with a size/token-limit error, that
+   IS the signal — skip straight to triage regardless of the thresholds below. (In Claude
+   Code specifically, a failed read_note/read_content call saves the full content to a
+   local temp file the error message points to — inspect and edit via that file's path
+   with `wc`/`grep`/`jq`/local tools instead of retrying the read.)
+2. **Total size.** If the read succeeded, treat the note as oversized once its total
+   content is at or over roughly 8,000 characters (`wc -c`, or the length of what
+   read_note returned) — well under the point observed to break reads, leaving real
+   margin to triage before this same failure recurs. Line count (≥200 lines) remains a
+   secondary trigger for the "many distinct items" growth pattern, distinct from #3's
+   "few items growing forever."
+3. **Single-entry length.** Independently of the totals above, check for any individual
+   line/bullet/paragraph over roughly 800 characters (`awk '{ print length }' | sort -rn`
+   against the same local temp file works well here, or eyeball it in what read_note
+   returned). One entry that long is the anti-pattern itself, not a symptom of general
+   growth, and needs condensing even if the note as a whole is still small — fold its
+   still-relevant facts into a short current statement and move full detail out (the
+   session log already has it, or it belongs in a reference/known-issues note).
 
 If the `memory-defrag` skill is installed, invoke it against this note instead of
 triaging by hand — that's exactly its job ("bloated file >300 lines → split into focused
@@ -90,7 +118,8 @@ rather than copy-and-delete — it preserves the permalink, so any existing
 `[[wiki-links]]` into that content keep resolving. Reserve outright deletion for content
 that's flatly wrong or superseded, not merely old.
 
-Repeat until the note is at or under 200 lines. Confirm the final line count alongside
-the note titles below.
+Repeat until all three signals are clear (read succeeds, under ~8,000 characters and 200
+lines, no single entry over ~800 characters). Confirm the final size alongside the note
+titles below.
 
 Confirm both note titles and permalinks after saving.
