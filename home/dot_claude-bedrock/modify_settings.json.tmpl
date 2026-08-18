@@ -1,1 +1,5 @@
-{{ includeTemplate "claude-settings-hooks-modifier" . }}
+{{- /* Permission posture derived from /doctor run 2026-08-18 */ -}}
+{{- $extra := dict
+      "permissions" (dict "defaultMode" "auto")
+-}}
+{{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}
