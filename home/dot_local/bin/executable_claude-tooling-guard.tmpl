@@ -1,15 +1,19 @@
 #!/bin/bash
-# claude-tooling-guard — PreToolUse hook (Bash matcher) that reminds Claude to check
+# claude-tooling-guard — PreToolUse hook (Bash matcher) that instructs Claude to check
 # claude-tooling.md before editing Claude Code skill/MCP/plugin config directly via a
 # shell command (jq/mv/sed/etc.), which bypasses the path-frontmatter auto-load that
 # normally triggers claude-tooling.md for Read/Edit/Write on the same paths.
-# Read-only: never blocks, never modifies anything — only injects a reminder.
+# Never blocks and never modifies the repo or Claude Code config — the only state it
+# touches is a tiny per-session marker file (below) used to avoid re-sending these
+# instructions multiple times in one session.
 #
-# Rendered from home/dot_local/bin/executable_claude-tooling-guard.tmpl by chezmoi —
+# Rendered from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_claude-tooling-guard.tmpl by chezmoi —
 # edit the source template and run `chezmoi apply` to update the deployed copy.
 set -euo pipefail
 
-jq -r --arg pattern '\.claude[A-Za-z0-9_-]*/settings\.json|\.claude[A-Za-z0-9_-]*/\.claude\.json|\.chezmoidata/packages\.yaml|dot_claude(-[A-Za-z0-9_-]+)?/' '
+payload=$(cat)
+
+instructions=$(jq -r --arg pattern '\.claude[A-Za-z0-9_-]*/settings\.json|\.claude[A-Za-z0-9_-]*/\.claude\.json|\.chezmoidata/packages\.yaml|dot_claude(-[A-Za-z0-9_-]+)?/' '
   (.tool_input.command // "") as $command
   | if ($command != "" and ($command | test($pattern))) then
       {
@@ -19,4 +23,22 @@ jq -r --arg pattern '\.claude[A-Za-z0-9_-]*/settings\.json|\.claude[A-Za-z0-9_-]
     else
       empty
     end
-'
+' <<<"$payload")
+
+[ -z "$instructions" ] && exit 0
+
+# Skip if these instructions were already delivered this session — no need to
+# re-send Claude to claude-tooling.md for a second matching command. Fail open:
+# if the marker can't be written, fall through and emit the instructions
+# unconditionally rather than ever blocking the tool call over a tmpfile error.
+session_id=$(jq -r '.session_id // empty' <<<"$payload")
+if [ -n "$session_id" ]; then
+  marker_dir="${TMPDIR:-/tmp}/claude-tooling-guard"
+  marker_file="$marker_dir/$session_id"
+  mkdir -p "$marker_dir" 2>/dev/null || true
+  find "$marker_dir" -type f -mtime +7 -delete 2>/dev/null || true
+  [ -e "$marker_file" ] && exit 0
+  touch "$marker_file" 2>/dev/null || true
+fi
+
+echo "$instructions"
