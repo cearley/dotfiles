@@ -1,4 +1,4 @@
-{{- /* Merges session-topic-capture hooks into a Claude settings.json, plus any
+{{- /* Merges session-topic-capture hooks, the claude-tooling-guard PreToolUse hook, and any
      per-environment extra top-level settings the caller wants chezmoi-managed.
 
      Params (merge with the chezmoi context before calling):
@@ -18,7 +18,7 @@
 cat
 {{- else -}}
 #!/bin/bash
-# Merge session-topic-capture hooks and any extra settings; preserve everything else managed by Claude Code.
+# Merge managed hooks and any extra settings; preserve everything else managed by Claude Code.
 set -euo pipefail
 
 existing=$(cat)
@@ -27,7 +27,8 @@ existing=$(cat)
 managed_hooks='{
   "UserPromptSubmit": [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture UserPromptSubmit"}]}],
   "PreCompact":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture PreCompact"}]}],
-  "SessionEnd":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture SessionEnd"}]}]
+  "SessionEnd":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture SessionEnd"}]}],
+  "PreToolUse":       [{"matcher": "Bash", "hooks": [{"type": "command", "command": "claude-tooling-guard"}]}]
 }'
 
 extra_settings='{{ get . "claudeExtraSettings" | default (dict) | toJson }}'

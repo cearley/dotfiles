@@ -201,7 +201,7 @@ packages:
             scope: user
             command: uvx --python 3.12 basic-memory mcp
           skills: # Installed via `npx skills add <args> -g`
-          - 'basicmachines-co/basic-memory-skills --skill memory-defrag --skill memory-lifecycle --skill memory-notes --skill memory-schema'
+          - 'basicmachines-co/basic-memory-skills --skill memory-defrag --skill memory-notes --skill memory-schema'
           - 'cearley/claude-session-index --skill session-index'
           - 'specstoryai/agent-skills -all'
           # Install specific skills with arguments
