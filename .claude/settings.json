@@ -27,5 +27,9 @@
       }
     ]
   },
-  "enabledPlugins": {}
+  "enabledPlugins": {
+    "hookify@claude-plugins-official": false,
+    "plugin-dev@claude-plugins-official": false,
+    "skill-creator@claude-plugins-official": false
+  }
 }
