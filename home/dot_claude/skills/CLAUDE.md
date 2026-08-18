@@ -30,6 +30,17 @@ Also declared under `packages.darwin.ai.agents.claude_code` in `packages.yaml`:
 **Global MCP servers** (used across all projects) are separately deployed via
 `home/private_dot_config/claude-extend/tools.json.tmpl` → `~/.config/claude-extend/tools.json`.
 
+## Before Disabling Anything (e.g. /doctor audits)
+
+A skill/MCP-server/plugin usage audit (`/doctor` Check 1, or similar) must cross-check
+`packages.yaml` before proposing removal of anything. Declared items — everything under
+`packages.darwin.ai.agents.claude_code` above — are managed machine-wide by this repo; a local
+`skillOverrides: off` or `disabledMcpServers` entry doesn't undo that, it just drifts from the
+declared state. Zero/stale usage on a declared item is a signal to edit `packages.yaml`
+(remove/replace the declaration), not to disable it locally. `clean-claude-orphans` already
+draws exactly this distinction — reach for it (or its logic) for anything genuinely
+installed-but-undeclared.
+
 ## Personas Share Skills and CLAUDE.md via Symlink
 
 Each persona (`home/dot_claude-<name>/`) gets `symlink_skills.tmpl` and
