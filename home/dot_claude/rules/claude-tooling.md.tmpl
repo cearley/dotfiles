@@ -1,3 +1,5 @@
+{{- $sourceDir := .chezmoi.sourceDir -}}
+{{- $repoRoot := trimSuffix "/home" $sourceDir -}}
 ---
 paths:
   - "**/.claude*/settings.json"
@@ -10,39 +12,45 @@ paths:
   - "**/dot_claude-*/**"
 ---
 
-# AI Agent Tooling in This Repo
+# Claude Code Tooling in the chezmoi Dotfiles Repo
 
-Guidance for diagnosing installation health, editing settings/plugins, or reasoning about
-skill/MCP usage — this repo's Claude Code tooling spans `{{ .chezmoi.sourceDir }}/dot_claude/`,
-`{{ .chezmoi.sourceDir }}/.chezmoidata/`, `{{ .chezmoi.sourceDir }}/.chezmoiscripts/`, and the
-repo root, so start here.
+This machine's Claude Code skills, MCP servers, plugins, and CLAUDE.md are managed by the
+chezmoi dotfiles repo at `{{ $repoRoot }}` (source tree at `{{ $sourceDir }}`) — regardless of
+which project or repo you're currently working in, that is where the guidance below applies.
+Diagnosing installation health, editing settings/plugins, or reasoning about skill/MCP usage
+(e.g. `/doctor`) means looking at that repo's `{{ $sourceDir }}/dot_claude/`,
+`{{ $sourceDir }}/.chezmoidata/`, and `{{ $sourceDir }}/.chezmoiscripts/`, not the current
+working directory.
 
 ## Two Sources of Skills — Don't Confuse Them
 
-**Native skills** (`{{ .chezmoi.sourceDir }}/dot_claude/skills/`): authored and
-version-controlled in this repo. Run `ls` there rather than trusting a hand-maintained list —
-same anti-drift principle as `.chezmoiscripts/` (see `{{ .chezmoi.sourceDir }}/CLAUDE.md`).
+**Native skills** (`{{ $sourceDir }}/dot_claude/skills/`): authored and version-controlled in
+the chezmoi repo above. Run `ls` there rather than trusting a hand-maintained list — same
+anti-drift principle as `{{ $sourceDir }}/.chezmoiscripts/` (see `{{ $repoRoot }}/CLAUDE.md`).
 Deployed by `chezmoi apply` to `~/.claude/skills/`.
 
 **External skills**: declared in `packages.darwin.ai.agents.claude_code.skills` in
-`{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml`, fetched from third-party GitHub repos
+`{{ $sourceDir }}/.chezmoidata/packages.yaml`, fetched from third-party GitHub repos
 (e.g. `basicmachines-co/basic-memory-skills`, `specstoryai/agent-skills`) by
-`run_onchange_after_darwin-37-install-claude-skills.sh.tmpl`. Their source of truth is the
-external repo, not this one — edit `packages.yaml` to add/remove/pin, don't expect to find
-their files here. They land in the same `~/.claude/skills/` directory as the native ones, so
-`~/.claude/skills/` on disk is a merge of both sources.
+`{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-37-install-claude-skills.sh.tmpl`.
+Their source of truth is the external repo, not the chezmoi repo — edit `packages.yaml` to
+add/remove/pin, don't expect to find their files there. They land in the same
+`~/.claude/skills/` directory as the native ones, so `~/.claude/skills/` on disk is a merge of
+both sources.
 
 ## MCP Servers and Plugins
 
-Also declared under `packages.darwin.ai.agents.claude_code` in `packages.yaml`:
+Also declared under `packages.darwin.ai.agents.claude_code` in that same `packages.yaml`:
 
-- `mcp_servers` — installed by `run_onchange_after_darwin-38-install-claude-mcp-servers.sh.tmpl`
+- `mcp_servers` — installed by
+  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-38-install-claude-mcp-servers.sh.tmpl`
 - `plugin_marketplaces` / `plugins` — installed/enabled by
-  `run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`; the `plugins` list maps to
-  `enabledPlugins` in `~/.claude/settings.json`
+  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`;
+  the `plugins` list maps to `enabledPlugins` in `~/.claude/settings.json`
 
 **Global MCP servers** (used across all projects) are separately deployed via
-`home/private_dot_config/claude-extend/tools.json.tmpl` → `~/.config/claude-extend/tools.json`.
+`{{ $sourceDir }}/private_dot_config/claude-extend/tools.json.tmpl` →
+`~/.config/claude-extend/tools.json`.
 
 ## Before Disabling, Removing, or Overriding Anything (e.g. /doctor audits)
 
@@ -57,14 +65,14 @@ installed-but-undeclared.
 
 ## Personas Share Skills, Rules, and CLAUDE.md via Symlink
 
-Each persona (`{{ .chezmoi.sourceDir }}/dot_claude-<name>/`) gets `symlink_skills.tmpl`,
+Each persona (`{{ $sourceDir }}/dot_claude-<name>/`) gets `symlink_skills.tmpl`,
 `symlink_rules.tmpl`, and `symlink_CLAUDE.md.tmpl` pointing back at `~/.claude/skills`,
 `~/.claude/rules`, and `~/.claude/CLAUDE.md` — so a skill edit, a rule edit, or a
 `CLAUDE.md.tmpl` edit takes effect for every persona after one `chezmoi apply`, with no
 per-persona copy to keep in sync.
 
 **Not a "local" file, despite the path**: `~/.claude*/CLAUDE.md` is this symlink — checked-in
-content sourced from `{{ .chezmoi.sourceDir }}/dot_claude/CLAUDE.md.tmpl`, not personal/local
+content sourced from `{{ $sourceDir }}/dot_claude/CLAUDE.md.tmpl`, not personal/local
 content. Any check that distinguishes "LOCAL/personal" CLAUDE.md from "checked-in" (e.g. a
 `/doctor`-style dedup pass) should treat it as checked-in. A genuinely personal, non-chezmoi-managed
 layer only exists if the user separately created a `CLAUDE.local.md` alongside it — verify that
@@ -75,7 +83,7 @@ history (`projects/`). Use `$CLAUDE_CONFIG_DIR/.claude.json` for all of these, n
 `~/.claude.json` — it belongs to a different persona and won't reflect (or affect) the active
 one. Each persona's `modify_settings.json.tmpl` chezmoi-manages a baseline
 `skillOverrides`/`enabledPlugins`/`permissions` posture for that machine's/profile's typical
-workload (see the comment at the top of `home/dot_claude-personal/modify_settings.json.tmpl` —
+workload (see the comment at the top of `{{ $sourceDir }}/dot_claude-personal/modify_settings.json.tmpl` —
 these postures are derived from `/doctor` runs per-persona and should not be copied verbatim
 between personas without re-running that analysis).
 
@@ -87,12 +95,13 @@ check both the template *and* the live file — they can legitimately disagree.
 
 ## Two Deliberately Different Install Models
 
-- **`dot_claude/skills/` + `packages.yaml`** (this file's subject): global, always-on,
-  identical across every persona and project on this machine.
-- **The `chezmoi-personal` marketplace** (`.claude-plugin/marketplace.json` + `plugins/` at the
-  repo root): a **separate, deliberately not-chezmoi-managed** catalog for convenient
-  per-project opt-in/opt-out (`/plugin marketplace add`, then `/plugin install`) — registered
-  once via `run_onchange_after_darwin-44-register-claude-plugin-marketplace.sh.tmpl`, but which
-  plugins are actually *installed* into a given project is a per-project decision, not a
-  machine-wide one. Don't add something here just because it's useful somewhere — that's what
+- **`{{ $sourceDir }}/dot_claude/skills/` + `packages.yaml`** (this file's subject): global,
+  always-on, identical across every persona and project on this machine.
+- **The `chezmoi-personal` marketplace** (`{{ $repoRoot }}/.claude-plugin/marketplace.json` +
+  `{{ $repoRoot }}/plugins/`): a **separate, deliberately not-chezmoi-managed** catalog for
+  convenient per-project opt-in/opt-out (`/plugin marketplace add`, then `/plugin install`) —
+  registered once via
+  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-44-register-claude-plugin-marketplace.sh.tmpl`,
+  but which plugins are actually *installed* into a given project is a per-project decision, not
+  a machine-wide one. Don't add something here just because it's useful somewhere — that's what
   the marketplace is for.
