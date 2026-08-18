@@ -78,6 +78,14 @@ content. Any check that distinguishes "LOCAL/personal" CLAUDE.md from "checked-i
 layer only exists if the user separately created a `CLAUDE.local.md` alongside it — verify that
 file's actual presence before assuming one exists.
 
+Being checked-in doesn't mean uneditable — it means edits go through the source, the same
+principle as `packages.yaml`. If `/doctor` (or any diagnosis) concludes `~/.claude*/CLAUDE.md`
+should change, don't edit the symlink target directly; make the change in
+`{{ $sourceDir }}/dot_claude/CLAUDE.md.tmpl`, then the user commits it so it propagates on the
+next `chezmoi apply` (their own or any other persona's). The same applies to any skill or rule
+under `{{ $sourceDir }}/dot_claude/` (`skills/`, `rules/`): edit the source file there, not the
+deployed copy under `~/.claude/`.
+
 What's **not** shared per persona: `settings.json`, `.claude.json`, `plugins/`, and session
 history (`projects/`). Use `$CLAUDE_CONFIG_DIR/.claude.json` for all of these, never the bare
 `~/.claude.json` — it belongs to a different persona and won't reflect (or affect) the active
