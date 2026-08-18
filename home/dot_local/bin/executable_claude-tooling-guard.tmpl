@@ -1,8 +1,14 @@
 #!/bin/bash
-# claude-tooling-guard — PreToolUse hook (Bash matcher) that instructs Claude to check
-# claude-tooling.md before editing Claude Code skill/MCP/plugin config directly via a
-# shell command (jq/mv/sed/etc.), which bypasses the path-frontmatter auto-load that
-# normally triggers claude-tooling.md for Read/Edit/Write on the same paths.
+# claude-tooling-guard — PreToolUse hook (Bash matcher) that injects the Claude Code
+# tooling guidance directly into the tool-call system message when Claude edits Claude
+# Code skill/MCP/plugin config directly via a shell command (jq/mv/sed/etc.), which
+# bypasses the path-frontmatter auto-load that normally triggers claude-tooling.md for
+# Read/Edit/Write on the same paths. Delivers the instructions inline rather than
+# pointing at the file — a "go read X" pointer is advisory and easy to rationalize past
+# mid-task; injected content closes that gap.
+# The guidance text below is baked in at chezmoi-render time from the same
+# `claude-tooling-guidance` template partial that {{ .chezmoi.sourceDir }}/dot_claude/rules/claude-tooling.md.tmpl
+# includes, so the two stay in sync — edit the partial, not either generated copy.
 # Never blocks and never modifies the repo or Claude Code config — the only state it
 # touches is a tiny per-session marker file (below) used to avoid re-sending these
 # instructions multiple times in one session.
@@ -13,12 +19,22 @@ set -euo pipefail
 
 payload=$(cat)
 
-instructions=$(jq -r --arg pattern '\.claude[A-Za-z0-9_-]*/settings\.json|\.claude[A-Za-z0-9_-]*/\.claude\.json|\.chezmoidata/packages\.yaml|dot_claude(-[A-Za-z0-9_-]+)?/' '
+# Quoted heredoc delimiter disables all shell expansion ($, `, \) in the body, so the
+# guidance text's backticks and code spans pass through literally.
+guard_rules_content=$(cat <<'CLAUDE_TOOLING_GUIDANCE_EOF'
+{{ includeTemplate "claude-tooling-guidance" . }}
+CLAUDE_TOOLING_GUIDANCE_EOF
+)
+
+instructions=$(jq -r --arg pattern '\.claude[A-Za-z0-9_-]*/settings\.json|\.claude[A-Za-z0-9_-]*/\.claude\.json|\.chezmoidata/packages\.yaml|dot_claude(-[A-Za-z0-9_-]+)?/' --arg rules "$guard_rules_content" '
   (.tool_input.command // "") as $command
   | if ($command != "" and ($command | test($pattern))) then
       {
         hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow" },
-        systemMessage: "This command touches Claude Code skill/MCP/plugin config that this machine'\''s chezmoi dotfiles repo manages. Before editing settings.json/.claude.json skillOverrides, disabledMcpServers, or enabledPlugins directly: check whether the target is DECLARED in {{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml (packages.darwin.ai.agents.claude_code) — if so, edit that declaration instead, since a local override only drifts from the declared state without undoing it. Read ~/.claude/rules/claude-tooling.md."
+        systemMessage: (
+          "This command touches Claude Code skill/MCP/plugin config that this machine'\''s chezmoi dotfiles repo manages. Before editing settings.json/.claude.json skillOverrides, disabledMcpServers, or enabledPlugins directly: check whether the target is DECLARED in {{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml (packages.darwin.ai.agents.claude_code) — if so, edit that declaration instead, since a local override only drifts from the declared state without undoing it.\n\n"
+          + "<system-reminder>\n" + $rules + "\n</system-reminder>"
+        )
       } | tojson
     else
       empty
