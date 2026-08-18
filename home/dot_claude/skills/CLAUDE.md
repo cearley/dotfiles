@@ -37,8 +37,17 @@ Each persona (`home/dot_claude-<name>/`) gets `symlink_skills.tmpl` and
 skill edit here or a `CLAUDE.md.tmpl` edit takes effect for every persona after one
 `chezmoi apply`, with no per-persona copy to keep in sync.
 
+**Not a "local" file, despite the path**: `~/.claude*/CLAUDE.md` is this symlink — checked-in
+content sourced from `home/dot_claude/CLAUDE.md.tmpl`, not personal/local content. Any check
+that distinguishes "LOCAL/personal" CLAUDE.md from "checked-in" (e.g. a `/doctor`-style dedup
+pass) should treat it as checked-in. A genuinely personal, non-chezmoi-managed layer only
+exists if the user separately created a `CLAUDE.local.md` alongside it — verify that file's
+actual presence before assuming one exists.
+
 What's **not** shared per persona: `settings.json`, `.claude.json`, `plugins/`, and session
-history (`projects/`). Each persona's `modify_settings.json.tmpl` chezmoi-manages a baseline
+history (`projects/`). Use `$CLAUDE_CONFIG_DIR/.claude.json` for all of these, never the bare
+`~/.claude.json` — it belongs to a different persona and won't reflect (or affect) the active
+one. Each persona's `modify_settings.json.tmpl` chezmoi-manages a baseline
 `skillOverrides`/`enabledPlugins`/`permissions` posture for that machine's/profile's typical
 workload (see the comment at the top of `home/dot_claude-personal/modify_settings.json.tmpl` —
 these postures are derived from `/doctor` runs per-persona and should not be copied verbatim

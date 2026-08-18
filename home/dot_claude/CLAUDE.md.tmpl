@@ -38,6 +38,7 @@ When executing a named skill workflow, mandatory steps must not be silently skip
   echo "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
   ```
   Known personas on this machine: {{ join ", " $claudeEnvs }} (plus the unnamed default, `~/.claude`, used whenever `CLAUDE_CONFIG_DIR` is unset).
+  Every per-persona path is `$CLAUDE_CONFIG_DIR/<name>` — compute it explicitly, don't substitute the bare `~/`-prefixed path: `$CLAUDE_CONFIG_DIR/settings.json`, **`$CLAUDE_CONFIG_DIR/.claude.json`** (not `~/.claude.json` — that's the unnamed default persona's file; reading or writing it silently uses the wrong persona's skillUsage/pluginUsage/mcpServers), `$CLAUDE_CONFIG_DIR/plugins/`, `$CLAUDE_CONFIG_DIR/projects/` (transcripts). When a task's scope could mean "every persona" rather than just the active one (a health check, an audit, a cleanup), ask which is wanted before running — don't default to the active persona silently.
   For how skills, MCP servers, and plugins are chezmoi-managed and shared across personas, see `home/dot_claude/skills/CLAUDE.md` in the chezmoi dotfiles repo (`~/.local/share/chezmoi`).
 {{- end }}
 
