@@ -20,7 +20,7 @@ Standard chezmoi commands (`apply`, `diff`, `status`, `add`, `managed`, ...) and
 
 ## Practical Quick Reference
 
-Script naming, shared utilities, template testing, and template-editing gotchas moved to `home/CLAUDE.md` (loads automatically when working under `home/`).
+Script naming, shared utilities, template testing, and template-editing gotchas moved to `.claude/rules/home-scripts.md` (loads automatically when working under `home/`).
 
 ### Reusable Templates
 
