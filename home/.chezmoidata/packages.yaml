@@ -200,10 +200,6 @@ packages:
           - name: basic-memory
             scope: user
             command: uvx --python 3.12 basic-memory mcp
-          - name: fast-filesystem
-            env:
-              CREATE_BACKUP_FILES: "true"
-            command: npx -y fast-filesystem-mcp
           skills: # Installed via `npx skills add <args> -g`
           - 'basicmachines-co/basic-memory-skills --skill memory-defrag --skill memory-lifecycle --skill memory-notes --skill memory-schema'
           - 'cearley/claude-session-index --skill session-index'
