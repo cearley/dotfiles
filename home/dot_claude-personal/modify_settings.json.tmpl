@@ -1,12 +1,18 @@
 {{- /* Skill/plugin/permission posture below was derived from a /doctor run analyzing
      this environment's own transcripts (2026-08-06) — do not copy verbatim into
-     dot_claude-work or dot_claude-bedrock without re-running that analysis there. */ -}}
+     dot_claude-work or dot_claude-bedrock without re-running that analysis there.
+     specstory-* entries added 2026-08-18 after an override-drift audit found them
+     disabled locally with no source-of-truth record. */ -}}
 {{- $extra := dict
       "skillOverrides" (dict
         "integrate-worktrees" "off"
         "parallel-worktrees" "off"
         "memory-recall" "off"
-        "memory-save" "off")
+        "memory-save" "off"
+        "specstory-guard" "off"
+        "specstory-project-stats" "off"
+        "specstory-link-trail" "off"
+        "specstory-yak" "off")
       "enabledPlugins" (dict
         "claude-code-setup@claude-plugins-official" true
         "claude-md-management@claude-plugins-official" true)

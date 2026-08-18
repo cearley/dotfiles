@@ -44,9 +44,10 @@ Also declared under `packages.darwin.ai.agents.claude_code` in that same `packag
 
 - `mcp_servers` — installed by
   `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-38-install-claude-mcp-servers.sh.tmpl`
-- `plugin_marketplaces` / `plugins` — installed/enabled by
-  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`;
-  the `plugins` list maps to `enabledPlugins` in `~/.claude/settings.json`
+- `plugin_marketplaces` / `plugins` — installed by
+  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`,
+  which runs `claude plugins install <id> --scope user` per entry; that CLI command is what
+  actually records `enabledPlugins: true` in `~/.claude/settings.json`, not the script directly
 
 **Global MCP servers** (used across all projects) are separately deployed via
 `{{ $sourceDir }}/private_dot_config/claude-extend/tools.json.tmpl` →
@@ -62,6 +63,36 @@ declared state. Zero/stale usage on a declared item is a signal to edit `package
 (remove/replace the declaration), not to disable it locally. `clean-claude-orphans` already
 draws exactly this distinction — reach for it (or its logic) for anything genuinely
 installed-but-undeclared.
+
+## Checking for Override Drift (the mirror-image case)
+
+`clean-claude-orphans` handles installed-but-undeclared drift. This is the opposite
+direction — **declared-but-locally-suppressed** — and no skill currently automates it, so
+follow this manually whenever auditing tooling health (`/doctor`-style checks) or when a
+skill/plugin isn't behaving despite being installed and declared.
+
+For every `.claude*/settings.json` on the machine (the `**/.claude*/settings.json` glob this
+file's frontmatter already watches):
+
+1. Read its `skillOverrides` and `enabledPlugins` dicts.
+2. Read that persona's own `{{ $sourceDir }}/dot_claude-<name>/modify_settings.json.tmpl` to
+   get its *intended* baseline — the `$extra`/`claudeExtraSettings` dict, if any, passed to
+   `includeTemplate "claude-settings-hooks-modifier"`. Most personas call it with no `$extra`
+   at all (empty baseline); as of this writing only `dot_claude-personal` declares one. The
+   unnamed default persona (`~/.claude`) has no `dot_claude-<name>/` directory at all, so its
+   baseline is always empty.
+3. Flag any entry the baseline doesn't explain:
+   - `skillOverrides.<skill>: "off"` for a **native** skill (listed under
+     `{{ $sourceDir }}/dot_claude/skills/`) — someone toggled it off ad hoc with `/skill` in a
+     session and it was never captured in source.
+   - `enabledPlugins.<id>: false` for a plugin that's in `packages.yaml`'s `claude_code.plugins`
+     list (meaning chezmoi intends it enabled) — same ad hoc drift, opposite direction.
+4. Resolve by asking the user which way it should go, then edit the *source*, never the live
+   file directly as the fix (same principle as the CLAUDE.md/skill-editing rule below):
+   - **Keep the override** → add it to that persona's `modify_settings.json.tmpl` `$extra` dict
+     so it's version-controlled and survives reprovisioning.
+   - **Drop the override** → remove the key via the equivalent `/skill` or `/plugin` command (or
+     edit the live `settings.json` directly), since nothing in chezmoi asked for it.
 
 ## Personas Share Skills, Rules, and CLAUDE.md via Symlink
 
@@ -95,11 +126,11 @@ workload (see the comment at the top of `{{ $sourceDir }}/dot_claude-personal/mo
 these postures are derived from `/doctor` runs per-persona and should not be copied verbatim
 between personas without re-running that analysis).
 
-**Drift note**: the live `~/.claude*/settings.json` on any given machine can carry more
-`skillOverrides`/`enabledPlugins` entries than the chezmoi template declares — ad hoc `/plugin`
-toggles made directly in a session survive `chezmoi apply` (a `modify_` script only enforces
-the specific keys it sets; it doesn't strip additions). When diagnosing "why is skill X off",
-check both the template *and* the live file — they can legitimately disagree.
+**Drift note**: ad hoc `/skill`/`/plugin` toggles made directly in a session survive `chezmoi
+apply` — a `modify_` script only enforces the specific keys it sets, it doesn't strip
+additions — so the live `~/.claude*/settings.json` can carry more `skillOverrides`/
+`enabledPlugins` entries than the chezmoi template declares. See "Checking for Override
+Drift" above for how to find and resolve these.
 
 ## Two Deliberately Different Install Models
 
