@@ -32,7 +32,6 @@ When executing a named skill workflow, mandatory steps must not be silently skip
 
 ## Environment Notes
 - Background subagents (via Agent tool) cannot respond to interactive permission prompts — Bash commands already approved in settings.json work fine, but unapproved commands are silently denied. For shell tasks not yet pre-approved, use foreground agents instead.
-- Before proposing to disable, remove, or override any Claude Code skill, MCP server, or plugin (e.g. a `/doctor`-style unused-extension audit), check `{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml` first. Items declared there are installed by this repo's package management system across every machine it's applied to — a local `skillOverrides`/`disabledMcpServers` edit doesn't turn them off, it just creates silent drift against the declared state. The correct fix for a declared-but-genuinely-unwanted item is editing `packages.yaml` itself (a cross-machine, checked-in decision); use the `clean-claude-orphans` skill for items installed but *not* declared there. See `{{ .chezmoi.sourceDir }}/dot_claude/skills/CLAUDE.md` for the full native-vs-declared model.
 {{- if $claudeEnvs }}
 - This machine runs multiple named Claude Code profiles ("personas"), each with its own `CLAUDE_CONFIG_DIR`. This file and `skills/` are symlinked from `~/.claude/skills/` into every persona, but `settings.json`, `.claude.json`, `plugins/`, and session history (`projects/`) are separate per persona. Before diagnosing installation health, editing settings/plugins, or reasoning about skill/MCP usage (e.g. `/doctor`), confirm which persona this session is actually running under — don't assume it matches the shell's default or the current working directory:
   ```bash
@@ -40,7 +39,6 @@ When executing a named skill workflow, mandatory steps must not be silently skip
   ```
   Known personas on this machine: {{ join ", " $claudeEnvs }} (plus the unnamed default, `~/.claude`, used whenever `CLAUDE_CONFIG_DIR` is unset).
   Every per-persona path is `$CLAUDE_CONFIG_DIR/<name>` — compute it explicitly, don't substitute the bare `~/`-prefixed path: `$CLAUDE_CONFIG_DIR/settings.json`, **`$CLAUDE_CONFIG_DIR/.claude.json`** (not `~/.claude.json` — that's the unnamed default persona's file; reading or writing it silently uses the wrong persona's skillUsage/pluginUsage/mcpServers), `$CLAUDE_CONFIG_DIR/plugins/`, `$CLAUDE_CONFIG_DIR/projects/` (transcripts). When a task's scope could mean "every persona" rather than just the active one (a health check, an audit, a cleanup), ask which is wanted before running — don't default to the active persona silently.
-  For how skills, MCP servers, and plugins are chezmoi-managed and shared across personas, see `{{ .chezmoi.sourceDir }}/dot_claude/skills/CLAUDE.md`.
 {{- end }}
 
 ## Basic Memory
