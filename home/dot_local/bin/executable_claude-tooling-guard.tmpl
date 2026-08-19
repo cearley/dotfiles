@@ -1,9 +1,10 @@
 #!/bin/bash
 # claude-tooling-guard — PreToolUse hook (Bash matcher). Injects claude-tooling
-# guidance into the systemMessage when a command edits Claude Code skill/MCP/plugin
-# config via shell (jq/mv/sed/etc.), bypassing the path-frontmatter auto-load that
-# normally triggers claude-tooling.md for Read/Edit/Write. Inline injection beats a
-# "go read X" pointer, which is easy to rationalize past mid-task.
+# guidance into model context (via additionalContext) when a command edits Claude
+# Code skill/MCP/plugin config via shell (jq/mv/sed/etc.), bypassing the
+# path-frontmatter auto-load that normally triggers claude-tooling.md for
+# Read/Edit/Write. Inline injection beats a "go read X" pointer, which is easy to
+# rationalize past mid-task.
 # Guidance text is baked in at render time from the same claude-tooling-guidance
 # partial that dot_claude/rules/claude-tooling.md.tmpl includes — edit the partial,
 # not either generated copy. Never blocks; only state touched is a per-session
@@ -44,12 +45,18 @@ IFS= read -r -d '' guard_rules_content <<'CLAUDE_TOOLING_GUIDANCE_EOF' || true
 {{ includeTemplate "claude-tooling-guidance" . }}
 CLAUDE_TOOLING_GUIDANCE_EOF
 
+# systemMessage alone is not confirmed to reach model context on PreToolUse hooks
+# (only confirmed to render in the terminal UI, collapsed). additionalContext inside
+# hookSpecificOutput is the field verified — by direct test, not just a bug report —
+# to actually land in the model's context. Emit both: additionalContext so Claude
+# reliably sees it, systemMessage so it's visible in the transcript too.
 jq -n -r --arg rules "$guard_rules_content" '
-  {
-    hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow" },
-    systemMessage: (
-      "This command touches Claude Code skill/MCP/plugin config that this machine'\''s chezmoi dotfiles repo manages. Before editing settings.json/.claude.json skillOverrides, disabledMcpServers, or enabledPlugins directly: check whether the target is DECLARED in {{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml (packages.darwin.ai.agents.claude_code) — if so, edit that declaration instead, since a local override only drifts from the declared state without undoing it.\n\n"
-      + "<system-reminder>\n" + $rules + "\n</system-reminder>"
-    )
-  } | tojson
+  (
+    "This command touches Claude Code skill/MCP/plugin config that this machine'\''s chezmoi dotfiles repo manages. Before editing settings.json/.claude.json skillOverrides, disabledMcpServers, or enabledPlugins directly: check whether the target is DECLARED in {{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml (packages.darwin.ai.agents.claude_code) — if so, edit that declaration instead, since a local override only drifts from the declared state without undoing it.\n\n"
+    + "<system-reminder>\n" + $rules + "\n</system-reminder>"
+  ) as $message
+  | {
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", additionalContext: $message },
+      systemMessage: $message
+    } | tojson
 '
