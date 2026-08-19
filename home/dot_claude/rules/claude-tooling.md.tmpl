@@ -61,9 +61,11 @@ A skill/MCP-server/plugin usage audit (`/doctor` Check 1, or similar) must cross
 `packages.darwin.ai.agents.claude_code` above — are managed machine-wide by this repo; a local
 `skillOverrides: off` or `disabledMcpServers` entry doesn't undo that, it just drifts from the
 declared state. Zero/stale usage on a declared item is a signal to edit `packages.yaml`
-(remove/replace the declaration), not to disable it locally. `clean-claude-orphans` already
-draws exactly this distinction — reach for it (or its logic) for anything genuinely
-installed-but-undeclared.
+(remove/replace the declaration), not to disable it locally. The `clean-claude-orphans` Skill
+(`{{ $sourceDir }}/dot_claude/skills/clean-claude-orphans/`) already draws exactly this
+distinction — invoke it via the Skill tool (it has `disable-model-invocation: true`, so it
+won't fire on its own) for anything genuinely installed-but-undeclared, or read its `SKILL.md`
+directly to apply the same logic by hand.
 
 ## Checking for Override Drift (the mirror-image case)
 
