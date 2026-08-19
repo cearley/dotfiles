@@ -63,12 +63,17 @@ For every `.claude*/settings.json` on the machine (the `**/.claude*/settings.jso
 file's frontmatter already watches):
 
 1. Read its `skillOverrides` and `enabledPlugins` dicts.
-2. Read that persona's own `{{ $sourceDir }}/dot_claude-<name>/modify_settings.json.tmpl` to
-   get its *intended* baseline — the `$extra`/`claudeExtraSettings` dict, if any, passed to
-   `includeTemplate "claude-settings-hooks-modifier"`. Most personas call it with no `$extra`
-   at all (empty baseline); as of this writing only `dot_claude-personal` declares one. The
-   unnamed default persona (`~/.claude`) has no `dot_claude-<name>/` directory at all, so its
-   baseline is always empty.
+2. Read that persona's own `modify_settings.json.tmpl` to get its *intended* baseline — the
+   `$extra`/`claudeExtraSettings` dict, if any, passed to
+   `includeTemplate "claude-settings-hooks-modifier"`. For named personas that's
+   `{{ $sourceDir }}/dot_claude-<name>/modify_settings.json.tmpl`. The unnamed default persona
+   has no `dot_claude-<name>/` directory, but it is still fully managed: `dot_claude/` (no
+   suffix) *is* its directory — rules, skills, `CLAUDE.md.tmpl`, and its own
+   `modify_settings.json.tmpl` all live there directly, and it's the same directory every named
+   persona's skills/rules/CLAUDE.md are symlinked from (see "Personas Share Skills, Rules, and
+   CLAUDE.md via Symlink" below). As of this writing, `dot_claude-personal` and
+   `dot_claude-bedrock` declare an `$extra`; the unnamed default and `dot_claude-work` call the
+   partial with no `$extra` (empty baseline).
 3. Flag any entry the baseline doesn't explain:
    - `skillOverrides.<skill>: "off"` for a **native** skill (listed under
      `{{ $sourceDir }}/dot_claude/skills/`) — someone toggled it off ad hoc with `/skill` in a
