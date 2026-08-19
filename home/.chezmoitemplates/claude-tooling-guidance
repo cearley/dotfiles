@@ -5,6 +5,8 @@
 This machine's Claude Code skills, MCP servers, plugins, and CLAUDE.md are managed by the
 chezmoi dotfiles repo at `{{ $repoRoot }}` (source tree at `{{ $sourceDir }}`) — regardless of
 which project or repo you're currently working in, that is where the guidance below applies.
+This machine runs multiple named Claude Code profiles ("personas"), each with its own
+`CLAUDE_CONFIG_DIR` — the guidance below refers to them as "personas" throughout.
 Diagnosing installation health, editing settings/plugins, or reasoning about skill/MCP usage
 (e.g. `/doctor`) means looking at that repo's `{{ $sourceDir }}/dot_claude/`,
 `{{ $sourceDir }}/.chezmoidata/`, and `{{ $sourceDir }}/.chezmoiscripts/`, not the current
