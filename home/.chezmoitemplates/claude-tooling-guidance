@@ -15,7 +15,7 @@ working directory.
 **Native skills** (`{{ $sourceDir }}/dot_claude/skills/`): authored and version-controlled in
 the chezmoi repo above. Run `ls` there rather than trusting a hand-maintained list — same
 anti-drift principle as `{{ $sourceDir }}/.chezmoiscripts/`, where `ls` is likewise
-authoritative over any hand-maintained table (one drifted out of sync in commit `6f3790c`).
+authoritative over any hand-maintained table.
 Deployed by `chezmoi apply` to `~/.claude/skills/`.
 
 **External skills**: declared in `packages.darwin.ai.agents.claude_code.skills` in
