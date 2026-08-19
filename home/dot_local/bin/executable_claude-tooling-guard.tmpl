@@ -1,53 +1,31 @@
 #!/bin/bash
-# claude-tooling-guard — PreToolUse hook (Bash matcher) that injects the Claude Code
-# tooling guidance directly into the tool-call system message when Claude edits Claude
-# Code skill/MCP/plugin config directly via a shell command (jq/mv/sed/etc.), which
-# bypasses the path-frontmatter auto-load that normally triggers claude-tooling.md for
-# Read/Edit/Write on the same paths. Delivers the instructions inline rather than
-# pointing at the file — a "go read X" pointer is advisory and easy to rationalize past
-# mid-task; injected content closes that gap.
-# The guidance text below is baked in at chezmoi-render time from the same
-# `claude-tooling-guidance` template partial that {{ .chezmoi.sourceDir }}/dot_claude/rules/claude-tooling.md.tmpl
-# includes, so the two stay in sync — edit the partial, not either generated copy.
-# Never blocks and never modifies the repo or Claude Code config — the only state it
-# touches is a tiny per-session marker file (below) used to avoid re-sending these
-# instructions multiple times in one session.
+# claude-tooling-guard — PreToolUse hook (Bash matcher). Injects claude-tooling
+# guidance into the systemMessage when a command edits Claude Code skill/MCP/plugin
+# config via shell (jq/mv/sed/etc.), bypassing the path-frontmatter auto-load that
+# normally triggers claude-tooling.md for Read/Edit/Write. Inline injection beats a
+# "go read X" pointer, which is easy to rationalize past mid-task.
+# Guidance text is baked in at render time from the same claude-tooling-guidance
+# partial that dot_claude/rules/claude-tooling.md.tmpl includes — edit the partial,
+# not either generated copy. Never blocks; only state touched is a per-session
+# marker file that dedupes repeat delivery.
 #
-# Rendered from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_claude-tooling-guard.tmpl by chezmoi —
-# edit the source template and run `chezmoi apply` to update the deployed copy.
+# Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_claude-tooling-guard.tmpl —
+# edit the source template, then `chezmoi apply`.
 set -euo pipefail
 
 payload=$(cat)
 
-# Quoted heredoc delimiter disables all shell expansion ($, `, \) in the body, so the
-# guidance text's backticks and code spans pass through literally.
-guard_rules_content=$(cat <<'CLAUDE_TOOLING_GUIDANCE_EOF'
-{{ includeTemplate "claude-tooling-guidance" . }}
-CLAUDE_TOOLING_GUIDANCE_EOF
-)
+# Cheap check first — extract command/session_id and test in bash, so the common
+# non-matching case skips the heredoc load and jq build below. @tsv escapes tabs/
+# newlines within a field as literal `\t`/`\n`, so splitting on a real tab is safe.
+IFS=$'\t' read -r command session_id <<<"$(jq -r '[(.tool_input.command // ""), (.session_id // "")] | @tsv' <<<"$payload")"
 
-instructions=$(jq -r --arg pattern '\.claude[A-Za-z0-9_-]*/settings\.json|\.claude[A-Za-z0-9_-]*/\.claude\.json|\.chezmoidata/packages\.yaml|dot_claude(-[A-Za-z0-9_-]+)?/' --arg rules "$guard_rules_content" '
-  (.tool_input.command // "") as $command
-  | if ($command != "" and ($command | test($pattern))) then
-      {
-        hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow" },
-        systemMessage: (
-          "This command touches Claude Code skill/MCP/plugin config that this machine'\''s chezmoi dotfiles repo manages. Before editing settings.json/.claude.json skillOverrides, disabledMcpServers, or enabledPlugins directly: check whether the target is DECLARED in {{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml (packages.darwin.ai.agents.claude_code) — if so, edit that declaration instead, since a local override only drifts from the declared state without undoing it.\n\n"
-          + "<system-reminder>\n" + $rules + "\n</system-reminder>"
-        )
-      } | tojson
-    else
-      empty
-    end
-' <<<"$payload")
+pattern='\.claude[A-Za-z0-9_-]*/settings\.json|\.claude[A-Za-z0-9_-]*/\.claude\.json|\.chezmoidata/packages\.yaml|dot_claude(-[A-Za-z0-9_-]+)?/'
+[[ -z "$command" || ! "$command" =~ $pattern ]] && exit 0
 
-[ -z "$instructions" ] && exit 0
-
-# Skip if these instructions were already delivered this session — no need to
-# re-send Claude to claude-tooling.md for a second matching command. Fail open:
-# if the marker can't be written, fall through and emit the instructions
-# unconditionally rather than ever blocking the tool call over a tmpfile error.
-session_id=$(jq -r '.session_id // empty' <<<"$payload")
+# Skip if already delivered this session. Checked before the heredoc load, so a
+# repeat match is as cheap as a non-match. Fail open on marker errors — never block
+# the tool call over a tmpfile issue.
 if [ -n "$session_id" ]; then
   marker_dir="${TMPDIR:-/tmp}/claude-tooling-guard"
   marker_file="$marker_dir/$session_id"
@@ -57,4 +35,21 @@ if [ -n "$session_id" ]; then
   touch "$marker_file" 2>/dev/null || true
 fi
 
-echo "$instructions"
+# Quoted heredoc delimiter blocks shell expansion, so backticks in the guidance text
+# pass through literally. Read via `read -d ''`, not `$(cat <<'EOF' ...)` — macOS's
+# /bin/bash (3.2.57, frozen since 2007) mishandles a quoted heredoc nested in a
+# $(...) substitution and executes backtick code-spans as commands. Reached only on
+# a real match, so the ~9KB guidance text loads only when needed.
+IFS= read -r -d '' guard_rules_content <<'CLAUDE_TOOLING_GUIDANCE_EOF' || true
+{{ includeTemplate "claude-tooling-guidance" . }}
+CLAUDE_TOOLING_GUIDANCE_EOF
+
+jq -n -r --arg rules "$guard_rules_content" '
+  {
+    hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow" },
+    systemMessage: (
+      "This command touches Claude Code skill/MCP/plugin config that this machine'\''s chezmoi dotfiles repo manages. Before editing settings.json/.claude.json skillOverrides, disabledMcpServers, or enabledPlugins directly: check whether the target is DECLARED in {{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml (packages.darwin.ai.agents.claude_code) — if so, edit that declaration instead, since a local override only drifts from the declared state without undoing it.\n\n"
+      + "<system-reminder>\n" + $rules + "\n</system-reminder>"
+    )
+  } | tojson
+'
