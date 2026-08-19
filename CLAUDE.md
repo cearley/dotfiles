@@ -42,7 +42,6 @@ Catalog and usage examples moved to `home/.chezmoitemplates/CLAUDE.md` (loads au
 ## Claude Code Automations
 
 ### MCP Server Configuration
-- **Global MCP servers**: `home/private_dot_config/claude-extend/tools.json.tmpl` (deployed to `~/.config/claude-extend/tools.json`)
 - GitHub MCP uses `gh auth token` for authentication — no PAT management needed
 
 ## When to Reference openspec/

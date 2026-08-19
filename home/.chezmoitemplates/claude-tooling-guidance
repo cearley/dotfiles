@@ -38,10 +38,6 @@ Also declared under `packages.darwin.ai.agents.claude_code` in that same `packag
   which runs `claude plugins install <id> --scope user` per entry; that CLI command is what
   actually records `enabledPlugins: true` in `~/.claude/settings.json`, not the script directly
 
-**Global MCP servers** (used across all projects) are separately deployed via
-`{{ $sourceDir }}/private_dot_config/claude-extend/tools.json.tmpl` →
-`~/.config/claude-extend/tools.json`.
-
 ## Before Disabling, Removing, or Overriding Anything (e.g. /doctor audits)
 
 A skill/MCP-server/plugin usage audit (`/doctor` Check 1, or similar) must cross-check
