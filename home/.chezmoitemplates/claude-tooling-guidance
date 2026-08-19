@@ -16,7 +16,8 @@ working directory.
 the chezmoi repo above. Run `ls` there rather than trusting a hand-maintained list — same
 anti-drift principle as `{{ $sourceDir }}/.chezmoiscripts/`, where `ls` is likewise
 authoritative over any hand-maintained table.
-Deployed by `chezmoi apply` to `~/.claude/skills/`.
+Deployed by `chezmoi apply` to `~/.claude/skills/`, symlinked from each persona's
+`~/.claude-<name>/skills` (see "Personas Share Skills, Rules, and CLAUDE.md via Symlink" below).
 
 **External skills**: declared in `packages.darwin.ai.agents.claude_code.skills` in
 `{{ $sourceDir }}/.chezmoidata/packages.yaml`, fetched from third-party GitHub repos
@@ -106,7 +107,7 @@ What's **not** shared per persona: `settings.json`, `.claude.json`, `plugins/`, 
 history (`projects/`). Use `$CLAUDE_CONFIG_DIR/.claude.json` for all of these, never the bare
 `~/.claude.json` — it belongs to a different persona and won't reflect (or affect) the active
 one. Each persona's `modify_settings.json.tmpl` chezmoi-manages a baseline
-`skillOverrides`/`enabledPlugins`/`permissions` posture for that machine's/profile's typical
+`skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
 workload (see the comment at the top of `{{ $sourceDir }}/dot_claude-personal/modify_settings.json.tmpl` —
 these postures are derived from `/doctor` runs per-persona and should not be copied verbatim
 between personas without re-running that analysis).
