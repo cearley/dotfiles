@@ -29,14 +29,18 @@ done
 # This repo's own marketplace catalog. Plugins installed from chezmoi-personal are
 # already declared here, outside packages.yaml — never suggest DECLAREing them. Bundled
 # skills are listed too (col 2), so a skill orphan that duplicates a bundle can be spotted
-# without re-reading marketplace.json by hand.
+# without re-reading marketplace.json by hand. Captured into $marketplace_tsv so the
+# ## orphans section below can tag matching skill orphans inline instead of leaving that
+# cross-check to the model.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## chezmoi-personal-plugins"
 marketplace_json="${CHEZMOI_SOURCE}/.claude-plugin/marketplace.json"
+marketplace_tsv=""
 if [[ -f "$marketplace_json" ]]; then
-    jq -r '.plugins[] | [.name, ((.skills // []) | join(","))] | @tsv' "$marketplace_json" \
-        | awk -F'\t' '{ printf "%s\t%s\n", $1, ($2 == "" ? "-" : $2) }'
+    marketplace_tsv="$(jq -r '.plugins[] | [.name, ((.skills // []) | map(sub("^\\./"; "")) | join(","))] | @tsv' "$marketplace_json" \
+        | awk -F'\t' '{ printf "%s\t%s\n", $1, ($2 == "" ? "-" : $2) }')"
+    printf '%s\n' "$marketplace_tsv"
 else
     echo "error: marketplace.json not found at ${marketplace_json}" >&2
 fi
@@ -44,48 +48,98 @@ fi
 # ---------------------------------------------------------------------------
 # Skills managed by this repo's own chezmoi source (deployed via `chezmoi apply`),
 # never installed through `npx skills add` — not orphans of that mechanism, and
-# packages.yaml's `skills:` list was never meant to track them.
+# packages.yaml's `skills:` list was never meant to track them. Captured into
+# $chezmoi_managed_skills so the ## orphans section below can tag matches inline.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## chezmoi-managed-skills"
 skills_src="${CHEZMOI_SOURCE}/home/dot_claude/skills"
+chezmoi_managed_skills=""
 if [[ -d "$skills_src" ]]; then
     for dir in "$skills_src"/*/; do
         [[ -e "$dir" ]] || continue
-        basename "$dir"
+        name="$(basename "$dir")"
+        echo "$name"
+        chezmoi_managed_skills+="$name"$'\n'
     done
 else
     echo "error: skills source dir not found at ${skills_src}" >&2
 fi
 
 # ---------------------------------------------------------------------------
-# Every currently installed plugin's scope and (for project/local scope) owning
-# project, sourced from the current environment's own install record. This is what
-# uninstalling actually needs: user-scope plugins uninstall directly; project/local-scope
-# plugins require clearing the `enabledPlugins` entry from the owning project's settings
-# file first, then `claude plugins uninstall <id> --scope <project|local>` run with cwd
-# inside that project. Without this, both facts have to be rediscovered by trial and error.
+# Every currently installed plugin's scope, owning project (for project/local scope),
+# and whether it's sourced from this repo's own chezmoi-personal marketplace (`.id`
+# ends `@chezmoi-personal` — never a DECLARE candidate, see SKILL.md Step 3). This is
+# what uninstalling actually needs: user-scope plugins uninstall directly;
+# project/local-scope plugins require clearing the `enabledPlugins` entry from the
+# owning project's settings file first, then `claude plugins uninstall <id> --scope
+# <project|local>` run with cwd inside that project. Without this, all three facts
+# have to be rediscovered by trial and error.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## installed-plugins"
 installed_json="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json"
 if [[ -f "$installed_json" ]]; then
-    jq -r '.plugins | to_entries[] | .key as $id | .value[] | [$id, .scope, (.projectPath // "-")] | @tsv' "$installed_json"
+    jq -r '.plugins | to_entries[] | .key as $id | .value[]
+        | [$id, .scope, (.projectPath // "-"), (if ($id | endswith("@chezmoi-personal")) then "yes" else "no" end)]
+        | @tsv' "$installed_json"
 else
     echo "error: installed_plugins.json not found at ${installed_json}" >&2
 fi
 
 # ---------------------------------------------------------------------------
+# For every project/local-scope plugin, check whether the owning project's
+# settings.json or settings.local.json still lists it in enabledPlugins.
+# ## installed-plugins above already has each plugin's scope and projectPath, so this
+# is a direct file check rather than something left for the model to remember to go
+# do by hand before uninstalling.
+# ---------------------------------------------------------------------------
+echo ""
+echo "## still-enabled-elsewhere"
+if [[ -f "$installed_json" ]]; then
+    while IFS=$'\t' read -r id project_path; do
+        [[ -z "$id" ]] && continue
+        for settings_name in settings.json settings.local.json; do
+            settings_file="${project_path}/.claude/${settings_name}"
+            [[ -f "$settings_file" ]] || continue
+            if jq -e --arg id "$id" '.enabledPlugins[$id] == true' "$settings_file" >/dev/null 2>&1; then
+                printf '%s\t%s\t%s\n' "$id" "$project_path" "$settings_name"
+            fi
+        done
+    done < <(jq -r '.plugins | to_entries[] | .key as $id | .value[]
+        | select((.scope == "project" or .scope == "local") and .projectPath != null)
+        | [$id, .projectPath] | @tsv' "$installed_json")
+fi
+
+# ---------------------------------------------------------------------------
 # Orphans from the four Claude Code sections of `audit-packages`, as clean
-# <category>\t<item> lines. Forcing LANG=C/LC_ALL=C makes print_message emit its
-# ASCII "[INFO]"-style prefixes instead of emoji, so section/noise lines are
-# trivial to filter regardless of the invoking shell's locale. The per-line
-# uninstall hint ("   claude plugins uninstall ...") is indented with leading
-# whitespace; real orphan names never are, so that's also filtered out.
+# <category>\t<item> lines, with a 3rd column on skill orphans tagging whether they're
+# chezmoi-managed or duplicate a chezmoi-personal-bundled skill — both mean KEEP, never
+# REMOVE/DECLARE through this skill (SKILL.md Step 3). Forcing LANG=C/LC_ALL=C makes
+# print_message emit its ASCII "[INFO]"-style prefixes instead of emoji, so
+# section/noise lines are trivial to filter regardless of the invoking shell's locale.
+# The per-line uninstall hint ("   claude plugins uninstall ...") is indented with
+# leading whitespace; real orphan names never are, so that's also filtered out. The
+# marketplace section's literal "null" line is audit-packages' own artifact for
+# chezmoi-personal (a local-directory source with no repo/url field to report) — never
+# an actual orphan, so it's dropped here instead of left for the model to remember to
+# ignore.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## orphans"
-LC_ALL=C LANG=C audit-packages 2>&1 | awk '
+LC_ALL=C LANG=C audit-packages 2>&1 | managed_skills_env="$chezmoi_managed_skills" bundled_plugins_env="$marketplace_tsv" awk '
+    BEGIN {
+        # ENVIRON, not -v: -v assignments cannot contain raw embedded newlines.
+        n = split(ENVIRON["managed_skills_env"], m, "\n")
+        for (i = 1; i <= n; i++) if (m[i] != "") is_managed[m[i]] = 1
+        b = split(ENVIRON["bundled_plugins_env"], plugins, "\n")
+        for (i = 1; i <= b; i++) {
+            split(plugins[i], cols, "\t")
+            if (cols[2] == "" || cols[2] == "-") continue
+            s = split(cols[2], skills, ",")
+            for (j = 1; j <= s; j++) bundled_by[skills[j]] = cols[1]
+        }
+    }
     /=== Claude Code MCP Servers ===/         { section = "mcp_server"; next }
     /=== Claude Code Plugins ===/             { section = "plugin"; next }
     /=== Claude Code Plugin Marketplaces ===/ { section = "marketplace"; next }
@@ -96,5 +150,9 @@ LC_ALL=C LANG=C audit-packages 2>&1 | awk '
     /^\[/                                     { next }
     /^[[:space:]]/                            { next }
     /^$/                                      { next }
+    section == "marketplace" && $0 == "null"  { next }
+    section == "skill" && ($0 in is_managed)  { print section "\t" $0 "\tchezmoi-managed"; next }
+    section == "skill" && ($0 in bundled_by)  { print section "\t" $0 "\tbundled-by:" bundled_by[$0]; next }
+    section == "skill"                        { print section "\t" $0 "\t-"; next }
     { print section "\t" $0 }
 '
