@@ -14,6 +14,8 @@
 # Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_claude-tooling-guard.tmpl —
 # edit the source template, then `chezmoi apply`.
 set -euo pipefail
+{{- $sourceDir := .chezmoi.sourceDir }}
+{{- $repoRoot := trimSuffix "/home" $sourceDir }}
 
 payload=$(cat)
 
@@ -22,7 +24,7 @@ payload=$(cat)
 # newlines within a field as literal `\t`/`\n`, so splitting on a real tab is safe.
 IFS=$'\t' read -r command session_id <<<"$(jq -r '[(.tool_input.command // ""), (.session_id // "")] | @tsv' <<<"$payload")"
 
-pattern='\.claude[A-Za-z0-9_-]*/settings\.json|\.claude[A-Za-z0-9_-]*/\.claude\.json|\.chezmoidata/packages\.yaml|dot_claude(-[A-Za-z0-9_-]+)?/'
+pattern='\.claude[A-Za-z0-9_-]*/(settings\.json|\.claude\.json|plugins/|skills/|CLAUDE\.md)|\.chezmoidata/packages\.yaml|dot_claude(-[A-Za-z0-9_-]+)?/'
 [[ -z "$command" || ! "$command" =~ $pattern ]] && exit 0
 
 # Skip if already delivered this session. Checked before the heredoc load, so a
@@ -45,9 +47,9 @@ rule_file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/rules/claude-tooling.md"
 # to actually land in the model's context. Emit both: additionalContext so Claude
 # reliably sees it, systemMessage so it's visible in the transcript too. Message is
 # kept short and self-contained (no heredoc needed) — see header comment for why.
-jq -n -r --arg rule_file "$rule_file" '
+jq -n -r --arg rule_file "$rule_file" --arg repo_root "{{ $repoRoot }}" --arg packages_yaml "{{ $sourceDir }}/.chezmoidata/packages.yaml" '
   (
-    "This command touches Claude Code skill/MCP/plugin config that this machine'\''s chezmoi dotfiles repo manages — skills, MCP servers, and plugins are declared in packages.yaml, so local disables (e.g. /mcp disable, skillOverrides) drift from that declared state and get silently overwritten on the next chezmoi apply. The rules file also explains when the correct action is editing packages.yaml rather than a local disable at all. Without reading it first you may propose the wrong fix. Read " + $rule_file + " now (via the Read tool) before proceeding, if you have not already loaded it this session. This is required, not optional; do not proceed until it has been read."
+    "This command touches Claude Code skill/MCP/plugin config that the chezmoi dotfiles repo at " + $repo_root + " manages — MCP servers, plugins, and externally-fetched skills are declared in " + $packages_yaml + "; native skills aren'\''t, their enable/disable baseline lives in each persona'\''s modify_settings.json.tmpl instead. Either way, local disables (e.g. /mcp disable, skillOverrides) drift from the declared baseline and get silently overwritten or reasserted on the next chezmoi apply. Without reading the rules file first you may propose the wrong fix. Read " + $rule_file + " now (via the Read tool) before proceeding, if you have not already loaded it this session. This is required, not optional; do not proceed until it has been read."
   ) as $message
   | {
       hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", additionalContext: $message },
