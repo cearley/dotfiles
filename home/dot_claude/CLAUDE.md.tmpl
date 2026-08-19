@@ -32,6 +32,7 @@ When executing a named skill workflow, mandatory steps must not be silently skip
 
 ## Environment Notes
 - Background subagents (via Agent tool) cannot respond to interactive permission prompts — Bash commands already approved in settings.json work fine, but unapproved commands are silently denied. For shell tasks not yet pre-approved, use foreground agents instead.
+- When forking or dispatching agents for tasks touching Claude Code tooling config (`$CLAUDE_CONFIG_DIR/settings.json`, `.claude.json`, `packages.yaml`, skills, plugins, MCP servers): read `$CLAUDE_CONFIG_DIR/rules/claude-tooling.md` yourself first, then include its key constraints in the fork prompt. Hooks fire in subagents but compliance is not guaranteed — the coordinator is responsible for pre-briefing forks.
 {{- if $claudeEnvs }}
 - This machine runs multiple named Claude Code profiles ("personas"), each with its own `CLAUDE_CONFIG_DIR`. This file and `skills/` are symlinked from `~/.claude/skills/` into every persona, but `settings.json`, `.claude.json`, `plugins/`, and session history (`projects/`) are separate per persona. Before diagnosing installation health, editing settings/plugins, or reasoning about skill/MCP usage (e.g. `/doctor`), confirm which persona this session is actually running under — don't assume it matches the shell's default or the current working directory:
   ```bash

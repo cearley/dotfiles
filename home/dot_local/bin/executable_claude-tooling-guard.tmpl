@@ -1,14 +1,15 @@
 #!/bin/bash
-# claude-tooling-guard — PreToolUse hook (Bash matcher). Injects claude-tooling
-# guidance into model context (via additionalContext) when a command edits Claude
-# Code skill/MCP/plugin config via shell (jq/mv/sed/etc.), bypassing the
-# path-frontmatter auto-load that normally triggers claude-tooling.md for
-# Read/Edit/Write. Inline injection beats a "go read X" pointer, which is easy to
-# rationalize past mid-task.
-# Guidance text is baked in at render time from the same claude-tooling-guidance
-# partial that dot_claude/rules/claude-tooling.md.tmpl includes — edit the partial,
-# not either generated copy. Never blocks; only state touched is a per-session
-# marker file that dedupes repeat delivery.
+# claude-tooling-guard — PreToolUse hook (Bash matcher). Points the model at
+# claude-tooling.md when a Bash command edits Claude Code skill/MCP/plugin
+# config (jq/mv/sed/etc.), bypassing the path-frontmatter auto-load that
+# normally triggers that rule for Read/Edit/Write.
+#
+# Emits a short pointer rather than inlining the full guidance: large
+# PreToolUse additionalContext/systemMessage payloads get truncated to a
+# preview with the rest saved to a file, and a model that reads only the
+# preview can silently miss it. Guidance content lives solely in
+# dot_claude/rules/claude-tooling.md.tmpl — edit that, not this script.
+# Never blocks; a per-session marker file dedupes repeat delivery.
 #
 # Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_claude-tooling-guard.tmpl —
 # edit the source template, then `chezmoi apply`.
@@ -25,8 +26,8 @@ pattern='\.claude[A-Za-z0-9_-]*/settings\.json|\.claude[A-Za-z0-9_-]*/\.claude\.
 [[ -z "$command" || ! "$command" =~ $pattern ]] && exit 0
 
 # Skip if already delivered this session. Checked before the heredoc load, so a
-# repeat match is as cheap as a non-match. Fail open on marker errors — never block
-# the tool call over a tmpfile issue.
+# repeat match is as cheap as a non-match. Fail open on marker errors — never
+# block the tool call over a tmpfile issue.
 if [ -n "$session_id" ]; then
   marker_dir="${TMPDIR:-/tmp}/claude-tooling-guard"
   marker_file="$marker_dir/$session_id"
@@ -36,24 +37,17 @@ if [ -n "$session_id" ]; then
   touch "$marker_file" 2>/dev/null || true
 fi
 
-# Quoted heredoc delimiter blocks shell expansion, so backticks in the guidance text
-# pass through literally. Read via `read -d ''`, not `$(cat <<'EOF' ...)` — macOS's
-# /bin/bash (3.2.57, frozen since 2007) mishandles a quoted heredoc nested in a
-# $(...) substitution and executes backtick code-spans as commands. Reached only on
-# a real match, so the ~9KB guidance text loads only when needed.
-IFS= read -r -d '' guard_rules_content <<'CLAUDE_TOOLING_GUIDANCE_EOF' || true
-{{ includeTemplate "claude-tooling-guidance" . }}
-CLAUDE_TOOLING_GUIDANCE_EOF
+rule_file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/rules/claude-tooling.md"
 
 # systemMessage alone is not confirmed to reach model context on PreToolUse hooks
 # (only confirmed to render in the terminal UI, collapsed). additionalContext inside
 # hookSpecificOutput is the field verified — by direct test, not just a bug report —
 # to actually land in the model's context. Emit both: additionalContext so Claude
-# reliably sees it, systemMessage so it's visible in the transcript too.
-jq -n -r --arg rules "$guard_rules_content" '
+# reliably sees it, systemMessage so it's visible in the transcript too. Message is
+# kept short and self-contained (no heredoc needed) — see header comment for why.
+jq -n -r --arg rule_file "$rule_file" '
   (
-    "This command touches Claude Code skill/MCP/plugin config that this machine'\''s chezmoi dotfiles repo manages. Before editing settings.json/.claude.json skillOverrides, disabledMcpServers, or enabledPlugins directly: check whether the target is DECLARED in {{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml (packages.darwin.ai.agents.claude_code) — if so, edit that declaration instead, since a local override only drifts from the declared state without undoing it.\n\n"
-    + "<system-reminder>\n" + $rules + "\n</system-reminder>"
+    "This command touches Claude Code skill/MCP/plugin config that this machine'\''s chezmoi dotfiles repo manages — skills, MCP servers, and plugins are declared in packages.yaml, so local disables (e.g. /mcp disable, skillOverrides) drift from that declared state and get silently overwritten on the next chezmoi apply. The rules file also explains when the correct action is editing packages.yaml rather than a local disable at all. Without reading it first you may propose the wrong fix. Read " + $rule_file + " now (via the Read tool) before proceeding, if you have not already loaded it this session. This is required, not optional; do not proceed until it has been read."
   ) as $message
   | {
       hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", additionalContext: $message },
