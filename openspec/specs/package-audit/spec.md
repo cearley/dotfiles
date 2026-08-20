@@ -6,39 +6,30 @@ The package audit system provides an on-demand, read-only report of packages tha
 ## Requirements
 
 ### Requirement: On-Demand Audit Script Location
-The system SHALL provide an on-demand audit script at `home/scripts/audit-packages.sh` that the user invokes manually to discover installed-but-not-declared packages.
+The system SHALL provide an on-demand audit script, chezmoi-templated and deployed directly to a PATH-resident directory, that the user invokes manually by short name to discover installed-but-not-declared packages.
 
-#### Scenario: Script lives under home/scripts/
+#### Scenario: Script source lives under home/dot_local/bin/
 - **WHEN** the user inspects the repository
-- **THEN** an executable file SHALL exist at `home/scripts/audit-packages.sh`
-- **AND** it SHALL source `home/scripts/shared-utils.sh` for `print_message`, `command_exists`, and `require_tools`
+- **THEN** a chezmoi-templated executable SHALL exist at `home/dot_local/bin/executable_audit-packages.tmpl`
+- **AND** it SHALL source `{{ .chezmoi.sourceDir }}/scripts/shared-utils.sh` for `print_message`, `command_exists`, and `require_tools`
 
 #### Scenario: Script is not run by chezmoi apply
 - **WHEN** the user runs `chezmoi apply`
 - **THEN** the audit script SHALL NOT execute automatically
 - **AND** running `chezmoi apply` SHALL produce no audit output
 
-### Requirement: PATH-Accessible Invocation Shortcut
-The system SHALL install a symlink to the audit script under a PATH-resident directory so that the user can invoke it by short name from any working directory.
+### Requirement: PATH-Accessible Invocation
+The system SHALL deploy the audit script directly to a PATH-resident directory so that the user can invoke it by short name from any working directory.
 
-#### Scenario: Symlink source file uses chezmoi convention
-- **WHEN** the user inspects the source repository
-- **THEN** a file SHALL exist at `home/dot_local/bin/symlink_audit-packages.tmpl`
-- **AND** its body SHALL resolve to the absolute path of `home/scripts/audit-packages.sh` under `{{ .chezmoi.sourceDir }}`
-
-#### Scenario: Symlink created on apply
+#### Scenario: Script rendered on apply
 - **WHEN** the user runs `chezmoi apply`
-- **THEN** a symlink SHALL exist at `~/.local/bin/audit-packages` pointing at the source script
+- **THEN** an executable file SHALL exist at `~/.local/bin/audit-packages`, rendered from `home/dot_local/bin/executable_audit-packages.tmpl`
 
 #### Scenario: Short-name invocation
 - **WHEN** `~/.local/bin` is on the user's PATH
 - **AND** the user runs `audit-packages` from any working directory
 - **THEN** the audit script SHALL execute the same as if invoked by its full path
 - **AND** `audit-packages --help` SHALL print the usage message
-
-#### Scenario: Symlink target tracks source location
-- **WHEN** the user inspects the symlink with `readlink ~/.local/bin/audit-packages`
-- **THEN** the readlink output SHALL point inside the chezmoi source directory at `home/scripts/audit-packages.sh`
 
 ### Requirement: Active-Tag-Aware Declared Set
 The audit SHALL compute the "declared" set of packages using only the chezmoi tags that are active on the invoking machine.
