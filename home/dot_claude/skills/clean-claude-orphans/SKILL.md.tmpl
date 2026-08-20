@@ -21,6 +21,11 @@ against `{{ .chezmoi.sourceDir -}}/.chezmoidata/packages.yaml`, starting from
 
 Use the `chezmoi` skill to add a DECLARE item back into `packages.yaml`.
 
+This covers installed-but-undeclared drift only. For the mirror-image direction —
+declared-but-locally-suppressed `skillOverrides`/`enabledPlugins` entries — run
+`check-claude-overrides` instead (see `claude-tooling.md`'s "Checking for Override Drift"
+section).
+
 ## Step 1: Gather orphans and environment context
 
 ```bash

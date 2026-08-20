@@ -70,37 +70,30 @@ directly to apply the same logic by hand.
 ## Checking for Override Drift (the mirror-image case)
 
 `clean-claude-orphans` handles installed-but-undeclared drift. This is the opposite
-direction — **declared-but-locally-suppressed** — and no skill currently automates it, so
-follow this manually whenever auditing tooling health (`/doctor`-style checks) or when a
-skill/plugin isn't behaving despite being installed and declared.
+direction — **declared-but-locally-suppressed**. Run `check-claude-overrides` to detect it,
+whenever auditing tooling health (`/doctor`-style checks) or when a skill/plugin isn't
+behaving despite being installed and declared — it checks every persona's live
+`settings.json` against that persona's own `modify_settings.json.tmpl` baseline (the
+`$extra`/`claudeExtraSettings` dict, if any, passed to
+`includeTemplate "claude-settings-hooks-modifier"`) and flags:
 
-For every `.claude*/settings.json` on the machine (the `**/.claude*/settings.json` glob this
-file's frontmatter already watches):
+- `skillOverrides.<skill>: "off"` for a **native** skill (listed under
+  `{{ $sourceDir }}/dot_claude/skills/`) the baseline doesn't explain — someone toggled it
+  off ad hoc with `/skill` in a session and it was never captured in source.
+- `enabledPlugins.<id>: false` for a plugin that's in `packages.yaml`'s `claude_code.plugins`
+  list (meaning chezmoi intends it enabled) the baseline doesn't explain — same ad hoc drift,
+  opposite direction.
 
-1. Read its `skillOverrides` and `enabledPlugins` dicts.
-2. Read that persona's own `modify_settings.json.tmpl` to get its *intended* baseline — the
-   `$extra`/`claudeExtraSettings` dict, if any, passed to
-   `includeTemplate "claude-settings-hooks-modifier"`. For named personas that's
-   `{{ $sourceDir }}/dot_claude-<name>/modify_settings.json.tmpl`. The unnamed default persona
-   has no `dot_claude-<name>/` directory, but it is still fully managed: `dot_claude/` (no
-   suffix) *is* its directory — rules, skills, `CLAUDE.md.tmpl`, and its own
-   `modify_settings.json.tmpl` all live there directly, and it's the same directory every named
-   persona's skills/rules/CLAUDE.md are symlinked from (see "Personas Share Skills, Rules, and
-   CLAUDE.md via Symlink" below). As of this writing, `dot_claude-personal` and
-   `dot_claude-bedrock` declare an `$extra`; the unnamed default and `dot_claude-work` call the
-   partial with no `$extra` (empty baseline).
-3. Flag any entry the baseline doesn't explain:
-   - `skillOverrides.<skill>: "off"` for a **native** skill (listed under
-     `{{ $sourceDir }}/dot_claude/skills/`) — someone toggled it off ad hoc with `/skill` in a
-     session and it was never captured in source.
-   - `enabledPlugins.<id>: false` for a plugin that's in `packages.yaml`'s `claude_code.plugins`
-     list (meaning chezmoi intends it enabled) — same ad hoc drift, opposite direction.
-4. Resolve by asking the user which way it should go, then edit the *source*, never the live
-   file directly as the fix (same principle as the CLAUDE.md/skill-editing rule below):
-   - **Keep the override** → add it to that persona's `modify_settings.json.tmpl` `$extra` dict
-     so it's version-controlled and survives reprovisioning.
-   - **Drop the override** → remove the key via the equivalent `/skill` or `/plugin` command (or
-     edit the live `settings.json` directly), since nothing in chezmoi asked for it.
+Resolve each flagged entry by asking the user which way it should go:
+
+- **Keep the override** → run `check-claude-overrides --fix <persona>
+  <skillOverrides|enabledPlugins> <key>`. It reads the live value straight from
+  `settings.json`, writes it into that persona's `modify_settings.json.tmpl` `$extra` dict,
+  and verifies the write (via a re-render) before the tracked file is ever touched — never
+  hand-edit the dict for this.
+- **Drop the override** → remove the key via the equivalent `/skill` or `/plugin` command (or
+  edit the live `settings.json` directly), since nothing in chezmoi asked for it. This
+  direction stays manual — `check-claude-overrides` never modifies a live `settings.json`.
 
 ## Personas Share Skills, Rules, and CLAUDE.md via Symlink
 

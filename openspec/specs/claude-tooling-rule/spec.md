@@ -34,7 +34,7 @@ The rule SHALL declare a `paths:` frontmatter field so it loads only when Claude
 - **THEN** Claude Code SHALL NOT auto-load `claude-tooling.md` on account of that read/edit alone
 
 ### Requirement: Content Coverage
-The rule's content SHALL cover: the distinction between native (repo-authored) and external (`packages.yaml`-declared) skills; where MCP servers and plugins are declared and installed; the requirement to cross-check `packages.yaml` before disabling, removing, or overriding any declared skill, MCP server, or plugin; the persona symlink-sharing model for skills, rules, and `CLAUDE.md`; and the distinction between the chezmoi-managed global skill set and the separate, not-chezmoi-managed `chezmoi-personal` plugin marketplace.
+The rule's content SHALL cover: the distinction between native (repo-authored) and external (`packages.yaml`-declared) skills; where MCP servers and plugins are declared and installed; the requirement to cross-check `packages.yaml` before disabling, removing, or overriding any declared skill, MCP server, or plugin; the persona symlink-sharing model for skills, rules, and `CLAUDE.md`; the distinction between the chezmoi-managed global skill set and the separate, not-chezmoi-managed `chezmoi-personal` plugin marketplace; and how to detect `skillOverrides`/`enabledPlugins` entries that silently diverge from a persona's chezmoi-managed baseline.
 
 #### Scenario: Cross-check guidance present
 - **WHEN** the rule is loaded
@@ -43,6 +43,16 @@ The rule's content SHALL cover: the distinction between native (repo-authored) a
 #### Scenario: Persona sharing model documented
 - **WHEN** the rule is loaded
 - **THEN** it SHALL state which persona-level entries are shared via symlink (`skills/`, `rules/`, `CLAUDE.md`) versus which are per-persona (`settings.json`, `.claude.json`, `plugins/`, `projects/`)
+
+#### Scenario: Override-drift script pointer present
+- **WHEN** the rule is loaded
+- **THEN** its override-drift guidance SHALL direct the reader to run `check-claude-overrides` to detect unexplained `skillOverrides`/`enabledPlugins` entries, rather than describing a fully manual per-file comparison
+
+#### Scenario: Fix-mode pointer present for the keep resolution
+- **WHEN** the rule is loaded
+- **AND** the resolve guidance covers the "keep the override" direction
+- **THEN** it SHALL direct the reader to `check-claude-overrides --fix <persona> <kind> <key>` instead of describing a fully manual template edit
+- **AND** it SHALL state that the "drop the override" direction remains a manual `/skill`/`/plugin` command, unchanged
 
 ### Requirement: Path References Use sourceDir Variable
 Any reference to the chezmoi source directory within the rule's rendered content SHALL use `{{ .chezmoi.sourceDir }}` rather than a hardcoded path, consistent with the convention already applied in `home/dot_claude/CLAUDE.md.tmpl`.

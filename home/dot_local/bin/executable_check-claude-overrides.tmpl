@@ -1,0 +1,251 @@
+#!/bin/bash
+# check-claude-overrides — Detect Claude Code skillOverrides/enabledPlugins entries that
+# silently diverge from a persona's chezmoi-managed baseline (modify_settings.json.tmpl's
+# $extra dict) — the mirror-image direction of the installed-but-undeclared drift that
+# audit-packages/clean-claude-orphans already cover. Read-only by default; --fix codifies a
+# single confirmed "keep" resolution directly into the target persona's source template.
+#
+# Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_check-claude-overrides.tmpl —
+# edit the source template, then `chezmoi apply`. The persona list and every chezmoi-source
+# path below are baked in at render time from this machine's claude_envs config and
+# .chezmoi.sourceDir — never hardcoded, never rediscovered at runtime.
+#
+# Usage: check-claude-overrides [--help]
+#        check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins> <key>
+set -euo pipefail
+{{- $sourceDir := .chezmoi.sourceDir }}
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+
+PACKAGES_YAML="{{ $sourceDir }}/.chezmoidata/packages.yaml"
+NATIVE_SKILLS_DIR="{{ $sourceDir }}/dot_claude/skills"
+
+# Parallel arrays, one entry per checked persona: name / live config dir / source template.
+# The unnamed default is always first; named personas come from this machine's claude_envs,
+# baked in here at chezmoi-apply time rather than rediscovered at runtime.
+PERSONA_NAMES=("default"{{ range $claudeEnvs }} "{{ trimPrefix "~/.claude-" . }}"{{ end }})
+PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
+PERSONA_TEMPLATES=("{{ $sourceDir }}/dot_claude/modify_settings.json.tmpl"{{ range $claudeEnvs }} "{{ $sourceDir }}/dot_claude-{{ trimPrefix "~/.claude-" . }}/modify_settings.json.tmpl"{{ end }})
+
+print_usage() {
+    cat <<'EOF'
+Usage: check-claude-overrides [--help]
+       check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins> <key>
+
+Detects Claude Code skillOverrides/enabledPlugins entries in any ~/.claude* persona's
+settings.json that silently diverge from that persona's chezmoi-managed baseline
+(modify_settings.json.tmpl's $extra dict) — i.e. an override with no source-of-truth record.
+
+Without --fix: read-only. Prints a "## drift" section (persona<TAB>kind<TAB>key<TAB>value),
+one line per unexplained entry; empty if none found.
+
+With --fix <persona> <kind> <key>: codifies the "keep the override" resolution by writing
+the live value into the target persona's modify_settings.json.tmpl, after re-confirming the
+entry is currently flagged. The value is always read from the live settings.json, never
+typed. Verifies via a re-render before touching the real file. Dropping an override instead
+remains the existing manual /skill or /plugin command — see claude-tooling.md's "Checking
+for Override Drift" section for the full resolve workflow.
+EOF
+}
+
+require_cmd() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        echo "error: $1 is required but not found on PATH" >&2
+        exit 1
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Baseline extraction: render a persona's modify_settings.json.tmpl and extract the
+# extra_settings='...' JSON literal claude-settings-hooks-modifier already computes — never
+# hand-parse the source template's Go dict(...) syntax. Done at runtime, on every
+# invocation, since the template's content (unlike the persona list above) can change
+# without a chezmoi apply having run yet.
+# ---------------------------------------------------------------------------
+render_baseline() {
+    local template_path="$1"
+    local rendered json_line
+    rendered="$(chezmoi execute-template < "$template_path" 2>/dev/null)" || return 1
+    json_line="$(printf '%s\n' "$rendered" | grep -m1 "^extra_settings='" || true)"
+    [[ -n "$json_line" ]] || return 1
+    json_line="${json_line#extra_settings=\'}"
+    json_line="${json_line%\'}"
+    jq -e '.' <<<"$json_line" >/dev/null 2>&1 || return 1
+    echo "$json_line"
+}
+
+# ---------------------------------------------------------------------------
+# Reference data: native skills and packages.yaml-declared plugins
+# ---------------------------------------------------------------------------
+native_skills() {
+    [[ -d "$NATIVE_SKILLS_DIR" ]] || return 0
+    for dir in "$NATIVE_SKILLS_DIR"/*/; do
+        [[ -e "$dir" ]] || continue
+        basename "$dir"
+    done
+}
+
+declared_plugins() {
+    yq '.packages.darwin.ai.agents.claude_code.plugins[]?' "$PACKAGES_YAML" 2>/dev/null || true
+}
+
+# ---------------------------------------------------------------------------
+# Drift detection for one persona: prints persona\tkind\tkey\tvalue lines to stdout
+# ---------------------------------------------------------------------------
+detect_persona_drift() {
+    local name="$1" template_path="$2" config_dir="$3"
+    local settings_file baseline_json
+
+    if [[ ! -f "$template_path" ]]; then
+        echo "skip: ${name} — no modify_settings.json.tmpl at ${template_path}" >&2
+        return 0
+    fi
+
+    if ! baseline_json="$(render_baseline "$template_path")"; then
+        echo "skip: ${name} — could not render/extract baseline from ${template_path}" >&2
+        return 0
+    fi
+
+    settings_file="${config_dir}/settings.json"
+    [[ -f "$settings_file" ]] || return 0
+
+    while IFS= read -r skill; do
+        [[ -z "$skill" ]] && continue
+        if jq -e --arg s "$skill" '.skillOverrides[$s]? == "off"' "$settings_file" >/dev/null 2>&1 \
+            && ! jq -e --arg s "$skill" '.skillOverrides[$s]? == "off"' <<<"$baseline_json" >/dev/null 2>&1; then
+            printf '%s\tskillOverrides\t%s\toff\n' "$name" "$skill"
+        fi
+    done < <(native_skills)
+
+    while IFS= read -r plugin; do
+        [[ -z "$plugin" ]] && continue
+        if jq -e --arg p "$plugin" '.enabledPlugins[$p]? == false' "$settings_file" >/dev/null 2>&1 \
+            && ! jq -e --arg p "$plugin" '.enabledPlugins[$p]? == false' <<<"$baseline_json" >/dev/null 2>&1; then
+            printf '%s\tenabledPlugins\t%s\tfalse\n' "$name" "$plugin"
+        fi
+    done < <(declared_plugins)
+}
+
+detect_all_drift() {
+    local i
+    for ((i = 0; i < ${#PERSONA_NAMES[@]}; i++)); do
+        detect_persona_drift "${PERSONA_NAMES[$i]}" "${PERSONA_TEMPLATES[$i]}" "${PERSONA_DIRS[$i]}"
+    done
+}
+
+# ---------------------------------------------------------------------------
+# --fix mode: codify a single, currently-flagged "keep" resolution into the target
+# persona's source template. See design.md - Decisions for the full rationale.
+# ---------------------------------------------------------------------------
+run_fix() {
+    local persona="$1" kind="$2" key="$3"
+
+    if [[ "$kind" != "skillOverrides" && "$kind" != "enabledPlugins" ]]; then
+        echo "error: kind must be skillOverrides or enabledPlugins" >&2
+        exit 1
+    fi
+
+    local template_path="" config_dir="" i
+    for ((i = 0; i < ${#PERSONA_NAMES[@]}; i++)); do
+        if [[ "${PERSONA_NAMES[$i]}" == "$persona" ]]; then
+            template_path="${PERSONA_TEMPLATES[$i]}"
+            config_dir="${PERSONA_DIRS[$i]}"
+            break
+        fi
+    done
+    if [[ -z "$template_path" ]]; then
+        echo "error: unknown persona '${persona}' (not the default, not in this machine's claude_envs)" >&2
+        exit 1
+    fi
+
+    local flagged
+    flagged="$(detect_persona_drift "$persona" "$template_path" "$config_dir" 2>/dev/null | awk -F'\t' -v k="$kind" -v key="$key" '$2==k && $3==key {print; exit}')"
+    if [[ -z "$flagged" ]]; then
+        echo "error: ${persona} ${kind}.${key} is not currently flagged as drift — nothing to fix" >&2
+        exit 1
+    fi
+
+    local settings_file="${config_dir}/settings.json"
+    local live_value
+    live_value="$(jq -r --arg k "$key" ".${kind}[\$k]" "$settings_file")"
+
+    local anchor_pattern="\"${kind}\" (dict"
+    if ! grep -qF "$anchor_pattern" "$template_path"; then
+        echo "error: ${template_path} has no '${kind}' sub-dict to insert into — add it manually once, then re-run --fix" >&2
+        exit 1
+    fi
+
+    local value_literal
+    if [[ "$live_value" == "true" || "$live_value" == "false" ]]; then
+        value_literal="$live_value"
+    else
+        value_literal="\"${live_value}\""
+    fi
+
+    local tmp_file
+    tmp_file="$(mktemp)"
+
+    awk -v anchor="$anchor_pattern" -v key="$key" -v val="$value_literal" '
+        {
+            print
+            if (!inserted && index($0, anchor) > 0) {
+                match($0, /^[ \t]*/)
+                indent = substr($0, RSTART, RLENGTH) "  "
+                printf "%s\"%s\" %s\n", indent, key, val
+                inserted = 1
+            }
+        }
+    ' "$template_path" > "$tmp_file"
+
+    # Preserve the original file's trailing-newline state — awk's print always terminates
+    # the last line, even when the source file didn't, which would otherwise show up as a
+    # spurious whitespace-only diff line alongside the real insertion.
+    if [[ -n "$(tail -c1 "$template_path")" ]]; then
+        printf '%s' "$(cat "$tmp_file")" > "${tmp_file}.trimmed"
+        mv "${tmp_file}.trimmed" "$tmp_file"
+    fi
+
+    local rendered_json
+    if ! rendered_json="$(render_baseline "$tmp_file")"; then
+        rm -f "$tmp_file"
+        echo "error: verification failed — rendered template did not produce valid baseline JSON; ${template_path} left unchanged" >&2
+        exit 1
+    fi
+
+    local check_value
+    check_value="$(jq -r --arg k "$key" ".${kind}[\$k]" <<<"$rendered_json")"
+    if [[ "$check_value" != "$live_value" ]]; then
+        rm -f "$tmp_file"
+        echo "error: verification failed — expected ${kind}.${key}=${live_value}, got '${check_value}'; ${template_path} left unchanged" >&2
+        exit 1
+    fi
+
+    cp "$tmp_file" "$template_path"
+    rm -f "$tmp_file"
+    echo "fixed: ${persona} ${kind}.${key} = ${live_value} written to ${template_path}"
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+    print_usage
+    exit 0
+fi
+
+require_cmd chezmoi
+require_cmd jq
+require_cmd yq
+
+if [[ "${1:-}" == "--fix" ]]; then
+    shift
+    if [[ $# -ne 3 ]]; then
+        echo "error: --fix requires exactly 3 arguments: <persona> <skillOverrides|enabledPlugins> <key>" >&2
+        exit 1
+    fi
+    run_fix "$1" "$2" "$3"
+    exit 0
+fi
+
+echo "## drift"
+detect_all_drift
