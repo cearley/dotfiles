@@ -19,6 +19,9 @@
 #   EOF
 #
 # If no env file exists for a server the command runs with no additional variables set.
+#
+# Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_mcp-env-wrapper.tmpl —
+# edit the source template, then `chezmoi apply`.
 server_name="$1"; shift
 [ -f "$HOME/.config/mcp-env/${server_name}.env" ] && source "$HOME/.config/mcp-env/${server_name}.env"
 exec "$@"
