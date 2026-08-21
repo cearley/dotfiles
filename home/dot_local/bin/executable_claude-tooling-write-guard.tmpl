@@ -10,13 +10,15 @@
 #
 # Tiers:
 #   - Managed: file is templated/merged from a tracked source — a direct edit gets
-#     silently reverted or reasserted on the next `chezmoi apply`. Point at `source-path`.
+#     silently reverted or reasserted on the next `chezmoi apply`, so proceeding is never
+#     useful. permissionDecision "deny" — the reason is returned to the model as a
+#     blocking tool error, not just an interactive prompt a classifier or background
+#     subagent can wave through unread. Point at `source-path`.
 #   - Not managed, but under plugins/ or skills/: installed/fetched per a packages.yaml
 #     declaration — won't be reverted, but drifts from what a fresh install would
-#     produce. Point at packages.yaml.
+#     produce, and a local toggle is sometimes a deliberate choice. permissionDecision
+#     "ask". Point at packages.yaml.
 #   - Neither: out of scope, exit clean.
-#
-# permissionDecision is "ask" for now — a trial period before switching to "deny".
 #
 # Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_claude-tooling-write-guard.tmpl —
 # edit the source template, then `chezmoi apply`.
@@ -41,9 +43,30 @@ emit_ask() {
   }'
 }
 
+emit_deny() {
+  jq -n --arg reason "$1" '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "deny",
+      permissionDecisionReason: $reason
+    }
+  }'
+}
+
+# Dispatches a "TIER|message" string (see check_path) to emit_deny/emit_ask.
+emit_by_tier() {
+  local tagged="$1" tier="${1%%|*}"
+  if [[ "$tier" == "DENY" ]]; then
+    emit_deny "${tagged#DENY|}"
+  else
+    emit_ask "${tagged#ASK|}"
+  fi
+}
+
 # Tiered guard advice for one deployed-target path (resolving persona symlinks first).
-# Prints a reason if in scope; otherwise prints nothing and always returns 0, so a bare
-# `reason=$(check_path ...)` never trips `set -e`.
+# Prints "DENY|<message>" or "ASK|<message>" if in scope (see emit_by_tier); otherwise
+# prints nothing and always returns 0, so a bare `reason=$(check_path ...)` never trips
+# `set -e`.
 check_path() {
   local file_path="$1" tool="$2"
   [[ "$file_path" =~ /\.claude[A-Za-z0-9_-]*/ ]] || return 0
@@ -60,30 +83,84 @@ check_path() {
     source_path=$(chezmoi source-path "$resolved_path" 2>/dev/null) || source_path="(run: chezmoi source-path \"$resolved_path\")"
     if [[ "$resolved_path" == *settings.json ]]; then
       if [[ "$tool" == "Write" ]]; then
-        echo "This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit ${source_path}'s \$extra dict instead, then chezmoi apply."
+        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit ${source_path}'s \$extra dict instead, then chezmoi apply."
       else
         local old_new
         old_new=$(jq -r '(.tool_input.old_string // "") + "\n" + (.tool_input.new_string // "")' <<<"$payload" 2>/dev/null) || old_new=""
         if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions)"' <<<"$old_new"; then
-          echo "skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions in settings.json are chezmoi-managed baseline keys, not local toggles. Edit ${source_path}'s \$extra dict instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
+          echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions in settings.json are chezmoi-managed baseline keys, not local toggles. Edit ${source_path}'s \$extra dict instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
         fi
       fi
     else
-      echo "This file is chezmoi-managed (tracked from ${source_path}). Editing the deployed copy directly gets silently overwritten or reasserted on the next chezmoi apply — edit the source instead."
+      echo "DENY|This file is chezmoi-managed (tracked from ${source_path}). Editing the deployed copy directly gets silently overwritten or reasserted on the next chezmoi apply — edit the source instead."
     fi
   elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*)/plugins/ ]]; then
     local claude_dir="${BASH_REMATCH[1]}"
-    echo "This file isn't itself chezmoi-tracked, but ${claude_dir}/plugins/ is populated by 'claude plugins install' per the plugin_marketplaces/plugins lists in {{ $sourceDir }}/.chezmoidata/packages.yaml. A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
+    echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/plugins/ is populated by 'claude plugins install' per the plugin_marketplaces/plugins lists in {{ $sourceDir }}/.chezmoidata/packages.yaml. A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
   elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*/skills/[^/]+)(/.*)?$ ]]; then
     local skill_root="${BASH_REMATCH[1]}" claude_dir skill_managed skill_source
     claude_dir="${skill_root%/skills/*}"
     if skill_managed=$(chezmoi managed --path-style absolute "$skill_root" 2>/dev/null) && [[ -n "$skill_managed" ]]; then
       skill_source=$(chezmoi source-path "$skill_root" 2>/dev/null) || skill_source="(run: chezmoi source-path \"$skill_root\")"
-      echo "This exact file isn't chezmoi-tracked yet, but its skill directory is — a native skill, sourced at ${skill_source}. Add/edit the file there instead of the deployed copy, then chezmoi apply."
+      echo "DENY|This exact file isn't chezmoi-tracked yet, but its skill directory is — a native skill, sourced at ${skill_source}. Add/edit the file there instead of the deployed copy, then chezmoi apply."
     else
-      echo "This file isn't itself chezmoi-tracked, but ${claude_dir}/skills/ is populated from packages.darwin.ai.agents.claude_code.skills in {{ $sourceDir }}/.chezmoidata/packages.yaml (externally-fetched skills land here, unlike native ones which chezmoi tracks directly). A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
+      echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/skills/ is populated from packages.darwin.ai.agents.claude_code.skills in {{ $sourceDir }}/.chezmoidata/packages.yaml (externally-fetched skills land here, unlike native ones which chezmoi tracks directly). A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
     fi
   fi
+  return 0
+}
+
+# Best-effort mutation-target extraction for a Bash command string, scoped to each
+# matched construct's OWN trailing argument(s) — never a global scan of the whole
+# command line. A global scan mistakes a managed path that's only read earlier in the
+# command (e.g. `cat file > /tmp/x`, `cp file /tmp/x` — a plain backup) for the write
+# destination, just because it's the only/last `.claude*/...`-shaped token present.
+extract_bash_target() {
+  local cmd="$1" cand args tok
+
+  # Redirect: >, >> — destination is the token immediately after the operator.
+  if [[ "$cmd" =~ \>{1,2}[[:space:]]*([^[:space:];\&\|]+) ]]; then
+    cand="${BASH_REMATCH[1]}"
+    if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
+      echo "$cand"
+      return 0
+    fi
+  fi
+
+  # mv/cp: destination is the LAST token of that invocation's own argument list
+  # (mv/cp always take the destination last, even with multiple sources).
+  if [[ "$cmd" =~ (^|[;\&\|[:space:]])(mv|cp)[[:space:]]+([^;\&\|]+) ]]; then
+    args="${BASH_REMATCH[3]}"
+    cand="${args##* }"
+    if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
+      echo "$cand"
+      return 0
+    fi
+  fi
+
+  # sed -i: destination is the LAST token of that invocation's own argument list.
+  if [[ "$cmd" =~ (^|[;\&\|[:space:]])sed[[:space:]]+-i[^[:space:]]*[[:space:]]+([^;\&\|]+) ]]; then
+    args="${BASH_REMATCH[2]}"
+    cand="${args##* }"
+    if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
+      echo "$cand"
+      return 0
+    fi
+  fi
+
+  # tee/rm: every non-flag token of that invocation's own argument list is a potential
+  # target (tee can write multiple files; rm can delete multiple).
+  if [[ "$cmd" =~ (^|[;\&\|[:space:]])(tee|rm)[[:space:]]+([^;\&\|]+) ]]; then
+    args="${BASH_REMATCH[3]}"
+    for tok in $args; do
+      [[ "$tok" == -* ]] && continue
+      if [[ "$tok" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
+        echo "$tok"
+        return 0
+      fi
+    done
+  fi
+
   return 0
 }
 
@@ -93,7 +170,7 @@ Edit|Write)
   [[ -z "$file_path" ]] && exit 0
   reason=$(check_path "$file_path" "$tool_name")
   [[ -z "$reason" ]] && exit 0
-  emit_ask "$reason"
+  emit_by_tier "$reason"
   ;;
 Bash)
   command=$(jq -r '.tool_input.command // ""' <<<"$payload")
@@ -103,24 +180,18 @@ Bash)
   broad_pattern='\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/|CLAUDE\.md)'
   [[ "$command" =~ $broad_pattern ]] || exit 0
 
-  # Recognized mutation shapes: redirect, mv/cp/rm, sed -i, tee. Best-effort target: the
-  # last token containing a deployed .claude*/... path, regardless of shell construct
-  # (usually the destination, e.g. `mv tmp ~/.claude/settings.json`).
-  mutation_pattern='(^|[;&|[:space:]])(mv|cp|rm|sed[[:space:]]+-i|tee)[[:space:]]|>{1,2}'
+  target=$(extract_bash_target "$command")
+  # Raw command text, not shell-evaluated — expand ~ and a literal $HOME manually,
+  # since realpath/chezmoi would otherwise see a nonexistent path and call it unmanaged.
+  target="${target/#\~/$HOME}"
+  target="${target//\$HOME/$HOME}"
+  # "Write" semantics: Bash has no old_string/new_string to key-filter against, so
+  # settings.json always takes the blanket "any change is risky" path here.
   reason=""
-  if [[ "$command" =~ $mutation_pattern ]]; then
-    target=$(grep -oE '[^[:space:]]*/\.claude[A-Za-z0-9_-]*/[^[:space:];&|]*' <<<"$command" | tail -1) || true
-    # Raw command text, not shell-evaluated — expand ~ and a literal $HOME manually,
-    # since realpath/chezmoi would otherwise see a nonexistent path and call it unmanaged.
-    target="${target/#\~/$HOME}"
-    target="${target//\$HOME/$HOME}"
-    # "Write" semantics: Bash has no old_string/new_string to key-filter against, so
-    # settings.json always takes the blanket "any change is risky" path here.
-    [[ -n "$target" ]] && reason=$(check_path "$target" "Write")
-  fi
+  [[ -n "$target" ]] && reason=$(check_path "$target" "Write")
 
   if [[ -n "$reason" ]]; then
-    emit_ask "$reason"
+    emit_by_tier "$reason"
     exit 0
   fi
 
