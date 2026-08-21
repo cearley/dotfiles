@@ -1,9 +1,6 @@
 #!/bin/bash
 # run-checks.sh — Minimal, fast health checks against ~/.claude: settings.json validity and
-# hook-script health. Deliberately hardcodes ~/.claude and never consults $CLAUDE_CONFIG_DIR
-# or any persona — this skill exists to shadow the built-in /doctor for cheap, repeated
-# testing, and its naivety about personas is intentional test scaffolding for verifying
-# claude-tooling.md's persona-awareness guidance gets applied in a session. See SKILL.md.
+# hook-script health.
 set -euo pipefail
 
 CLAUDE_DIR="$HOME/.claude"
