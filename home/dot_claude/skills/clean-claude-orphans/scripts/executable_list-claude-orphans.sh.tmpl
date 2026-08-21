@@ -119,11 +119,7 @@ fi
 # print_message emit its ASCII "[INFO]"-style prefixes instead of emoji, so
 # section/noise lines are trivial to filter regardless of the invoking shell's locale.
 # The per-line uninstall hint ("   claude plugins uninstall ...") is indented with
-# leading whitespace; real orphan names never are, so that's also filtered out. The
-# marketplace section's literal "null" line is audit-packages' own artifact for
-# chezmoi-personal (a local-directory source with no repo/url field to report) — never
-# an actual orphan, so it's dropped here instead of left for the model to remember to
-# ignore.
+# leading whitespace; real orphan names never are, so that's also filtered out.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## orphans"
@@ -150,7 +146,6 @@ LC_ALL=C LANG=C audit-packages 2>&1 | managed_skills_env="$chezmoi_managed_skill
     /^\[/                                     { next }
     /^[[:space:]]/                            { next }
     /^$/                                      { next }
-    section == "marketplace" && $0 == "null"  { next }
     section == "skill" && ($0 in is_managed)  { print section "\t" $0 "\tchezmoi-managed"; next }
     section == "skill" && ($0 in bundled_by)  { print section "\t" $0 "\tbundled-by:" bundled_by[$0]; next }
     section == "skill"                        { print section "\t" $0 "\t-"; next }

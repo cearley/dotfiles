@@ -209,6 +209,7 @@ packages:
           - 'aws/agent-toolkit-for-aws'
           - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev'
           - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
+          - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace (chezmoi-personal), deployed under home/dot_local/share/claude-plugins/
           plugins: # Installed via `claude plugins install`
           - 'claude-md-management@claude-plugins-official'
           - 'example-skills@anthropic-agent-skills'

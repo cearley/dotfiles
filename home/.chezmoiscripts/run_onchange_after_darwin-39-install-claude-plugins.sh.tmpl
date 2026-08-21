@@ -25,7 +25,7 @@ declare -a PLUGINS=()
 
 {{- if and (hasKey $claudeCode "plugin_marketplaces") $claudeCode.plugin_marketplaces }}
   {{- range $claudeCode.plugin_marketplaces }}
-MARKETPLACES+=('{{ . }}')
+MARKETPLACES+=("{{ . }}")
   {{- end }}
 {{- end }}
 

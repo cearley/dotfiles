@@ -461,10 +461,11 @@ audit_claude_marketplaces() {
     installed_file=$(mktemp)
     declared_file=$(mktemp)
 
-    # Installed: for github sources → repo field; for git sources → url field
-    # Compare against declared entries (repo strings or URLs, stripping #ref)
+    # Installed: for github sources → repo field; for directory sources → path field
+    # (a chezmoi-managed local marketplace, e.g. chezmoi-personal); for anything else → url field.
+    # Compare against declared entries (repo strings, URLs, or local paths, stripping #ref).
     if claude plugins marketplace list --json 2>/dev/null | \
-        jq -r '.[] | if .source == "github" then .repo else .url end' 2>/dev/null | \
+        jq -r '.[] | if .source == "github" then .repo elif .source == "directory" then .path else .url end' 2>/dev/null | \
         sort > "$installed_file"; then
         : # JSON succeeded
     else
@@ -475,9 +476,14 @@ audit_claude_marketplaces() {
             | sort > "$installed_file"
     fi
 
-    # Declared: strip #ref from URL entries (e.g. "https://...#dev" → "https://...")
+    # Declared: strip #ref from URL entries (e.g. "https://...#dev" → "https://...");
+    # expand a literal "$HOME" in a declared local path (e.g. chezmoi-personal's
+    # "$HOME/.local/share/claude-plugins") to match the absolute path `claude` reports —
+    # packages.yaml is static data, so this can't be a chezmoi/Go-template expansion, only
+    # a real shell one, done here at actual invocation time.
     declared_for_agent "claude_code" "plugin_marketplaces" \
         | sed 's/#[^#]*$//' \
+        | sed "s|\$HOME|$HOME|" \
         | sort > "$declared_file"
 
     report_orphans "Claude Code Plugin Marketplaces" "$installed_file" "$declared_file" "claude plugins marketplace remove" "per_line"

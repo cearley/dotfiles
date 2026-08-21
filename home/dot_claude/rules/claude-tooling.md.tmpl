@@ -137,11 +137,14 @@ Drift" above for how to find and resolve these.
 
 - **`{{ $sourceDir }}/dot_claude/skills/` + `packages.yaml`** (this file's subject): global,
   always-on, identical across every persona and project on this machine.
-- **The `chezmoi-personal` marketplace** (`{{ $repoRoot }}/.claude-plugin/marketplace.json` +
-  `{{ $repoRoot }}/plugins/`): a **separate, deliberately not-chezmoi-managed** catalog for
-  convenient per-project opt-in/opt-out (`/plugin marketplace add`, then `/plugin install`) —
-  registered once via
-  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-44-register-claude-plugin-marketplace.sh.tmpl`,
-  but which plugins are actually *installed* into a given project is a per-project decision, not
-  a machine-wide one. Don't add something here just because it's useful somewhere — that's what
+- **The `chezmoi-personal` marketplace** (`{{ $sourceDir }}/dot_local/share/claude-plugins/`,
+  deployed by `chezmoi apply` to `~/.local/share/claude-plugins`): chezmoi-managed like any
+  other `home/` content — its path is declared as a plain entry in `packages.yaml`'s
+  `plugin_marketplaces` list and registered by the same generic
+  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`
+  every other declared marketplace goes through (no dedicated script). What makes it
+  different from the bullet above isn't its registration mechanism — it's that declaring the
+  marketplace only makes its plugins *installable*; which plugins are actually enabled for a
+  given project stays a deliberate, per-project decision (`/plugin install`), not a
+  machine-wide one. Don't add something here just because it's useful somewhere — that's what
   the marketplace is for.

@@ -2,8 +2,8 @@
   "name": "chezmoi-personal",
   "description": "Personal catalog of MCP servers, skills, and plugins for per-project opt-in install, curated from this dotfiles repo.",
   "owner": {
-    "name": "Craig Earley",
-    "email": "craig@craigearley.software",
+    "name": {{ .fullname | quote }},
+    "email": {{ .gh_commit_email | quote }},
     "url": "https://github.com/cearley/dotfiles"
   },
   "plugins": [

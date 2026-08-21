@@ -109,9 +109,10 @@ Work marketplaces last — removing one can orphan the plugins installed from it
 ### Plugin marketplaces
 | Check | Verdict |
 |---|---|
-| Name is `chezmoi-personal`, or its `source` is a local directory (no `repo`/`url`) resolving to this repo's root | **NEVER an orphan** — it's this repo's own marketplace, registered outside packages.yaml's `plugin_marketplaces` list (see `openspec/specs/claude-plugin-marketplace/spec.md`). `audit-packages` reports any local-directory-sourced marketplace as a literal `null` line (no `repo`/`url` field to read) — Step 1's script drops these before they reach `## orphans`, so you shouldn't see one. |
 | Still has any KEPT plugin installed from it (`claude plugins list --json`, `.id` ends `@<marketplace>`) | **KEEP** until those plugins are removed first |
-| No remaining plugins, not chezmoi-personal | **REMOVE**: `claude plugins marketplace remove <name>` |
+| No remaining plugins | **REMOVE**: `claude plugins marketplace remove <name>` |
+
+`chezmoi-personal` is declared in `packages.yaml`'s `plugin_marketplaces` like any other marketplace (registered at `~/.local/share/claude-plugins`, deployed there by `chezmoi apply` — see `openspec/specs/claude-plugin-marketplace/spec.md`), so it won't appear in `## orphans` at all — no special-case handling needed here.
 
 ### Skills
 | Check | Verdict |
