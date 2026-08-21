@@ -5,9 +5,6 @@ paths:
   - "**/.claude*/plugins/**"
   - "**/.claude*/skills/**"
   - "**/.claude*/CLAUDE.md"
-  - "**/.chezmoidata/packages.yaml"
-  - "**/dot_claude/**"
-  - "**/dot_claude-*/**"
 ---
 
 {{- $sourceDir := .chezmoi.sourceDir }}
@@ -21,14 +18,14 @@ This machine may run multiple named Claude Code profiles ("personas") in additio
 unnamed default, each with its own `CLAUDE_CONFIG_DIR` — the guidance below refers to them as
 "personas" throughout, whether or not any are currently configured on this machine.
 Diagnosing installation health, editing settings/plugins, or reasoning about skill/MCP usage
-(e.g. `/doctor`) means looking at that repo's `{{ $sourceDir }}/dot_claude/`,
+(e.g. `/doctor`) concerns that repo's `{{ $sourceDir }}/dot_claude/`,
 `{{ $sourceDir }}/.chezmoidata/`, and `{{ $sourceDir }}/.chezmoiscripts/`, not the current
 working directory.
 
-## Two Sources of Skills — Don't Confuse Them
+## Two Distinct Sources of Skills
 
 **Native skills** (`{{ $sourceDir }}/dot_claude/skills/`): authored and version-controlled in
-the chezmoi repo above. Run `ls` there rather than trusting a hand-maintained list — same
+the chezmoi repo above. `ls` there is authoritative over any hand-maintained list — same
 anti-drift principle as `{{ $sourceDir }}/.chezmoiscripts/`, where `ls` is likewise
 authoritative over any hand-maintained table.
 Deployed by `chezmoi apply` to `~/.claude/skills/`, symlinked from each persona's
@@ -38,10 +35,10 @@ Deployed by `chezmoi apply` to `~/.claude/skills/`, symlinked from each persona'
 `{{ $sourceDir }}/.chezmoidata/packages.yaml`, fetched from third-party GitHub repos
 (e.g. `basicmachines-co/basic-memory-skills`, `specstoryai/agent-skills`) by
 `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-37-install-claude-skills.sh.tmpl`.
-Their source of truth is the external repo, not the chezmoi repo — edit `packages.yaml` to
-add/remove/pin, don't expect to find their files there. They land in the same
-`~/.claude/skills/` directory as the native ones, so `~/.claude/skills/` on disk is a merge of
-both sources.
+Their source of truth is the external repo, not the chezmoi repo — adding, removing, or pinning
+one is a `packages.yaml` edit, and their files won't be found in the chezmoi repo itself. They
+land in the same `~/.claude/skills/` directory as the native ones, so `~/.claude/skills/` on
+disk is a merge of both sources.
 
 ## MCP Servers and Plugins
 
@@ -54,26 +51,26 @@ Also declared under `packages.darwin.ai.agents.claude_code` in that same `packag
   which runs `claude plugins install <id> --scope user` per entry; that CLI command is what
   actually records `enabledPlugins: true` in `~/.claude/settings.json`, not the script directly
 
-## Before Disabling, Removing, or Overriding Anything (e.g. /doctor audits)
+## Disabling, Removing, or Overriding Requires a packages.yaml Cross-Check (e.g. /doctor audits)
 
-A skill/MCP-server/plugin usage audit (`/doctor` Check 1, or similar) must cross-check
-`packages.yaml` before proposing removal of anything. Declared items — everything under
+A skill/MCP-server/plugin usage audit (`/doctor` Check 1, or similar) needs a `packages.yaml`
+cross-check before any removal is proposed. Declared items — everything under
 `packages.darwin.ai.agents.claude_code` above — are managed machine-wide by this repo; a local
 `skillOverrides: off` or `disabledMcpServers` entry doesn't undo that, it just drifts from the
 declared state. Zero/stale usage on a declared item is a signal to edit `packages.yaml`
 (remove/replace the declaration), not to disable it locally. The `clean-claude-orphans` Skill
 (`{{ $sourceDir }}/dot_claude/skills/clean-claude-orphans/`) already draws exactly this
-distinction — invoke it via the Skill tool (it has `disable-model-invocation: true`, so it
-won't fire on its own) for anything genuinely installed-but-undeclared, or read its `SKILL.md`
-directly to apply the same logic by hand.
+distinction — it has `disable-model-invocation: true`, so it only runs when invoked via the
+Skill tool, for anything genuinely installed-but-undeclared; its `SKILL.md` documents the same
+logic for applying it by hand.
 
 ## Checking for Override Drift (the mirror-image case)
 
 `clean-claude-orphans` handles installed-but-undeclared drift. This is the opposite
-direction — **declared-but-locally-suppressed**. Run `check-claude-overrides` to detect it,
-whenever auditing tooling health (`/doctor`-style checks) or when a skill/plugin isn't
-behaving despite being installed and declared — it checks every persona's live
-`settings.json` against that persona's own `modify_settings.json.tmpl` baseline (the
+direction — **declared-but-locally-suppressed**. `check-claude-overrides` detects it, and is
+relevant whenever auditing tooling health (`/doctor`-style checks) or when a skill/plugin isn't
+behaving despite being installed and declared — it checks every persona's live `settings.json`
+against that persona's own `modify_settings.json.tmpl` baseline (the
 `$extra`/`claudeExtraSettings` dict, if any, passed to
 `includeTemplate "claude-settings-hooks-modifier"`) and flags:
 
@@ -84,16 +81,16 @@ behaving despite being installed and declared — it checks every persona's live
   list (meaning chezmoi intends it enabled) the baseline doesn't explain — same ad hoc drift,
   opposite direction.
 
-Resolve each flagged entry by asking the user which way it should go:
+Each flagged entry needs the user's input on which way it should go:
 
-- **Keep the override** → run `check-claude-overrides --fix <persona>
-  <skillOverrides|enabledPlugins> <key>`. It reads the live value straight from
+- **Keep the override** → `check-claude-overrides --fix <persona>
+  <skillOverrides|enabledPlugins> <key>` reads the live value straight from
   `settings.json`, writes it into that persona's `modify_settings.json.tmpl` `$extra` dict,
-  and verifies the write (via a re-render) before the tracked file is ever touched — never
-  hand-edit the dict for this.
-- **Drop the override** → remove the key via the equivalent `/skill` or `/plugin` command (or
-  edit the live `settings.json` directly), since nothing in chezmoi asked for it. This
-  direction stays manual — `check-claude-overrides` never modifies a live `settings.json`.
+  and verifies the write (via a re-render) before the tracked file is ever touched —
+  hand-editing the dict directly isn't the supported path.
+- **Drop the override** → removing the key via the equivalent `/skill` or `/plugin` command (or
+  editing the live `settings.json` directly) is correct, since nothing in chezmoi asked for it.
+  This direction stays manual — `check-claude-overrides` never modifies a live `settings.json`.
 
 ## Personas Share Skills, Rules, and CLAUDE.md via Symlink
 
@@ -106,32 +103,32 @@ per-persona copy to keep in sync.
 **Not a "local" file, despite the path**: `~/.claude*/CLAUDE.md` is this symlink — checked-in
 content sourced from `{{ $sourceDir }}/dot_claude/CLAUDE.md.tmpl`, not personal/local
 content. Any check that distinguishes "LOCAL/personal" CLAUDE.md from "checked-in" (e.g. a
-`/doctor`-style dedup pass) should treat it as checked-in. A genuinely personal, non-chezmoi-managed
-layer only exists if the user separately created a `CLAUDE.local.md` alongside it — verify that
-file's actual presence before assuming one exists.
+`/doctor`-style dedup pass) classifies it as checked-in. A genuinely personal,
+non-chezmoi-managed layer only exists if the user separately created a `CLAUDE.local.md`
+alongside it, and its actual presence — not an assumption — is what confirms that.
 
 Being checked-in doesn't mean uneditable — it means edits go through the source, the same
 principle as `packages.yaml`. If `/doctor` (or any diagnosis) concludes `~/.claude*/CLAUDE.md`
-should change, don't edit the symlink target directly; make the change in
-`{{ $sourceDir }}/dot_claude/CLAUDE.md.tmpl`, then the user commits it so it propagates on the
-next `chezmoi apply` (their own or any other persona's). The same applies to any skill or rule
-under `{{ $sourceDir }}/dot_claude/` (`skills/`, `rules/`): edit the source file there, not the
-deployed copy under `~/.claude/`.
+should change, the edit target is `{{ $sourceDir }}/dot_claude/CLAUDE.md.tmpl`, not the symlink;
+a commit there propagates on the next `chezmoi apply` (the user's own or any other persona's).
+The same applies to any skill or rule under `{{ $sourceDir }}/dot_claude/` (`skills/`, `rules/`):
+the source file there is the edit target, not the deployed copy under `~/.claude/`.
 
 What's **not** shared per persona: `settings.json`, `.claude.json`, `plugins/`, and session
-history (`projects/`). Use `$CLAUDE_CONFIG_DIR/.claude.json` for all of these, never the bare
-`~/.claude.json` — it belongs to a different persona and won't reflect (or affect) the active
-one. Each persona's `modify_settings.json.tmpl` chezmoi-manages a baseline
-`skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
-workload (see the comment at the top of `{{ $sourceDir }}/dot_claude-personal/modify_settings.json.tmpl` —
-these postures are derived from `/doctor` runs per-persona and should not be copied verbatim
-between personas without re-running that analysis).
+history (`projects/`). `$CLAUDE_CONFIG_DIR/.claude.json` is the correct reference for all of
+these, not the bare `~/.claude.json`, which belongs to a different persona and won't reflect
+(or affect) the active one. Each persona's `modify_settings.json.tmpl` chezmoi-manages a
+baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
+workload (see the comment at the top of
+`{{ $sourceDir }}/dot_claude-personal/modify_settings.json.tmpl` — these postures are derived
+from `/doctor` runs per-persona, and copying them verbatim between personas skips re-running
+that analysis for a different workload).
 
 **Drift note**: ad hoc `/skill`/`/plugin` toggles made directly in a session survive `chezmoi
 apply` — a `modify_` script only enforces the specific keys it sets, it doesn't strip
 additions — so the live `~/.claude*/settings.json` can carry more `skillOverrides`/
-`enabledPlugins` entries than the chezmoi template declares. See "Checking for Override
-Drift" above for how to find and resolve these.
+`enabledPlugins` entries than the chezmoi template declares. "Checking for Override Drift"
+above covers how to find and resolve these.
 
 ## Two Deliberately Different Install Models
 
@@ -146,5 +143,5 @@ Drift" above for how to find and resolve these.
   different from the bullet above isn't its registration mechanism — it's that declaring the
   marketplace only makes its plugins *installable*; which plugins are actually enabled for a
   given project stays a deliberate, per-project decision (`/plugin install`), not a
-  machine-wide one. Don't add something here just because it's useful somewhere — that's what
-  the marketplace is for.
+  machine-wide one. Adding something here just because it's useful somewhere skips the
+  marketplace's actual purpose, which exists for exactly that per-project case.

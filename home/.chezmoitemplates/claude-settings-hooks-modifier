@@ -1,16 +1,19 @@
-{{- /* Merges session-topic-capture hooks, the claude-tooling-guard PreToolUse hook, and any
-     per-environment extra top-level settings the caller wants chezmoi-managed.
+{{- /* Merges hooks and any per-environment extra settings the caller wants chezmoi-managed.
 
      Params (merge with the chezmoi context before calling):
-       claudeExtraSettings: optional dict, default {}. Recursively merged over
-                    the existing settings.json (jq `*`) after the hooks merge —
-                    e.g. skillOverrides, enabledPlugins, permissions. Only pass
-                    this for an environment whose skill/plugin/permission
-                    posture has actually been analyzed for that environment;
-                    other callers get {} and are unaffected.
+       claudeExtraSettings: optional dict, default {}. Merged over the existing
+                    settings.json (jq `*`) after the hooks merge — e.g. skillOverrides,
+                    enabledPlugins, permissions. Only pass this for an environment
+                    whose posture has actually been analyzed; other callers get {}.
 
      Example:
        {{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" (dict "permissions" (dict "defaultMode" "auto"))) .) }}
+
+     Hooks are upserted by command name, so matcher/command edits below reach an
+     already-applied settings.json, not just fresh installs. retired_commands lists
+     commands no longer managed — the upsert alone won't remove a dropped entry, since
+     it only acts on commands still listed below. Add to it when retiring a hook; never
+     remove from it.
 */ -}}
 {{- if not (and (eq .chezmoi.os "darwin") (has "ai" .tags)) -}}
 #!/bin/bash
@@ -18,7 +21,7 @@
 cat
 {{- else -}}
 #!/bin/bash
-# Merge managed hooks and any extra settings; preserve everything else managed by Claude Code.
+# Merge managed hooks and extra settings; preserve everything else Claude Code manages.
 set -euo pipefail
 
 existing=$(cat)
@@ -28,22 +31,27 @@ managed_hooks='{
   "UserPromptSubmit": [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture UserPromptSubmit"}]}],
   "PreCompact":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture PreCompact"}]}],
   "SessionEnd":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture SessionEnd"}]}],
-  "PreToolUse":       [{"matcher": "Bash", "hooks": [{"type": "command", "command": "claude-tooling-guard"}]}],
+  "PreToolUse":       [{"matcher": "Bash|Edit|Write", "hooks": [{"type": "command", "command": "claude-tooling-write-guard"}]}],
   "SessionStart":     [{"matcher": "", "hooks": [{"type": "command", "command": "check-claude-overrides --session-start"}]}]
 }'
 
+# Commands no longer managed here — stripped unconditionally so retiring one reaches a
+# live settings.json, not just source.
+# 2026-08-21: claude-tooling-guard folded into claude-tooling-write-guard.
+retired_commands='["claude-tooling-guard"]'
+
 extra_settings='{{ get . "claudeExtraSettings" | default (dict) | toJson }}'
 
-echo "$existing" | jq --argjson managed "$managed_hooks" --argjson extra "$extra_settings" '
-  reduce ($managed | keys[]) as $event (
+echo "$existing" | jq --argjson managed "$managed_hooks" --argjson retired "$retired_commands" --argjson extra "$extra_settings" '
+  .hooks = ((.hooks // {}) | with_entries(
+    .value |= map(select((.hooks[0].command) as $c | ($retired | index($c)) == null))
+  ))
+  | reduce ($managed | keys[]) as $event (
     .;
-    ((.hooks[$event] // []) | map(.hooks[]?.command)) as $existing_cmds |
+    ($managed[$event] | map(.hooks[0].command)) as $managed_cmds |
     .hooks[$event] = (
-      (.hooks[$event] // []) +
-      ($managed[$event] | map(
-        . as $entry |
-        select(($existing_cmds | index($entry.hooks[0].command)) == null)
-      ))
+      ((.hooks[$event] // []) | map(select((.hooks[0].command) as $c | ($managed_cmds | index($c)) == null)))
+      + $managed[$event]
     )
   )
   | . * $extra

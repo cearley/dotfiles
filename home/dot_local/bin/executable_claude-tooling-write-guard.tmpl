@@ -1,0 +1,147 @@
+#!/bin/bash
+# claude-tooling-write-guard — PreToolUse hook (Bash|Edit|Write matcher). Redirects
+# direct edits to chezmoi-managed Claude Code tooling files (settings.json, skills/,
+# CLAUDE.md, plugins/) to their real source, using `chezmoi managed`/`source-path`.
+#
+# Edit/Write give a structured tool_input.file_path; Bash only gives a command string,
+# so mutation detection there is heuristic. A command referencing a deployed path that
+# isn't a recognized mutation (a read, an unrecognized shape) falls back to an
+# informational nudge, once per session.
+#
+# Tiers:
+#   - Managed: file is templated/merged from a tracked source — a direct edit gets
+#     silently reverted or reasserted on the next `chezmoi apply`. Point at `source-path`.
+#   - Not managed, but under plugins/ or skills/: installed/fetched per a packages.yaml
+#     declaration — won't be reverted, but drifts from what a fresh install would
+#     produce. Point at packages.yaml.
+#   - Neither: out of scope, exit clean.
+#
+# permissionDecision is "ask" for now — a trial period before switching to "deny".
+#
+# Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_claude-tooling-write-guard.tmpl —
+# edit the source template, then `chezmoi apply`.
+set -euo pipefail
+{{- $sourceDir := .chezmoi.sourceDir }}
+{{- $repoRoot := trimSuffix "/home" $sourceDir }}
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+{{- $personaList := "~/.claude" }}
+{{- range $claudeEnvs }}{{ $personaList = printf "%s, %s" $personaList . }}{{ end }}
+
+payload=$(cat)
+tool_name=$(jq -r '.tool_name // ""' <<<"$payload")
+
+emit_ask() {
+  jq -n --arg reason "$1" '{
+    hookSpecificOutput: {
+      hookEventName: "PreToolUse",
+      permissionDecision: "ask",
+      permissionDecisionReason: $reason
+    }
+  }'
+}
+
+# Tiered guard advice for one deployed-target path (resolving persona symlinks first).
+# Prints a reason if in scope; otherwise prints nothing and always returns 0, so a bare
+# `reason=$(check_path ...)` never trips `set -e`.
+check_path() {
+  local file_path="$1" tool="$2"
+  [[ "$file_path" =~ /\.claude[A-Za-z0-9_-]*/ ]] || return 0
+
+  local resolved_path="$file_path" real real_parent
+  if real=$(realpath "$file_path" 2>/dev/null); then
+    resolved_path="$real"
+  elif real_parent=$(realpath "$(dirname "$file_path")" 2>/dev/null); then
+    resolved_path="${real_parent}/$(basename "$file_path")"
+  fi
+
+  local managed source_path
+  if managed=$(chezmoi managed --path-style absolute "$resolved_path" 2>/dev/null) && [[ -n "$managed" ]]; then
+    source_path=$(chezmoi source-path "$resolved_path" 2>/dev/null) || source_path="(run: chezmoi source-path \"$resolved_path\")"
+    if [[ "$resolved_path" == *settings.json ]]; then
+      if [[ "$tool" == "Write" ]]; then
+        echo "This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit ${source_path}'s \$extra dict instead, then chezmoi apply."
+      else
+        local old_new
+        old_new=$(jq -r '(.tool_input.old_string // "") + "\n" + (.tool_input.new_string // "")' <<<"$payload" 2>/dev/null) || old_new=""
+        if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions)"' <<<"$old_new"; then
+          echo "skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions in settings.json are chezmoi-managed baseline keys, not local toggles. Edit ${source_path}'s \$extra dict instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
+        fi
+      fi
+    else
+      echo "This file is chezmoi-managed (tracked from ${source_path}). Editing the deployed copy directly gets silently overwritten or reasserted on the next chezmoi apply — edit the source instead."
+    fi
+  elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*)/plugins/ ]]; then
+    local claude_dir="${BASH_REMATCH[1]}"
+    echo "This file isn't itself chezmoi-tracked, but ${claude_dir}/plugins/ is populated by 'claude plugins install' per the plugin_marketplaces/plugins lists in {{ $sourceDir }}/.chezmoidata/packages.yaml. A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
+  elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*/skills/[^/]+)(/.*)?$ ]]; then
+    local skill_root="${BASH_REMATCH[1]}" claude_dir skill_managed skill_source
+    claude_dir="${skill_root%/skills/*}"
+    if skill_managed=$(chezmoi managed --path-style absolute "$skill_root" 2>/dev/null) && [[ -n "$skill_managed" ]]; then
+      skill_source=$(chezmoi source-path "$skill_root" 2>/dev/null) || skill_source="(run: chezmoi source-path \"$skill_root\")"
+      echo "This exact file isn't chezmoi-tracked yet, but its skill directory is — a native skill, sourced at ${skill_source}. Add/edit the file there instead of the deployed copy, then chezmoi apply."
+    else
+      echo "This file isn't itself chezmoi-tracked, but ${claude_dir}/skills/ is populated from packages.darwin.ai.agents.claude_code.skills in {{ $sourceDir }}/.chezmoidata/packages.yaml (externally-fetched skills land here, unlike native ones which chezmoi tracks directly). A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
+    fi
+  fi
+  return 0
+}
+
+case "$tool_name" in
+Edit|Write)
+  file_path=$(jq -r '.tool_input.file_path // ""' <<<"$payload")
+  [[ -z "$file_path" ]] && exit 0
+  reason=$(check_path "$file_path" "$tool_name")
+  [[ -z "$reason" ]] && exit 0
+  emit_ask "$reason"
+  ;;
+Bash)
+  command=$(jq -r '.tool_input.command // ""' <<<"$payload")
+  [[ -z "$command" ]] && exit 0
+
+  # Does this command reference a deployed .claude*/... path at all?
+  broad_pattern='\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/|CLAUDE\.md)'
+  [[ "$command" =~ $broad_pattern ]] || exit 0
+
+  # Recognized mutation shapes: redirect, mv/cp/rm, sed -i, tee. Best-effort target: the
+  # last token containing a deployed .claude*/... path, regardless of shell construct
+  # (usually the destination, e.g. `mv tmp ~/.claude/settings.json`).
+  mutation_pattern='(^|[;&|[:space:]])(mv|cp|rm|sed[[:space:]]+-i|tee)[[:space:]]|>{1,2}'
+  reason=""
+  if [[ "$command" =~ $mutation_pattern ]]; then
+    target=$(grep -oE '[^[:space:]]*/\.claude[A-Za-z0-9_-]*/[^[:space:];&|]*' <<<"$command" | tail -1) || true
+    # Raw command text, not shell-evaluated — expand ~ and a literal $HOME manually,
+    # since realpath/chezmoi would otherwise see a nonexistent path and call it unmanaged.
+    target="${target/#\~/$HOME}"
+    target="${target//\$HOME/$HOME}"
+    # "Write" semantics: Bash has no old_string/new_string to key-filter against, so
+    # settings.json always takes the blanket "any change is risky" path here.
+    [[ -n "$target" ]] && reason=$(check_path "$target" "Write")
+  fi
+
+  if [[ -n "$reason" ]]; then
+    emit_ask "$reason"
+    exit 0
+  fi
+
+  # Informational fallback, once per session: a read, an unrecognized mutation shape,
+  # or a legitimate source-tree edit.
+  session_id=$(jq -r '.session_id // ""' <<<"$payload")
+  if [[ -n "$session_id" ]]; then
+    marker_dir="${TMPDIR:-/tmp}/claude-tooling-write-guard"
+    marker_file="$marker_dir/$session_id"
+    mkdir -p "$marker_dir" 2>/dev/null || true
+    find "$marker_dir" -type f -mtime +7 -delete 2>/dev/null || true
+    [ -e "$marker_file" ] && exit 0
+    touch "$marker_file" 2>/dev/null || true
+  fi
+
+  # Covers what the tiers above don't: cross-persona scope, and the two drift-audit
+  # skills for scenarios this hook doesn't resolve itself.
+  message="This command touches Claude Code tooling that the chezmoi dotfiles repo at {{ $repoRoot }} manages. This machine runs independent personas ({{ $personaList }}) — settings.json/plugins/.claude.json aren't shared between them, so a check scoped to one won't see the others. For installed-but-undeclared drift see the clean-claude-orphans skill; for declared-but-locally-suppressed drift see check-claude-overrides."
+  jq -n --arg message "$message" '{
+    hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", additionalContext: $message },
+    systemMessage: $message
+  }'
+  ;;
+esac

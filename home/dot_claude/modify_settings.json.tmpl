@@ -1,1 +1,7 @@
-{{ includeTemplate "claude-settings-hooks-modifier" . }}
+{{- $extra := dict
+      "skillOverrides" (dict)
+      "enabledPlugins" (dict)
+      "extraKnownMarketplaces" (dict)
+      "permissions" (dict)
+-}}
+{{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}

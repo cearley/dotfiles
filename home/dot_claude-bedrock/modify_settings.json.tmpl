@@ -1,5 +1,7 @@
-{{- /* Permission posture derived from /doctor run 2026-08-18 */ -}}
 {{- $extra := dict
+      "skillOverrides" (dict)
+      "enabledPlugins" (dict)
+      "extraKnownMarketplaces" (dict)
       "permissions" (dict "defaultMode" "auto")
 -}}
 {{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}
