@@ -11,11 +11,6 @@ Quick reference guide for AI assistants working with this chezmoi dotfiles repos
 
 ## Common Commands
 
-```bash
-audit-packages                 # List packages installed but not declared in packages.yaml (read-only)
-audit-packages --strict        # Same, but exit non-zero if any orphans found (CI-friendly)
-```
-
 Standard chezmoi commands (`apply`, `diff`, `status`, `add`, `managed`, ...) and file-attribute prefixes (`private_`, `dot_`, `executable_`, `symlink_`, `.tmpl`) are covered by the `chezmoi-expert` skill — invoke it rather than duplicating that reference here.
 
 ## Practical Quick Reference

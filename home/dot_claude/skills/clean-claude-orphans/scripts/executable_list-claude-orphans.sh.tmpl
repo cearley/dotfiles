@@ -6,8 +6,8 @@
 set -euo pipefail
 
 # .chezmoi.sourceDir resolves to the *chezmoiroot-relative* source dir (this repo's
-# home/, per .chezmoiroot), not the repo root — marketplace.json and dot_claude/skills/
-# live one level up and inside it respectively, so the repo root is what this script needs.
+# home/, per .chezmoiroot), not the repo root — dot_claude/skills/ lives one level up,
+# so the repo root is what this script needs.
 CHEZMOI_SOURCE="{{ dir .chezmoi.sourceDir }}"
 
 if ! command -v audit-packages >/dev/null 2>&1; then
@@ -32,10 +32,15 @@ done
 # without re-reading marketplace.json by hand. Captured into $marketplace_tsv so the
 # ## orphans section below can tag matching skill orphans inline instead of leaving that
 # cross-check to the model.
+#
+# Read from the deployed target, not chezmoi source: the source file
+# (home/dot_local/share/claude-plugins/dot_claude-plugin/marketplace.json.tmpl) has
+# unrendered {{ "{{ .fullname }}" }}-style template syntax jq can't parse, so only the
+# chezmoi-apply'd copy under ~/.local/share/claude-plugins is valid JSON.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## chezmoi-personal-plugins"
-marketplace_json="${CHEZMOI_SOURCE}/.claude-plugin/marketplace.json"
+marketplace_json="$HOME/.local/share/claude-plugins/.claude-plugin/marketplace.json"
 marketplace_tsv=""
 if [[ -f "$marketplace_json" ]]; then
     marketplace_tsv="$(jq -r '.plugins[] | [.name, ((.skills // []) | map(sub("^\\./"; "")) | join(","))] | @tsv' "$marketplace_json" \
