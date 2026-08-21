@@ -28,7 +28,8 @@ managed_hooks='{
   "UserPromptSubmit": [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture UserPromptSubmit"}]}],
   "PreCompact":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture PreCompact"}]}],
   "SessionEnd":       [{"matcher": "", "hooks": [{"type": "command", "command": "session-topic-capture SessionEnd"}]}],
-  "PreToolUse":       [{"matcher": "Bash", "hooks": [{"type": "command", "command": "claude-tooling-guard"}]}]
+  "PreToolUse":       [{"matcher": "Bash", "hooks": [{"type": "command", "command": "claude-tooling-guard"}]}],
+  "SessionStart":     [{"matcher": "", "hooks": [{"type": "command", "command": "check-claude-overrides --session-start"}]}]
 }'
 
 extra_settings='{{ get . "claudeExtraSettings" | default (dict) | toJson }}'

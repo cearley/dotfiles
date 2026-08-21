@@ -12,6 +12,7 @@
 #
 # Usage: check-claude-overrides [--help]
 #        check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins> <key>
+#        check-claude-overrides --session-start
 set -euo pipefail
 {{- $sourceDir := .chezmoi.sourceDir }}
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
@@ -45,6 +46,12 @@ entry is currently flagged. The value is always read from the live settings.json
 typed. Verifies via a re-render before touching the real file. Dropping an override instead
 remains the existing manual /skill or /plugin command — see claude-tooling.md's "Checking
 for Override Drift" section for the full resolve workflow.
+
+With --session-start: intended for automatic invocation from a Claude Code SessionStart
+hook, not interactive use. Checks only the persona matching $CLAUDE_CONFIG_DIR (never a full
+sweep), and only prints a one-line plain-text pointer when that persona's drift differs from
+what was last reported for it — silent on a clean or already-seen-and-unresolved state.
+Never modifies settings.json or any modify_settings.json.tmpl. Always exits 0.
 EOF
 }
 
@@ -131,6 +138,70 @@ detect_all_drift() {
     for ((i = 0; i < ${#PERSONA_NAMES[@]}; i++)); do
         detect_persona_drift "${PERSONA_NAMES[$i]}" "${PERSONA_TEMPLATES[$i]}" "${PERSONA_DIRS[$i]}"
     done
+}
+
+# ---------------------------------------------------------------------------
+# --session-start support: resolve $CLAUDE_CONFIG_DIR against the persona arrays
+# above, and track per-persona dedup state. See design.md - Decisions.
+# ---------------------------------------------------------------------------
+
+# Prints the index into PERSONA_* for the persona matching $CLAUDE_CONFIG_DIR (or
+# $HOME/.claude when unset). Returns non-zero if no declared persona matches.
+resolve_current_persona_index() {
+    local config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+    local i
+    for ((i = 0; i < ${#PERSONA_DIRS[@]}; i++)); do
+        if [[ "${PERSONA_DIRS[$i]}" == "$config_dir" ]]; then
+            echo "$i"
+            return 0
+        fi
+    done
+    return 1
+}
+
+drift_state_file() {
+    echo "$1/.check-claude-overrides-last-drift"
+}
+
+# Reads persona\tkind\tkey\tvalue lines (detect_persona_drift's output) on stdin, drops the
+# redundant persona column (the state file's location already scopes it to one persona), and
+# sorts for a stable comparison.
+drift_lines_without_persona() {
+    awk -F'\t' 'BEGIN{OFS="\t"} {print $2,$3,$4}' | sort
+}
+
+# ---------------------------------------------------------------------------
+# --session-start mode: single-persona check, dedup'd plain-text pointer, never fails a
+# session over a config edge case (missing tool, unrecognized persona) — always exits 0.
+# ---------------------------------------------------------------------------
+run_session_start() {
+    command -v chezmoi >/dev/null 2>&1 || exit 0
+    command -v jq >/dev/null 2>&1 || exit 0
+    command -v yq >/dev/null 2>&1 || exit 0
+
+    local idx
+    idx="$(resolve_current_persona_index)" || exit 0
+
+    local name="${PERSONA_NAMES[$idx]}" template_path="${PERSONA_TEMPLATES[$idx]}" config_dir="${PERSONA_DIRS[$idx]}"
+
+    local drift_tsv
+    drift_tsv="$(detect_persona_drift "$name" "$template_path" "$config_dir" 2>/dev/null)" || true
+
+    local new_lines=""
+    if [[ -n "$drift_tsv" ]]; then
+        new_lines="$(printf '%s\n' "$drift_tsv" | drift_lines_without_persona)"
+    fi
+
+    local state_file old_lines=""
+    state_file="$(drift_state_file "$config_dir")"
+    [[ -f "$state_file" ]] && old_lines="$(cat "$state_file")"
+
+    if [[ -n "$new_lines" && "$new_lines" != "$old_lines" ]]; then
+        echo "Claude Code override drift detected for this persona — run check-claude-overrides for detail."
+    fi
+
+    printf '%s\n' "$new_lines" > "$state_file" 2>/dev/null || true
+    exit 0
 }
 
 # ---------------------------------------------------------------------------
@@ -231,6 +302,13 @@ run_fix() {
 if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     print_usage
     exit 0
+fi
+
+# --session-start is dispatched before require_cmd: a SessionStart hook must never fail a
+# session over a missing tool, so it does its own lenient command-v checks instead (see
+# run_session_start above).
+if [[ "${1:-}" == "--session-start" ]]; then
+    run_session_start
 fi
 
 require_cmd chezmoi
