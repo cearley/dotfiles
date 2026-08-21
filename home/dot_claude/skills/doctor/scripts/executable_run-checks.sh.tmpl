@@ -1,0 +1,53 @@
+#!/bin/bash
+# run-checks.sh — Minimal, fast health checks against ~/.claude: settings.json validity and
+# hook-script health. Deliberately hardcodes ~/.claude and never consults $CLAUDE_CONFIG_DIR
+# or any persona — this skill exists to shadow the built-in /doctor for cheap, repeated
+# testing, and its naivety about personas is intentional test scaffolding for verifying
+# claude-tooling.md's persona-awareness guidance gets applied in a session. See SKILL.md.
+set -euo pipefail
+
+CLAUDE_DIR="$HOME/.claude"
+SETTINGS_FILE="${CLAUDE_DIR}/settings.json"
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "error: jq is required but not found on PATH" >&2
+    exit 1
+fi
+
+echo "## settings-json"
+if [[ ! -f "$SETTINGS_FILE" ]]; then
+    echo "FAIL	no settings.json found at ${SETTINGS_FILE}"
+elif jq -e '.' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    echo "PASS	${SETTINGS_FILE} is valid JSON"
+else
+    echo "FAIL	${SETTINGS_FILE} is not valid JSON"
+fi
+
+echo ""
+echo "## hooks"
+if [[ ! -f "$SETTINGS_FILE" ]]; then
+    echo "PASS	no settings.json, nothing to check"
+elif ! jq -e '.hooks' "$SETTINGS_FILE" >/dev/null 2>&1; then
+    echo "PASS	no hooks configured"
+else
+    found_any=0
+    while IFS=$'\t' read -r event command; do
+        [[ -z "$command" ]] && continue
+        found_any=1
+        # Naive first-token extraction — good enough for a fast/cheap check, not a shell
+        # parser. Commands with env-var prefixes or shell operators may false-positive FAIL.
+        exe="${command%% *}"
+        if command -v "$exe" >/dev/null 2>&1; then
+            echo "PASS	${event}: ${exe} resolves on PATH"
+        elif [[ -x "$exe" ]]; then
+            echo "PASS	${event}: ${exe} is executable"
+        elif [[ -f "$exe" ]]; then
+            echo "FAIL	${event}: ${exe} exists but is not executable"
+        else
+            echo "FAIL	${event}: ${exe} not found"
+        fi
+    done < <(jq -r '.hooks // {} | to_entries[] | .key as $event | .value[]?.hooks[]? | select(.type == "command") | [$event, .command] | @tsv' "$SETTINGS_FILE")
+    if [[ "$found_any" -eq 0 ]]; then
+        echo "PASS	no command hooks configured"
+    fi
+fi

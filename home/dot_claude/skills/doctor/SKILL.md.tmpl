@@ -1,0 +1,45 @@
+{{- if has "ai" .tags -}}
+---
+name: doctor
+description: >
+  Minimal, fast stand-in for the built-in `/doctor` health check, for repeated invocation
+  while iterating on `claude-tooling.md`/`claude-tooling-guard` — the full built-in `/doctor`
+  is too slow/expensive to re-run every iteration. Runs only two cheap local checks
+  (settings.json validity, hook script health) against `~/.claude`. Use when the user types
+  `/doctor` or asks for a "quick doctor", "fast doctor check", or "shadow doctor" run.
+---
+
+# Doctor (shadow)
+
+A deliberately minimal, cheap work-alike for the built-in `/doctor` — not comprehensive, not
+a replacement. It exists so `claude-tooling.md`/`claude-tooling-guard` can be iterated on
+across many sessions without paying the full built-in `/doctor`'s time/token cost on every
+run.
+
+## Checks
+
+Run the script and report its output verbatim (it's already terse — don't expand on it):
+
+```bash
+~/.claude/skills/doctor/scripts/run-checks.sh
+```
+
+1. **settings.json validity** — is `~/.claude/settings.json` present and valid JSON.
+2. **Hook health** — for every `command`-type hook in `~/.claude/settings.json`, does the
+   referenced script exist and is it executable.
+
+Nothing else. No skill/plugin/MCP usage audit, no version check, no CLAUDE.md analysis, no
+PATH/install check — those require either transcript mining or broader scans this skill is
+explicitly not meant to pay for. Point the user at the real `/doctor` for those.
+
+## Deliberately hardcodes `~/.claude`
+
+The script never reads `$CLAUDE_CONFIG_DIR` and never checks any other persona
+(`~/.claude-work`, `~/.claude-personal`, ...) — this is intentional, not a bug to fix. It's
+test scaffolding: this skill's naive single-persona assumption is exactly the kind of gap
+`claude-tooling.md`'s persona-awareness guidance is supposed to catch and correct for at
+runtime. Don't patch the script to add persona detection — if the checks need to run against
+a different persona's config, that should come from applying the guidance in the moment
+(e.g. checking `$CLAUDE_CONFIG_DIR`/the active persona by hand), not from making the fixture
+correct by construction.
+{{ end -}}
