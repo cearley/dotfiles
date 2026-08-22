@@ -200,9 +200,8 @@ packages:
             scope: user
             command: uvx --python 3.12 basic-memory mcp
           skills: # Installed via `npx skills add <args> -g`
-          - 'basicmachines-co/basic-memory-skills --skill memory-defrag --skill memory-schema'
+          - 'basicmachines-co/basic-memory-skills --skill memory-defrag'
           - 'cearley/claude-session-index --skill session-index'
-          - 'specstoryai/agent-skills --skill specstory-organize --skill specstory-session-summary --skill specstory-guard --skill specstory-link-trail --skill specstory-project-stats --skill specstory-yak'
           - 'vercel-labs/skills --skill find-skills'
           - 'microsoft/azure-skills --skill microsoft-foundry'
           plugin_marketplaces: # Registered via `claude plugins marketplace add`
