@@ -36,7 +36,7 @@
 #
 # Bump SMW_VERSION whenever any canonical asset changes — the three
 # __PROJECT__/__SMW_VERSION__-templated assets (assets/*.template) plus
-# scripts/sync-memory.py.template — so existing installs get flagged as
+# scripts/executable_sync-memory.py.template — so existing installs get flagged as
 # drifted on their next check. When a change also leaves behind a legacy
 # artifact from a prior version (not just new canonical content), add a
 # migrate_<piece> cleanup function to migrations.sh and a CHANGELOG.md
@@ -193,7 +193,7 @@ cmd_check() {
 
   echo
   echo "== sync-memory script =="
-  report_templated_piece ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/sync-memory.py.template" yes
+  report_templated_piece ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/executable_sync-memory.py.template" yes
 
   echo
   echo "== .mcp.json =="
@@ -271,7 +271,7 @@ cmd_update() {
 
   echo
   echo "== sync-memory script =="
-  update_templated_piece "sync-memory-script" ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/sync-memory.py.template" yes
+  update_templated_piece "sync-memory-script" ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/executable_sync-memory.py.template" yes
 
   echo
   echo "== .mcp.json =="
@@ -335,7 +335,7 @@ cmd_apply() {
       ;;
     sync-memory-script)
       mkdir -p .claude/skills/sync-memory/scripts
-      apply_templated_file ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/sync-memory.py.template" yes
+      apply_templated_file ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/executable_sync-memory.py.template" yes
       ;;
     mcp-config)
       [ -f .mcp.json ] || echo '{}' > .mcp.json
