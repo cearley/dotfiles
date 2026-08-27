@@ -4,6 +4,28 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v12 (2026-08-27)
+Split `save-session` into two skills with separate triggers.
+
+`save-session` is now strictly append-only fast-path work: append to the session log, make a
+targeted Open/Resolved edit to the status note, done. All size, rollover and triage logic moved
+out into a new `save-session-maintenance` skill, invoked manually via
+`/save-session-maintenance`. The two were previously one skill whose triage step (`Step 3b`)
+ran opportunistically inside an ordinary save — mixing a mechanical append with a judgment-heavy
+restructure of the same note, which is what caused the v8–v11 breakage.
+
+`save-session` also gains two things. A project-root anchor: it resolves the repository root via
+`git rev-parse` and verifies it before touching any `.claude/...` path, because Claude Code's
+working directory can drift over a long session (an earlier `cd`, or entering a worktree) and
+every relative path in the skill assumed the root. And an explicit Step 0 that lets the model run
+it on its own initiative without asking for confirmation, gated on a cheap mechanical pre-filter
+(non-trivial tool-call/exchange count) followed by judgment — deliberately not gated on whether
+any file was edited, since a purely exploratory session can be entirely save-worthy while a
+one-typo fix may not be.
+
+`check-drift.sh` gains a sixth piece, `save-session-maintenance-skill`, managed exactly like its
+siblings.
+
 ## v11 (2026-08-17)
 v10's Step 3b triage trigger (≥200 lines) was itself confirmed insufficient the same day
 it shipped: running `/save-session` against a real status note found it broke

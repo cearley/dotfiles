@@ -20,7 +20,7 @@
 #     means "this should already look like canonical." Never touches a piece
 #     reporting NAME-MISMATCH, even if that piece is also version-stale.
 #
-#   check-drift.sh apply <save-session-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script>
+#   check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script>
 #     Overwrites the named piece with the canonical version, regardless of
 #     its current status. This is the only path that repairs NAME-MISMATCH —
 #     only run it after the user has confirmed the identity change shown by
@@ -44,7 +44,7 @@
 
 set -euo pipefail
 
-SMW_VERSION=11
+SMW_VERSION=12
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS_DIR="$SKILL_DIR/assets"
 
@@ -185,6 +185,12 @@ cmd_check() {
   echo "== save-session skill =="
   report_templated_piece ".claude/skills/save-session/SKILL.md" "$ASSETS_DIR/save-session-skill.md.template"
 
+  mkdir -p .claude/skills/save-session-maintenance
+
+  echo
+  echo "== save-session-maintenance skill =="
+  report_templated_piece ".claude/skills/save-session-maintenance/SKILL.md" "$ASSETS_DIR/save-session-maintenance-skill.md.template"
+
   mkdir -p .claude/skills/sync-memory/scripts
 
   echo
@@ -260,10 +266,14 @@ cmd_check() {
 }
 
 cmd_update() {
-  mkdir -p .claude/skills/save-session .claude/skills/sync-memory/scripts
+  mkdir -p .claude/skills/save-session .claude/skills/save-session-maintenance .claude/skills/sync-memory/scripts
 
   echo "== save-session skill =="
   update_templated_piece "save-session-skill" ".claude/skills/save-session/SKILL.md" "$ASSETS_DIR/save-session-skill.md.template"
+
+  echo
+  echo "== save-session-maintenance skill =="
+  update_templated_piece "save-session-maintenance-skill" ".claude/skills/save-session-maintenance/SKILL.md" "$ASSETS_DIR/save-session-maintenance-skill.md.template"
 
   echo
   echo "== sync-memory skill =="
@@ -329,6 +339,10 @@ cmd_apply() {
     save-session-skill)
       apply_templated_file ".claude/skills/save-session/SKILL.md" "$ASSETS_DIR/save-session-skill.md.template"
       ;;
+    save-session-maintenance-skill)
+      mkdir -p .claude/skills/save-session-maintenance
+      apply_templated_file ".claude/skills/save-session-maintenance/SKILL.md" "$ASSETS_DIR/save-session-maintenance-skill.md.template"
+      ;;
     sync-memory-skill)
       mkdir -p .claude/skills/sync-memory
       apply_templated_file ".claude/skills/sync-memory/SKILL.md" "$ASSETS_DIR/sync-memory-skill.md.template"
@@ -358,7 +372,7 @@ cmd_apply() {
       echo "APPLIED: hook in .claude/settings.local.json"
       ;;
     *)
-      echo "Unknown piece: $piece (expected save-session-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script)" >&2
+      echo "Unknown piece: $piece (expected save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script)" >&2
       exit 1
       ;;
   esac
@@ -367,6 +381,6 @@ cmd_apply() {
 case "${1:-}" in
   check) cmd_check ;;
   update) cmd_update ;;
-  apply) cmd_apply "${2:?Usage: check-drift.sh apply <save-session-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script>}" ;;
+  apply) cmd_apply "${2:?Usage: check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script>}" ;;
   *) echo "Usage: check-drift.sh <check|update|apply PIECE>" >&2; exit 1 ;;
 esac

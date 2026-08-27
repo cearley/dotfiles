@@ -1,60 +1,76 @@
 ---
 name: save-session
-description: Save today's session to basic-memory. Run at end of every coding session.
+description: Save today's session to basic-memory — fast, append-only (session log entry + status-note Open/Resolved edit), no size checks or triage. Invoke proactively, without asking for confirmation, whenever the session has produced decision-worthy content (an architectural decision, a resolved open item, a persistable finding) — gate this on substantial tool-call/conversation activity, not on whether any file was edited. Also run at explicit user request (/save-session) or when the user signals they're wrapping up.
 ---
-<!-- setup-memory-workflow-version:11 -->
+<!-- setup-memory-workflow-version:12 -->
 
-## Step 1 — Check basic-memory is installed
+## Step 0 — Decide whether to run this automatically, without asking
 
-Run:
+Before invoking this skill on your own initiative (not an explicit `/save-session` from the
+user), apply a cheap mechanical pre-filter first, then judgment:
+
+1. **Mechanical pre-filter.** Has this session made a non-trivial number of tool calls, or
+   spanned more than a couple of exchanges? A single trivial lookup (e.g. one factual
+   question, one tool call, done) fails this filter — stop here, nothing to save. This filter
+   is deliberately **not** based on whether any file was edited — a purely exploratory
+   session (research, design discussion, `/opsx:explore`) can pass it and be entirely
+   save-worthy despite touching no files, while a session that only fixes one typo touches a
+   file but may not be.
+2. **Judgment.** If the pre-filter passes, decide whether the session actually produced
+   something worth persisting: a decision, a resolved open item, a finding, a convention
+   established or corrected. If yes, run the steps below directly — do **not** ask the user
+   "should I save this session?" and wait for a yes. If no, stop here.
+
+When invoked explicitly (`/save-session`, or the user says they're done), skip straight to
+Step 1 — this gate is only for the model's own unprompted initiative.
+
+## Anchor to the project root
+
+Before touching any `.claude/...` path below, confirm you're actually at this project's
+root. Claude Code's own working directory can drift over a long session — an earlier `cd`
+for an unrelated task, or entering a git worktree — and every relative path in this skill
+assumes the project root, not wherever the shell currently happens to be:
+
 ```bash
-which basic-memory
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+cd "$PROJECT_ROOT"
+[ -f ".claude/skills/save-session/SKILL.md" ] || {
+  echo "STOP: $PROJECT_ROOT doesn't look like this project (missing .claude/skills/save-session/SKILL.md) — the working directory may have drifted to an unrelated repository."
+  exit 1
+}
 ```
-If missing, tell the user to run `uv tool install basic-memory` (not `uvx` or `pip`) and
-stop — nothing else can proceed without it.
 
-## Step 2 — Append to the session log
+If that check fails, stop here and tell the user what happened rather than continuing
+against a directory that isn't actually this project.
+
+## Step 1 — Append to the session log
 
 Search basic-memory project "chezmoi" for the most recent session note using
 search_notes with query "chezmoi session".
 
-Before appending, check that note's size (read_note, or `wc -l` on its file under
-`~/.local/share/basic-memory/chezmoi/`). If it is at or over 300 lines, roll it over
-first — large session logs get skipped by agents that would otherwise read them:
-1. Find the note's earliest dated entry (its first `## YYYY-MM-DD` header) — that date
-   names the archived copy.
-2. Create a new note titled `Session Log — <earliest-date>` in the project's
-   `sessions/` directory, with the same frontmatter style as the project's other
-   session logs (title/type/permalink/tags) and the full body of the note being rolled
-   over. Give it a one-line banner: "Archived, <earliest-date> → <today>. Continues
-   from [[<prior archived log>]]" (only if a prior one exists) "— continuation lives in
-   [[<active note's title>]]."
-3. If a prior archived log already links forward to this note (a "continuation lives
-   in" banner or a `leads_to` relation), repoint it at the new archived note instead of
-   skipping ahead to the active one — keep the chain unbroken.
-4. Replace the active note's body with just a short banner: "Continues from
-   [[<new archived note>]]." Keep its title and permalink exactly as they were, so this
-   same search keeps finding it as "the most recent session note."
-
-Then append today's update with edit_note (operation="append") including:
+Append today's update directly with edit_note (operation="append") including:
 - Date (use the currentDate value from context)
 - What was changed or decided today (decisions, findings, discoveries)
 - Any items resolved this session
 
-Do NOT include open items or next steps here — those go in Step 3.
-Never overwrite the existing note — always append.
+Do NOT include open items or next steps here — those go in Step 2. Never overwrite the
+existing note — always append. This step performs one quick append — don't check the
+note's size or restructure it here; that requires deliberate judgment a single append
+shouldn't attempt.
 
-## Step 3 — Update the current status note
+## Step 2 — Update the current status note
 
 Read the current status note:
   identifier: "chezmoi/status/chezmoi-current-status"
   project: "chezmoi"
 
-If the read fails with a size/token-limit error, don't retry it — that failure is itself
-the strongest possible oversized-note signal, worth more than any threshold in Step 3b.
-Skip straight to Step 3b's read-failure handling before attempting any further edits.
+If the read fails with a size/token-limit error, don't work around it (chunked reads, inline
+summarization, ad hoc trimming) — report the failure (see "On failure" below) and stop. A note
+too large to read needs deliberate restructuring, not an improvised fix squeezed into a
+routine save.
 
-Then update it with edit_note (operation="find_replace" or "replace_section") to reflect:
+Otherwise, update it with edit_note (operation="find_replace" or "replace_section") to
+reflect:
 - Any items resolved this session — move from Open to Resolved
 - Any new open items or next steps discovered
 - Any environment facts that changed (new deployments, confirmed config, etc.)
@@ -67,59 +83,19 @@ session touched; unrelated open work must survive untouched. If the project trac
 in-flight work in a machine-readable form (issue tracker, OpenSpec changes, TODO file),
 spot-check that every still-active item there has a matching Open entry before saving.
 
-This note is the authoritative source for current state. Keep it accurate and tidy.
+This note is the authoritative source for current state. Keep it accurate and tidy. This
+step makes a targeted edit only — move resolved items, add new ones, update the date.
+Don't restructure or resize the note as a whole here; a rushed full-body rewrite risks
+colliding with unrelated content.
 
-## Step 3b — Triage if oversized
+If the edit itself fails after a successful read, report the failure (see below) and stop.
 
-Unlike the session log (Step 2), this note is edited in place forever, so it has no
-natural rollover point. Line count alone doesn't catch this note's real failure mode: a
-note can sit at a small, unremarkable line count while a handful of individual
-lines/paragraphs each grow without bound (a "Last updated" field re-prepended every
-session instead of condensed is the classic case) until a read against the whole note
-fails outright — confirmed in practice: one real status note broke `read_note` at 70K+
-characters while sitting at only ~117 lines, comfortably under any line-count trigger.
-Check for all three independent signals after the update above — any one of them means
-triage, not just editing:
+## On success
 
-1. **Read failure.** If Step 3's read already failed with a size/token-limit error, that
-   IS the signal — skip straight to triage regardless of the thresholds below. (In Claude
-   Code specifically, a failed read_note/read_content call saves the full content to a
-   local temp file the error message points to — inspect and edit via that file's path
-   with `wc`/`grep`/`jq`/local tools instead of retrying the read.)
-2. **Total size.** If the read succeeded, treat the note as oversized once its total
-   content is at or over roughly 8,000 characters (`wc -c`, or the length of what
-   read_note returned) — well under the point observed to break reads, leaving real
-   margin to triage before this same failure recurs. Line count (≥200 lines) remains a
-   secondary trigger for the "many distinct items" growth pattern, distinct from #3's
-   "few items growing forever."
-3. **Single-entry length.** Independently of the totals above, check for any individual
-   line/bullet/paragraph over roughly 800 characters (`awk '{ print length }' | sort -rn`
-   against the same local temp file works well here, or eyeball it in what read_note
-   returned). One entry that long is the anti-pattern itself, not a symptom of general
-   growth, and needs condensing even if the note as a whole is still small — fold its
-   still-relevant facts into a short current statement and move full detail out (the
-   session log already has it, or it belongs in a reference/known-issues note).
+Confirm both note titles and permalinks to the user.
 
-If the `memory-defrag` skill is installed, invoke it against this note instead of
-triaging by hand — that's exactly its job ("bloated file >300 lines → split into focused
-files", "stale entries → remove or archive"), and its audit → plan → execute → verify →
-log workflow gives repeatable, logged output instead of ad hoc per-session judgment
-calls. Point it at this note specifically; don't let it wander into unrelated memory
-files during a save-session run.
+## On failure
 
-If `memory-defrag` isn't installed, triage manually using the same split: content that's
-stable reference material or a still-real known issue moves to an existing or new note
-under `reference/` or `known-issues/`, with a one-line `See [[Note Title]]` pointer left
-behind; content of uncertain future value gets archived rather than deleted.
-
-Either way, for anything leaving this note, prefer the `memory-lifecycle` skill's
-archive-never-delete pattern if installed: `move_note` into an `archive/`-style location
-rather than copy-and-delete — it preserves the permalink, so any existing
-`[[wiki-links]]` into that content keep resolving. Reserve outright deletion for content
-that's flatly wrong or superseded, not merely old.
-
-Repeat until all three signals are clear (read succeeds, under ~8,000 characters and 200
-lines, no single entry over ~800 characters). Confirm the final size alongside the note
-titles below.
-
-Confirm both note titles and permalinks after saving.
+Tell the user which step failed and what the error was, then stop. Do not attempt any
+remediation — a note too large to read, or an edit that fails after a successful read, needs
+deliberate handling rather than an improvised fix squeezed into a routine save.
