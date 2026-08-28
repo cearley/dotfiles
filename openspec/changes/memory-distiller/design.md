@@ -87,6 +87,43 @@ advance) are unit-tested over fixtures with no network, clock or vault. The tool
 against a fake stdio MCP server replaying canned results. One end-to-end test runs the worker
 against a temp `HOME`, temp vault and synthetic transcripts — never against real system state.
 
+**10. Transcript reduction keeps conversation and discards machinery — measured, not guessed.**
+Settled 2026-08-27 against all 80 real transcripts in this project (77 MB total). Two measurements
+overturned the working assumption:
+
+- *A `user` record is not necessarily something the user said.* `user` records whose `content` is a
+  **list** carry injected skill and system text, not human input — one held 34 KB of skill-creator
+  documentation. Genuine turns are the records whose `content` is a plain **string**. A naive
+  "keep user text" rule imports skill boilerplate as if the user had written it.
+- *A single entry can swamp a session.* The largest reduced output was 201.5 KB, 90.8% of which was
+  one pasted SpecStory transcript; that session's real turns were 56–506 characters. A total budget
+  alone is insufficient — entries need individual caps.
+
+| Record / block | Treatment |
+|---|---|
+| Types other than `user`/`assistant` (9 kinds) and `attachment` | Dropped — ~70% of bytes, pure metadata |
+| `user`, string content | Kept verbatim, capped at `MAX_USER_CHARS` |
+| `user` string starting `<bash-input>` | `$ <cmd>`, capped at `MAX_BASH_CHARS` |
+| `user` string starting `<bash-stdout>` / `<local-command` | Dropped |
+| `user`, list content, `text` block | One-line marker `[injected: <first line>]`; body dropped |
+| `user`, list content, `tool_result` | Dropped unless `is_error`, then first `MAX_ERROR_CHARS` |
+| `assistant`, `text` | Kept verbatim, capped at `MAX_ASSISTANT_CHARS` |
+| `assistant`, `thinking` | Dropped (near-empty in the JSONL regardless) |
+| `assistant`, `tool_use` | One line `-> Name(<identifying arg>)`, capped at `MAX_TOOL_CHARS` |
+
+Successful tool output is dropped entirely: it is noise the assistant already summarises in prose,
+whereas failures carry the gotcha-and-fix content the distillation exists to capture.
+
+Every limit is a **named module-level constant, not a literal**, so it can be retuned without
+touching logic: `MAX_USER_CHARS=2000`, `MAX_ASSISTANT_CHARS=4000`, `MAX_TOOL_CHARS=120`,
+`MAX_ERROR_CHARS=300`, `MAX_BASH_CHARS=200`, `TOTAL_CHAR_BUDGET=100_000`. Truncation is always
+marked inline (`[…N chars truncated]`) so the model can tell abridgement from absence. The total
+budget truncates oldest-first with a leading marker.
+
+Measured outcome: 77 MB → 1.71 MB (2.22%); median session 10.4 K chars (~2,600 input tokens); worst
+case 89.6 K; **0 of 80 sessions hit the total budget**, because the per-entry caps absorb the
+outliers. The 50 K budget inherited from `sync-memory` would have truncated 21%.
+
 ### Architecture
 
 ```
@@ -176,14 +213,10 @@ cherry-picked onto a clean base; the automation is discarded.
 
 ## Open Questions
 
-1. **Transcript reduction heuristics.** The interface is fixed (`reduce(jsonl_bytes, char_budget)
-   -> str`, a pure function) and its tests are specified, but the heuristics are deferred to
-   implementation time at the user's request. Working assumption: keep user messages and assistant
-   prose, keep tool *names* with a one-line argument summary, discard tool result bodies beyond a
-   short head, collapse repeated read/search calls, truncate oldest-first at ~50k characters
-   (`sync-memory`'s existing limit). This does not affect the specs or the task breakdown.
-2. **The 300s interval and 300s quiet window** are estimates of "within a few minutes" and should
+1. **The 300s interval and 300s quiet window** are estimates of "within a few minutes" and should
    be tuned against real usage.
-3. **The rollover threshold** is arbitrary until real growth is observed.
-4. **Confirm the current Haiku model ID and pricing** via the `claude-api` skill before writing any
+2. **The rollover threshold** is arbitrary until real growth is observed.
+3. **Confirm the current Haiku model ID and pricing** via the `claude-api` skill before writing any
    API code (`sync-memory` currently pins `claude-haiku-4-5-20251001`).
+
+*(Resolved 2026-08-27: transcript reduction heuristics — see Decision 10.)*

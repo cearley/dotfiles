@@ -10,9 +10,13 @@
       before writing any state code (design.md Risks).
 - [ ] 1.3 Confirm the current Haiku model ID and pricing via the `claude-api` skill; record the
       chosen ID as a named constant. Verify a one-line API call succeeds with that ID.
-- [ ] 1.4 Settle transcript-reduction heuristics with the user (design.md Open Question 1) and
-      write them into design.md before implementing 3.3, so the deferred decision is stated
-      rather than assumed.
+- [x] 1.4 Settle transcript-reduction heuristics with the user and write them into design.md
+      before implementing 3.3. **Done 2026-08-27** — measured against all 80 transcripts in this
+      project (77 MB) rather than assumed; recorded as design.md Decision 10 with the full
+      keep/drop table and named constants. Two measurements changed the design: `user` records
+      with list content are injected skill/system text rather than human input, and a single
+      pasted entry once accounted for 90.8% of a session, so per-entry caps are required
+      alongside the total budget.
 
 ## 2. Credentials and scaffolding
 
@@ -35,14 +39,19 @@
 - [ ] 3.2 Implement quiescence eligibility (untouched ≥ quiet window AND unread bytes past
       offset). Verify with unit tests that a recently-modified transcript is excluded, a quiet one
       with unread bytes is included, and a quiet one fully read is excluded.
-- [ ] 3.3 Implement `reduce(jsonl_bytes, char_budget) -> str` per the heuristics settled in 1.4.
-      Verify with unit tests over a recorded fixture transcript that tool-result bodies are
-      dropped, user/assistant content is retained, output respects the budget, and truncation is
-      explicitly marked.
-- [ ] 3.4 Implement per-session state load/save with offset advance. Verify with unit tests that
+- [ ] 3.3 Implement `reduce(jsonl_bytes, char_budget) -> str` per design.md Decision 10, with
+      every limit a named module-level constant (`MAX_USER_CHARS` etc.), never a literal. Verify
+      with unit tests over recorded fixture transcripts that: successful tool-result bodies are
+      dropped while `is_error` results keep a capped head; `user` records with list content are
+      emitted as injection markers and never as human turns; a single oversized entry is capped
+      independently of the total budget; and every truncation is marked inline.
+- [ ] 3.4 Verify the reduction against the measured baseline: running it over this project's
+      transcript corpus reproduces roughly 2.2% of raw bytes with no session exceeding
+      `TOTAL_CHAR_BUDGET`. A large regression in either direction means a rule changed meaning.
+- [ ] 3.5 Implement per-session state load/save with offset advance. Verify with unit tests that
       advance happens only when explicitly committed, and that a resumed-and-grown session yields
       only the delta.
-- [ ] 3.5 Implement rollover computation (which entries move, given a note body and threshold).
+- [ ] 3.6 Implement rollover computation (which entries move, given a note body and threshold).
       Verify with unit tests that entries older than the newest dated entry are selected and the
       newest is retained, and that a below-threshold note yields no move.
 
