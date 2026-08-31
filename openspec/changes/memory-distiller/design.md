@@ -64,6 +64,21 @@ itself. *Alternative:* direct vault file writes, as `sync-memory --standalone` d
 Rejected on the index-drift constraint above. *Alternative:* the Claude Agent SDK. Rejected — it
 reintroduces the Claude Code harness this change exists to get out of.
 
+**4a. Only an allowlisted subset of the server's tools is exposed to the model.** Added 2026-08-28
+during task 5.1. The real basic-memory MCP server (4.0.0b1) exposes **21** tools, among them
+`delete_note`, `delete_project` and `move_note`. Converting the server's whole tool list into
+Anthropic tool definitions — as Decision 4 as originally written implies — would hand an
+unsupervised model the ability to delete curated notes or an entire project, leaving the design's
+central invariant enforced only by an after-the-fact assertion (task 7.4) that the model happened
+not to do so.
+
+The model is exposed only `read_note`, `search_notes`, and `recent_activity`. The worker itself
+uses `write_note` and `edit_note` only with preselected machine-owned targets: `Distilled Sessions`
+and its dated archives. Anything else the server offers is unavailable to the model. This makes
+"cannot damage curated content" structural rather than behavioural, while retaining MCP ownership
+of frontmatter, permalinks, and indexing. New tools appearing in a future basic-memory release are
+excluded by default rather than silently acquired.
+
 **5. Model instructions come from two sources.** A repo-authored distillation skill at
 `home/dot_local/share/memory-distiller/distill.md` carries this project's conventions (pass
 `project=` explicitly, `[category]` observation prefixes, `[[wikilinks]]`, never write curated
@@ -75,12 +90,31 @@ machine-owned note per project. Threshold crossings are reported into a `## Main
 section of that same note, visible through normal start-of-session recall — no new hook, no write
 to curated content. Acting on them stays interactive.
 
+The live `Distilled Sessions` note rolls over at **60,000 characters**. Its archive title is
+`Distilled Sessions Archive — YYYY-MM-DD`, dated by the rollover run. The worker reports, but does
+not act on, these curated-note conditions: `Chezmoi Current Status` over **20,000 characters** or
+missing `## Status Summary` / `## Open`; and `Chezmoi Session Notes` over **60,000 characters**.
+The report is replaced on each run, so resolved findings disappear rather than accumulating.
+
 **7. A single machine-level script, not a per-project rendered copy.** chezmoi's own apply replaces
 `check-drift.sh`'s version-marker and drift machinery for this component entirely.
 
-**8. Byte offsets advance only after a verified successful write.** Verification means reading back
-the tool result's own `project:` and `permalink:` fields and confirming the project matches. An
-interrupted or failed run re-processes rather than silently dropping content.
+**8. Byte offsets advance only after a verified successful write, and are themselves guarded by a
+hash.** Verification means reading back the tool result's own `project:` and `permalink:` fields and
+confirming the project matches. An interrupted or failed run re-processes rather than silently
+dropping content.
+
+Per-session state stores the offset *and* `guard_sha`, the SHA-256 of the `GUARD_BYTES` (4096)
+immediately preceding the offset — or of `[0, offset)` when the file is shorter than that. Before
+trusting a stored offset the worker re-hashes that range and compares. On mismatch it logs and
+reprocesses the transcript from 0 rather than resuming mid-file.
+
+This exists because the append-only assumption was verified only as far as passive observation
+reaches (task 1.2): 279 transcripts showed zero rewritten prefixes and zero truncations, and a live
+append was confirmed to leave its prefix intact, but no transcript was observed *across a resume
+boundary*. The guard converts an assumption that would fail silently — skipped content, no signal —
+into one that is re-checked every run and self-heals if Claude Code's behaviour ever changes. It
+costs one 4 KB read and one hash per session per run.
 
 **9. Verification strategy.** Pure functions (transcript reduction, eligibility, rollover, offset
 advance) are unit-tested over fixtures with no network, clock or vault. The tool-use loop is tested
@@ -105,6 +139,8 @@ overturned the working assumption:
 | `user`, string content | Kept verbatim, capped at `MAX_USER_CHARS` |
 | `user` string starting `<bash-input>` | `$ <cmd>`, capped at `MAX_BASH_CHARS` |
 | `user` string starting `<bash-stdout>` / `<local-command` | Dropped |
+| `user` string starting `<task-notification>` / `<command-message>` / `<command-args>` | Dropped |
+| `user` string starting `<command-name>` | Kept as `user: /<command>`, capped at `MAX_BASH_CHARS` |
 | `user`, list content, `text` block | One-line marker `[injected: <first line>]`; body dropped |
 | `user`, list content, `tool_result` | Dropped unless `is_error`, then first `MAX_ERROR_CHARS` |
 | `assistant`, `text` | Kept verbatim, capped at `MAX_ASSISTANT_CHARS` |
@@ -124,21 +160,63 @@ Measured outcome: 77 MB → 1.71 MB (2.22%); median session 10.4 K chars (~2,600
 case 89.6 K; **0 of 80 sessions hit the total budget**, because the per-entry caps absorb the
 outliers. The 50 K budget inherited from `sync-memory` would have truncated 21%.
 
+**Table extended 2026-08-28 during implementation (task 3.3), again by measurement.** The three
+tag prefixes above were not the whole set. Of 859 `user`-string records in this project's corpus,
+only 503 are genuine human turns; the other 356 are machinery wearing a human turn's clothes:
+`<local-command-caveat>` (96), `<command-name>` (96), `<command-message>` (84),
+`<local-command-stdout>` (53), `<task-notification>` (19), `<bash-input>`/`<bash-stdout>` (4).
+Without the added rows, task-notification bodies and slash-command boilerplate would have been
+attributed to the user verbatim. `<command-name>` is *kept* as a compact marker rather than
+dropped, because which command drove a session is decision-worthy even though its body is not.
+
+Re-verified against the implementation (task 3.4): 104 transcripts, 77.6 MB → 1.73 MB = **2.23%**,
+worst case 96.4 K, **0 sessions hit the budget**. The ratio reproduces the 2.22% baseline to within
+0.01pp. Median fell from 10.4 K to 2.9 K, which is the added drop rules plus 24 mostly-short
+sessions joining the corpus since 2026-08-27 — total volume is unchanged, so no rule is discarding
+substance.
+
 ### Architecture
 
+**When the worker runs, and what it will look at:**
+
+```mermaid
+flowchart TD
+    LD["launchd agent · StartInterval 300s<br/>runs never overlap, so no lock is needed"]
+    LD --> SH["zsh -c 'source ~/.zsh_secrets'<br/>launchd inherits no shell environment"]
+    SH --> KEY{"ANTHROPIC_API_KEY available?"}
+    KEY -- absent --> NOOP["log once, exit 0<br/>never a subscription credential"]
+    KEY -- present --> REG[("registry.json<br/>opt-in projects only")]
+    REG --> DISC["for each registered project:<br/>~/.claude*/projects/slug/*.jsonl<br/>every profile, one level deep — subagents excluded"]
+    DISC --> ELIG{"untouched 300s AND<br/>unread bytes past the offset?"}
+    ELIG -- no --> SKIP["skip — still live, or already fully read"]
+    ELIG -- yes --> GO["eligible · capped at MAX_SESSIONS_PER_RUN"]
 ```
-launchd (every 300s)
-  └─ /bin/zsh -c 'source ~/.zsh_secrets && exec ~/.local/bin/memory-distiller'
-       └─ for each project in registry.json:
-            ├─ discover transcripts across all personas
-            ├─ select quiescent transcripts with unread bytes
-            ├─ reduce transcript to bounded plain text     (pure function)
-            ├─ tool-use loop against Messages API
-            │    └─ stdio MCP: uvx --python 3.12 basic-memory mcp
-            ├─ verify tool results' project + permalink
-            ├─ advance byte offset (only on verified success)
-            └─ record maintenance signals
+
+**What then happens to one eligible transcript:**
+
+```mermaid
+flowchart TD
+    START(["one eligible transcript"]) --> GUARD{"guard_sha still matches the<br/>bytes before the stored offset?"}
+    GUARD -- "no — prefix changed" --> ZERO["reprocess from offset 0"]
+    GUARD -- yes --> DELTA["read bytes past the offset"]
+    ZERO --> DELTA
+    DELTA --> RED["reduce() — pure function<br/>per-entry caps, then total budget<br/>measured 77.6 MB to 2.23%"]
+    RED --> API["read-only tool-use loop · Messages API"]
+    API <--> TOOLS
+    subgraph MCP["stdio child process: uvx basic-memory mcp"]
+      TOOLS["model tools: read_note, search_notes, recent_activity<br/>worker-only: write_note, edit_note<br/>withheld: delete_note, delete_project, move_note, +13"]
+    end
+    API --> VER{"does the result's project match<br/>the intended project?"}
+    VER -- no --> FAIL["log mismatch · offset NOT advanced<br/>content retried on a later run"]
+    VER -- yes --> COMMIT["append to the machine-owned note<br/>save offset + fresh guard_sha"]
+    COMMIT --> ROLL{"note over the rollover threshold?"}
+    ROLL -- yes --> ARCH["move all but the newest dated<br/>entry into a dated archive note"]
+    ROLL -- no --> DONE(["done"])
+    ARCH --> DONE
 ```
+
+Every failure path leads to *not* advancing the offset, so the worst case is repeated work rather
+than lost content. The only edge that advances state runs through a verified project match.
 
 | Component | Location | Managed by |
 |---|---|---|
@@ -155,12 +233,48 @@ registrations. `<slug>` is the mangled project root (`/`→`-`, `.`→`-`), the 
 locate transcripts at `~/.claude*/projects/<mangled>/*.jsonl` — globbing the persona prefix picks
 up all four without hardcoding them, and survives a new one being added.
 
+That glob is deliberately **one level deep, which excludes subagent transcripts**. Measured
+2026-08-28: of 763 `.jsonl` files across the four profiles, 480 are subagent transcripts at
+`<session-id>/subagents/*.jsonl` and only 283 are top-level session transcripts. Subagent files are
+skipped because the parent session's transcript already contains each subagent's final report, so
+distilling them would pay for the same content twice and would attribute a subagent's internal
+reasoning to the session. If subagent content is ever wanted, it needs its own decision — it must
+not arrive by loosening the glob to a recursive walk.
+
 Dependencies (`anthropic`, `mcp`) are declared as PEP 723 inline script metadata and run via
 `uv run`, matching the repo's existing `uvx` usage — no venv to manage.
 
 ### The invariant this design rests on
 
 > The worker writes exactly one note, and nothing else ever writes that note.
+
+```mermaid
+flowchart LR
+    subgraph HUMAN["interactive — human authored"]
+      direction TB
+      SS["/save-session<br/>/save-session-maintenance"]
+      SL["Session Notes"]
+      ST["Current Status"]
+      SS -->|writes| SL
+      SS -->|writes| ST
+    end
+
+    subgraph AUTO["unattended — machine authored"]
+      direction TB
+      MD["memory-distiller"]
+      MN["Distilled Sessions<br/>machine-owned"]
+      AR["dated archive notes"]
+      MD -->|writes| MN
+      MN -.->|mechanical rollover| AR
+    end
+
+    MD -. "reads only — to report maintenance<br/>signals into the machine note" .-> SL
+    MD -. reads only .-> ST
+```
+
+The two write sets are disjoint, and that — not the choice of MCP — is what makes the worker
+lock-free. The dotted edges are reads: thresholds crossed on curated notes are *reported* into the
+machine note, never acted on.
 
 Lock-freedom follows from note-level disjointness, **not** from avoiding MCP. Any future change
 that widens the worker's write scope must revisit this decision explicitly, because coordination
@@ -179,8 +293,10 @@ comes straight back with it.
 - [launchd may not serialise `StartInterval` runs of the same label — load-bearing for "no locks"]
   → Verified by experiment before relying on it; `fcntl.flock` is a three-line fallback, not a
   redesign.
-- [Byte offsets assume Claude Code only ever appends to a transcript] → Verified by experiment; if
-  false, fall back to whole-transcript reprocessing with a content hash.
+- [Byte offsets assume Claude Code only ever appends to a transcript] → Verified over 279 real
+  transcripts (0 rewrites, 0 truncations) but not across a resume boundary, so the assumption is
+  additionally enforced at runtime by the `guard_sha` in Decision 8: a changed prefix triggers
+  reprocessing from 0 instead of silently skipping content.
 - [`uvx` cold start adds latency and the MCP server is a second process that can fail
   independently] → Failure is logged and the project skipped; the next interval retries.
 - [Losing SpecStory removes a human-readable markdown history that JSONL does not replace] →
@@ -215,8 +331,7 @@ cherry-picked onto a clean base; the automation is discarded.
 
 1. **The 300s interval and 300s quiet window** are estimates of "within a few minutes" and should
    be tuned against real usage.
-2. **The rollover threshold** is arbitrary until real growth is observed.
-3. **Confirm the current Haiku model ID and pricing** via the `claude-api` skill before writing any
+2. **Confirm the current Haiku model ID and pricing** via the `claude-api` skill before writing any
    API code (`sync-memory` currently pins `claude-haiku-4-5-20251001`).
 
 *(Resolved 2026-08-27: transcript reduction heuristics — see Decision 10.)*

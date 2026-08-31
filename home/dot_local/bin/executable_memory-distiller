@@ -1,0 +1,860 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "anthropic>=0.40",
+#     "mcp>=2.1,<3",
+# ]
+# ///
+"""memory-distiller — distil quiescent Claude Code transcripts into a machine-owned
+basic-memory note.
+
+Run unattended by a launchd agent on a fixed interval. This process is deliberately
+NOT a Claude Code session: it talks to the Anthropic API directly, so it cannot
+trigger a Claude Code hook and therefore cannot cause another instance of itself.
+
+See openspec/changes/memory-distiller/design.md in the chezmoi repo.
+"""
+from __future__ import annotations
+
+import argparse
+import contextlib
+import asyncio
+import hashlib
+import logging
+import json
+import os
+import re
+import sys
+import time
+from datetime import date
+from pathlib import Path
+
+# --- Transcript reduction limits (design.md Decision 10) --------------------
+# Every limit is a named constant so it can be retuned without touching logic.
+MAX_USER_CHARS = 2000
+MAX_ASSISTANT_CHARS = 4000
+MAX_TOOL_CHARS = 120
+MAX_ERROR_CHARS = 300
+MAX_BASH_CHARS = 200
+TOTAL_CHAR_BUDGET = 100_000
+
+# --- Scheduling / eligibility ----------------------------------------------
+QUIET_WINDOW_SECONDS = 300
+MAX_SESSIONS_PER_RUN = 10
+
+# --- MCP ------------------------------------------------------------------
+MCP_SERVER_COMMAND = ["uvx", "--python", "3.12", "basic-memory", "mcp"]
+
+# Only these reach the model (design.md Decision 4a). Worker-owned writes use
+# preselected machine-note targets instead. The real server's destructive tools
+# are unavailable to the model, and new tools are excluded by default.
+ALLOWED_TOOLS = frozenset({"read_note", "search_notes", "recent_activity"})
+
+MAX_TOOL_TURNS = 12
+MAX_OUTPUT_TOKENS = 4096
+
+# --- Anthropic API ---------------------------------------------------------
+# Named constant, never a literal at the call site. Task 1.3 still has to confirm
+# this ID and its pricing against the `claude-api` skill with a live call, which
+# needs an API key that does not exist on this machine yet.
+MODEL_ID = "claude-haiku-4-5-20251001"
+
+LOG = logging.getLogger("memory-distiller")
+
+# --- Model instructions (design.md Decision 5) ----------------------------
+DISTILLATION_SKILL_PATH = Path(__file__).resolve().parents[1] / "share" / "memory-distiller" / "distill.md"
+AI_ASSISTANT_GUIDE_URI = "memory://ai_assistant_guide"
+
+# --- Offset guard (design.md Decision 8) -----------------------------------
+GUARD_BYTES = 4096
+
+# --- Rollover --------------------------------------------------------------
+# Arbitrary until real growth is observed (design.md Open Question 2).
+ROLLOVER_THRESHOLD_CHARS = 60_000
+DATED_ENTRY_RE = re.compile(r"^## (\d{4}-\d{2}-\d{2})\b", re.M)
+
+# The sole live note owned by the worker. Archives are mechanical snapshots of
+# this note; the curated notes below are read-only inputs for maintenance signals.
+MACHINE_NOTE_TITLE = "Distilled Sessions"
+MAINTENANCE_SECTION = "## Maintenance signals"
+CURATED_NOTE_RULES = {
+    "Chezmoi Current Status": {
+        "threshold": 20_000,
+        "required_sections": ("## Status Summary", "## Open"),
+    },
+    "Chezmoi Session Notes": {
+        "threshold": 60_000,
+        "required_sections": (),
+    },
+}
+
+
+def mangle_project_root(project_root: str) -> str:
+    """Map a project path to the directory name Claude Code stores it under.
+
+    ``/Users/craig/.local/share/chezmoi`` -> ``-Users-craig--local-share-chezmoi``
+    """
+    return project_root.rstrip("/").replace("/", "-").replace(".", "-")
+
+
+def discover_transcripts(project_root: str, home: Path | None = None) -> list[Path]:
+    """Every top-level session transcript for a project, across all Claude Code profiles.
+
+    Profiles are found by globbing ``~/.claude*`` rather than by listing them, so a
+    profile added later is picked up with no config change.
+
+    The inner glob is deliberately one level deep: subagent transcripts live at
+    ``<session-id>/subagents/*.jsonl`` and are excluded, because the parent session's
+    transcript already contains each subagent's final report (design.md Architecture).
+    """
+    home = Path(home) if home is not None else Path.home()
+    slug = mangle_project_root(project_root)
+    found: list[Path] = []
+    for profile in sorted(home.glob(".claude*")):
+        project_dir = profile / "projects" / slug
+        if project_dir.is_dir():
+            found.extend(sorted(project_dir.glob("*.jsonl")))
+    return found
+
+
+def is_eligible(transcript: Path, offset: int, now: float) -> bool:
+    """A transcript is eligible when it has gone quiet AND has content we have not read.
+
+    This single test replaces session-end detection, crash recovery and the
+    live-session hazard: a running session is by definition not quiet, and a killed
+    session goes quiet exactly like a cleanly-ended one (design.md Decision 2).
+    """
+    stat = transcript.stat()
+    if now - stat.st_mtime < QUIET_WINDOW_SECONDS:
+        return False
+    return stat.st_size > offset
+
+
+# --- Transcript reduction (design.md Decision 10) --------------------------
+# `user` records whose content is a STRING are genuine human turns -- except for a
+# set of tag-wrapped varieties that are machinery wearing a human turn's clothes.
+# Measured 2026-08-28 over this project's corpus: of 859 user-string records, 503
+# were real turns and 356 carried one of these tags.
+USER_DROP_PREFIXES = (
+    "<bash-stdout>",
+    "<local-command",       # covers -stdout and -caveat
+    "<task-notification>",
+    "<command-message>",
+    "<command-args>",
+)
+
+# Most identifying argument to show for a tool call, in preference order.
+TOOL_ARG_PREFERENCE = (
+    "file_path", "path", "notebook_path", "command", "pattern", "query",
+    "url", "skill", "subagent_type", "description", "prompt",
+)
+
+
+def _cap(text: str, limit: int) -> str:
+    """Truncate to `limit`, marking the truncation inline so the model can tell
+    abridgement from absence."""
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return text[:limit] + f" [\u2026{len(text) - limit} chars truncated]"
+
+
+def _inner_tag_text(raw: str) -> str:
+    """`<bash-input>git status</bash-input>` -> `git status`."""
+    m = re.match(r"<([a-zA-Z-]+)>(.*)</\1>", raw.strip(), re.S)
+    return m.group(2).strip() if m else raw.strip()
+
+
+def _flatten(content) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                if isinstance(block.get("text"), str):
+                    parts.append(block["text"])
+                elif block.get("content") is not None:
+                    parts.append(_flatten(block["content"]))
+        return "\n".join(parts)
+    return ""
+
+
+def _reduce_user_string(raw: str) -> str | None:
+    stripped = raw.lstrip()
+    if stripped.startswith(USER_DROP_PREFIXES):
+        return None
+    if stripped.startswith("<bash-input>"):
+        return "$ " + _cap(_inner_tag_text(stripped), MAX_BASH_CHARS)
+    if stripped.startswith("<command-name>"):
+        return "user: " + _cap(_inner_tag_text(stripped), MAX_BASH_CHARS)
+    return "user: " + _cap(raw, MAX_USER_CHARS)
+
+
+def _reduce_user_blocks(blocks: list) -> list[str]:
+    """A `user` record with LIST content is injected skill/system text or tool
+    results -- never something the human typed."""
+    out = []
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        kind = block.get("type")
+        if kind == "text":
+            first_line = (block.get("text") or "").strip().splitlines()
+            marker = first_line[0] if first_line else ""
+            out.append(f"[injected: {_cap(marker, MAX_TOOL_CHARS)}]")
+        elif kind == "tool_result":
+            # Successful output is noise the assistant already summarises in prose;
+            # failures carry the gotcha-and-fix content distillation exists to capture.
+            if block.get("is_error"):
+                out.append("!! " + _cap(_flatten(block.get("content")), MAX_ERROR_CHARS))
+    return out
+
+
+def _reduce_assistant_blocks(blocks: list) -> list[str]:
+    out = []
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        kind = block.get("type")
+        if kind == "text":
+            text = _cap(block.get("text") or "", MAX_ASSISTANT_CHARS)
+            if text:
+                out.append("assistant: " + text)
+        elif kind == "tool_use":
+            args = block.get("input") or {}
+            key = next((k for k in TOOL_ARG_PREFERENCE if k in args), None)
+            if key is None:
+                key = next(iter(args), None)
+            shown = f"{key}={args.get(key)}" if key else ""
+            line = f"-> {block.get('name', '?')}({shown})"
+            out.append(_cap(" ".join(line.split()), MAX_TOOL_CHARS))
+        # `thinking` is dropped.
+    return out
+
+
+def reduce(jsonl_bytes: bytes, char_budget: int = TOTAL_CHAR_BUDGET) -> str:
+    """Reduce a raw JSONL transcript slice to bounded plain text.
+
+    Keeps conversation, discards machinery. Every limit is a named constant above.
+    Per-entry caps run first so one pasted blob cannot swamp the whole budget; the
+    total budget then truncates oldest-first with a leading marker.
+    """
+    lines: list[str] = []
+    for raw_line in jsonl_bytes.splitlines():
+        raw_line = raw_line.strip()
+        if not raw_line:
+            continue
+        try:
+            record = json.loads(raw_line)
+        except (ValueError, UnicodeDecodeError):
+            continue
+        if not isinstance(record, dict):
+            continue
+        rtype = record.get("type")
+        if rtype not in ("user", "assistant"):
+            continue
+        content = (record.get("message") or {}).get("content")
+        if rtype == "user":
+            if isinstance(content, str):
+                entry = _reduce_user_string(content)
+                if entry:
+                    lines.append(entry)
+            elif isinstance(content, list):
+                lines.extend(_reduce_user_blocks(content))
+        else:
+            if isinstance(content, list):
+                lines.extend(_reduce_assistant_blocks(content))
+            elif isinstance(content, str):
+                text = _cap(content, MAX_ASSISTANT_CHARS)
+                if text:
+                    lines.append("assistant: " + text)
+
+    body = "\n".join(lines)
+    if len(body) <= char_budget:
+        return body
+
+    kept: list[str] = []
+    size = 0
+    for line in reversed(lines):
+        if size + len(line) + 1 > char_budget:
+            break
+        kept.append(line)
+        size += len(line) + 1
+    kept.reverse()
+    dropped = len(lines) - len(kept)
+    return f"[\u2026{dropped} earlier entries truncated]\n" + "\n".join(kept)
+
+
+# --- Per-session state (design.md Decision 8) ------------------------------
+
+
+# --- State directory layout ------------------------------------------------
+# Runtime state, deliberately NOT chezmoi-managed: `chezmoi apply` would clobber
+# runtime registrations (design.md Architecture).
+#
+#   ~/.local/state/memory-distiller/
+#     registry.json                     which projects opt in
+#     <profile>__<session-id>.json      per-session offset + guard_sha
+#     distiller.log                     run log
+
+
+def state_dir(home: Path | None = None) -> Path:
+    home = Path(home) if home is not None else Path.home()
+    return home / ".local" / "state" / "memory-distiller"
+
+
+def ensure_state_dir(home: Path | None = None) -> Path:
+    d = state_dir(home)
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def registry_path(home: Path | None = None) -> Path:
+    return state_dir(home) / "registry.json"
+
+
+def log_path(home: Path | None = None) -> Path:
+    return state_dir(home) / "distiller.log"
+
+
+def session_state_path(directory: Path, transcript: Path) -> Path:
+    """State file for one transcript.
+
+    The Claude Code profile is part of the name: two profiles can hold transcripts
+    with the same session id for the same project, and they are different sessions.
+    """
+    profile = transcript.parent.parent.parent.name
+    return Path(directory) / f"{profile}__{transcript.stem}.json"
+
+
+def load_state(path: Path) -> dict:
+    try:
+        data = json.loads(Path(path).read_text())
+        return {"offset": int(data.get("offset", 0)), "guard_sha": data.get("guard_sha")}
+    except (OSError, ValueError, TypeError):
+        return {"offset": 0, "guard_sha": None}
+
+
+def save_state(path: Path, offset: int, guard_sha: str | None) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps({"offset": offset, "guard_sha": guard_sha}))
+    tmp.replace(path)
+
+
+def compute_guard_sha(transcript: Path, offset: int) -> str | None:
+    """SHA-256 of the GUARD_BYTES immediately preceding `offset`.
+
+    Returns None at offset 0, where there is no prefix to guard.
+    """
+    if offset <= 0:
+        return None
+    start = max(0, offset - GUARD_BYTES)
+    with open(transcript, "rb") as fh:
+        fh.seek(start)
+        return hashlib.sha256(fh.read(offset - start)).hexdigest()
+
+
+def resolve_start_offset(transcript: Path, state: dict) -> int:
+    """The offset to resume from, after re-checking that the prefix is unchanged.
+
+    Claude Code is believed to only ever append (verified over 279 transcripts, task
+    1.2), but never observed across a resume boundary. Rather than trust that
+    silently -- where a violation would skip content with no signal -- the guard is
+    re-checked every run and a mismatch reprocesses the file from the start.
+    """
+    offset = state.get("offset", 0)
+    if offset <= 0:
+        return 0
+    if transcript.stat().st_size < offset:
+        return 0
+    if compute_guard_sha(transcript, offset) != state.get("guard_sha"):
+        return 0
+    return offset
+
+
+def read_unread(transcript: Path, offset: int) -> bytes:
+    """Bytes past `offset`. Reading never advances anything -- the offset moves only
+    when save_state is called after a verified successful write."""
+    with open(transcript, "rb") as fh:
+        fh.seek(offset)
+        return fh.read()
+
+
+# --- Rollover (mechanical, never model judgment) ---------------------------
+
+
+def _split_dated_entries(body: str) -> tuple[str, list[tuple[str, str]]]:
+    """Split a machine note into (everything that is not a dated entry, [(date, text)]).
+
+    Only `## YYYY-MM-DD` sections are entries. The title and the `## Maintenance
+    signals` section are not, so rollover can never move them.
+    """
+    matches = list(DATED_ENTRY_RE.finditer(body))
+    if not matches:
+        return body, []
+    preamble = body[: matches[0].start()]
+    entries = []
+    for i, m in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(body)
+        entries.append((m.group(1), body[m.start(): end]))
+    return preamble, entries
+
+
+def compute_rollover(body: str, threshold: int = ROLLOVER_THRESHOLD_CHARS):
+    """Which entries move out of the live note, given its body and a threshold.
+
+    Deterministic and independent of the model. Returns (kept, moved) or None when
+    nothing should move. The newest dated entry always stays, so a note is never
+    emptied -- a single entry is never moved however large it is.
+    """
+    if len(body) <= threshold:
+        return None
+    preamble, entries = _split_dated_entries(body)
+    if len(entries) < 2:
+        return None
+    newest = max(range(len(entries)), key=lambda i: entries[i][0])
+    moved = [text for i, (_, text) in enumerate(entries) if i != newest]
+    kept = preamble + entries[newest][1]
+    return kept, "".join(moved)
+
+
+# --- Machine-owned output (design.md Decision 6) --------------------------
+
+
+def _machine_note_body(entry: str = "") -> str:
+    body = f"# {MACHINE_NOTE_TITLE}\n\n{MAINTENANCE_SECTION}\n\n- nothing to report\n\n"
+    return body + entry
+
+
+def _dated_entry(content: str, entry_date: date) -> str:
+    return f"## {entry_date.isoformat()} — session\n\n{content.strip()}\n\n"
+
+
+async def _read_note_text(session, identifier: str, project: str) -> str | None:
+    result = await session.call_tool("read_note", {"identifier": identifier, "project": project})
+    if getattr(result, "isError", False) or getattr(result, "is_error", False):
+        return None
+    return _tool_result_text(result)
+
+
+async def _worker_write(session, name: str, arguments: dict) -> dict:
+    """Call a preselected worker write tool and retain its result for verification."""
+    result = await session.call_tool(name, arguments)
+    return {
+        "name": name,
+        "arguments": arguments,
+        "result": _tool_result_text(result),
+        "is_error": bool(getattr(result, "isError", False) or getattr(result, "is_error", False)),
+    }
+
+
+async def append_distillation(session, project: str, content: str,
+                              entry_date: date | None = None) -> list[dict]:
+    """Create the machine note once, then append one dated distilled entry."""
+    entry = _dated_entry(content, entry_date or date.today())
+    if await _read_note_text(session, MACHINE_NOTE_TITLE, project) is None:
+        return [await _worker_write(session, "write_note", {
+            "title": MACHINE_NOTE_TITLE,
+            "directory": "",
+            "content": _machine_note_body(entry),
+            "project": project,
+        })]
+    return [await _worker_write(session, "edit_note", {
+        "identifier": MACHINE_NOTE_TITLE,
+        "operation": "append",
+        "content": entry,
+        "project": project,
+    })]
+
+
+async def rollover_machine_note(session, project: str, body: str,
+                                threshold: int = ROLLOVER_THRESHOLD_CHARS,
+                                today: date | None = None) -> list[dict]:
+    """Archive older entries then atomically replace the machine-owned live note."""
+    rollover = compute_rollover(body, threshold)
+    if rollover is None:
+        return []
+    kept, moved = rollover
+    archive_title = f"{MACHINE_NOTE_TITLE} Archive — {(today or date.today()).isoformat()}"
+    writes = [await _worker_write(session, "write_note", {
+        "title": archive_title,
+        "directory": "",
+        "content": f"# {archive_title}\n\n{moved}",
+        "project": project,
+    })]
+    writes.append(await _worker_write(session, "edit_note", {
+        "identifier": MACHINE_NOTE_TITLE,
+        "operation": "find_replace",
+        "find_text": body,
+        "content": kept,
+        "expected_replacements": 1,
+        "project": project,
+    }))
+    return writes
+
+
+def _maintenance_signal(title: str, body: str | None, rule: dict) -> str | None:
+    if body is None:
+        return f"- `{title}` could not be read; review it interactively."
+    findings = []
+    if len(body) > rule["threshold"]:
+        findings.append(f"{len(body):,} characters exceeds {rule['threshold']:,}")
+    missing = [section for section in rule["required_sections"] if section not in body]
+    if missing:
+        findings.append("missing required sections: " + ", ".join(missing))
+    return f"- `{title}`: " + "; ".join(findings) + "." if findings else None
+
+
+async def refresh_maintenance_signals(session, project: str) -> list[dict]:
+    """Refresh, rather than append, read-only curated-note maintenance findings."""
+    findings = []
+    for title, rule in CURATED_NOTE_RULES.items():
+        signal = _maintenance_signal(title, await _read_note_text(session, title, project), rule)
+        if signal:
+            findings.append(signal)
+    content = "\n".join(findings) if findings else "- nothing to report"
+    return [await _worker_write(session, "edit_note", {
+        "identifier": MACHINE_NOTE_TITLE,
+        "operation": "replace_section",
+        "section": MAINTENANCE_SECTION,
+        "content": content,
+        "project": project,
+    })]
+
+
+# --- Registry (projects opt in explicitly) ---------------------------------
+# Never inferred from files on disk: a project with transcripts but no entry is
+# not read at all.
+
+
+def normalize_root(project_root: str) -> str:
+    return str(Path(project_root).expanduser())
+
+
+def load_registry(path: Path) -> dict:
+    try:
+        data = json.loads(Path(path).read_text())
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def save_registry(path: Path, registry: dict) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(registry, indent=2, sort_keys=True))
+    tmp.replace(path)
+
+
+def register_project(path: Path, project_root: str, bm_project: str) -> None:
+    """Idempotent: re-registering leaves one entry and refreshes the project name."""
+    registry = load_registry(path)
+    registry[normalize_root(project_root)] = {"bm_project": bm_project}
+    save_registry(path, registry)
+
+
+def unregister_project(path: Path, project_root: str) -> None:
+    registry = load_registry(path)
+    registry.pop(normalize_root(project_root), None)
+    save_registry(path, registry)
+
+
+def eligible_sessions(registry: dict, home: Path, directory: Path, now: float,
+                      max_sessions: int = MAX_SESSIONS_PER_RUN) -> list[dict]:
+    """Every quiescent transcript with unread bytes, for registered projects only.
+
+    Bounded by `max_sessions` so a large backlog is spread across runs rather than
+    spent in one. Purely enumerative -- it reads no note and mutates nothing.
+    """
+    found: list[dict] = []
+    for project_root, config in sorted(registry.items()):
+        for transcript in discover_transcripts(project_root, home=home):
+            state = load_state(session_state_path(directory, transcript))
+            offset = resolve_start_offset(transcript, state)
+            if not is_eligible(transcript, offset, now):
+                continue
+            found.append({
+                "project_root": project_root,
+                "bm_project": config.get("bm_project"),
+                "transcript": transcript,
+                "offset": offset,
+            })
+            if len(found) >= max_sessions:
+                return found
+    return found
+
+
+# --- MCP session and the tool-use loop -------------------------------------
+
+
+@contextlib.asynccontextmanager
+async def mcp_session(command: list[str] | None = None, env: dict | None = None):
+    """Spawn the basic-memory MCP server over stdio and yield an initialised session.
+
+    Imported lazily so the pure functions above stay importable without the MCP
+    dependency present.
+    """
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+
+    command = command or MCP_SERVER_COMMAND
+    params = StdioServerParameters(command=command[0], args=list(command[1:]), env=env)
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            yield session
+
+
+def to_anthropic_tools(mcp_tools) -> list[dict]:
+    """Convert MCP tool descriptors to Anthropic tool definitions, allowlist-filtered."""
+    tools = []
+    for tool in mcp_tools:
+        name = getattr(tool, "name", None)
+        if name not in ALLOWED_TOOLS:
+            continue
+        tools.append({
+            "name": name,
+            "description": getattr(tool, "description", "") or "",
+            "input_schema": getattr(tool, "inputSchema", None) or {
+                "type": "object", "properties": {},
+            },
+        })
+    return tools
+
+
+def _tool_result_text(result) -> str:
+    """Flatten an MCP CallToolResult to text."""
+    parts = []
+    for block in getattr(result, "content", None) or []:
+        text = getattr(block, "text", None)
+        if text:
+            parts.append(text)
+    return "\n".join(parts) if parts else str(result)
+
+
+def _resource_text(result) -> str:
+    """Flatten a basic-memory ReadResourceResult to text."""
+    parts = []
+    for resource in getattr(result, "contents", None) or []:
+        text = getattr(resource, "text", None)
+        if text is None and isinstance(resource, dict):
+            text = resource.get("text")
+        if isinstance(text, str) and text.strip():
+            parts.append(text.strip())
+    return "\n\n".join(parts)
+
+
+def load_system_prompt(session=None, skill_path: Path | None = None):
+    """Load repo instructions, optionally augmenting them with the server guide.
+
+    The no-session form stays synchronous for local inspection and tests. Supplying
+    an MCP session returns a coroutine that fetches the version-matched guide; a
+    failure deliberately falls back to the repo-authored instructions alone.
+    """
+    skill_path = Path(skill_path) if skill_path is not None else DISTILLATION_SKILL_PATH
+    prompt = skill_path.read_text().strip()
+    if session is None:
+        return prompt
+
+    async def with_runtime_guide() -> str:
+        try:
+            guide = _resource_text(await session.read_resource(AI_ASSISTANT_GUIDE_URI))
+        except Exception as exc:
+            LOG.warning("could not fetch basic-memory AI assistant guide: %s", exc)
+            return prompt
+        return f"{prompt}\n\n# basic-memory AI assistant guide\n\n{guide}" if guide else prompt
+
+    return with_runtime_guide()
+
+
+async def run_tool_loop(client, session, system: str | None, prompt: str, tools: list[dict],
+                        model: str = MODEL_ID, max_turns: int = MAX_TOOL_TURNS) -> dict:
+    """Run the model against the MCP server until it stops asking for tools.
+
+    Tool calls outside ALLOWED_TOOLS are refused locally and never forwarded, so a
+    model that hallucinates a destructive tool cannot reach the server through here
+    either -- the allowlist is enforced on both the offer and the call.
+    """
+    if system is None:
+        system = await load_system_prompt(session)
+
+    messages: list[dict] = [{"role": "user", "content": prompt}]
+    calls: list[dict] = []
+    usage = {"input_tokens": 0, "output_tokens": 0}
+    stopped_at_max_turns = True
+    text_out: list[str] = []
+
+    for _ in range(max_turns):
+        response = await client.messages.create(
+            model=model, max_tokens=MAX_OUTPUT_TOKENS, system=system,
+            tools=tools, messages=messages,
+        )
+        if getattr(response, "usage", None):
+            usage["input_tokens"] += getattr(response.usage, "input_tokens", 0) or 0
+            usage["output_tokens"] += getattr(response.usage, "output_tokens", 0) or 0
+
+        blocks = list(response.content)
+        text_out.extend(b.text for b in blocks if getattr(b, "type", None) == "text")
+        tool_uses = [b for b in blocks if getattr(b, "type", None) == "tool_use"]
+        if not tool_uses:
+            stopped_at_max_turns = False
+            break
+
+        messages.append({"role": "assistant", "content": blocks})
+        results = []
+        for use in tool_uses:
+            if use.name not in ALLOWED_TOOLS:
+                results.append({
+                    "type": "tool_result", "tool_use_id": use.id, "is_error": True,
+                    "content": f"{use.name} is not available to this worker",
+                })
+                LOG.warning("refused withheld tool: %s", use.name)
+                continue
+            outcome = await session.call_tool(use.name, use.input)
+            text = _tool_result_text(outcome)
+            calls.append({"name": use.name, "arguments": use.input, "result": text})
+            results.append({
+                "type": "tool_result", "tool_use_id": use.id, "content": text,
+                "is_error": bool(getattr(outcome, "isError", False)),
+            })
+        messages.append({"role": "user", "content": results})
+
+    return {
+        "calls": calls,
+        "usage": usage,
+        "text": "\n".join(text_out),
+        "messages": messages,
+        "stopped_at_max_turns": stopped_at_max_turns,
+    }
+
+
+# --- Write verification (design.md Decision 8) -----------------------------
+# `edit_note` silently defaults to whatever project the MCP server considers
+# current when `project` is omitted. That is a misfile, not an error, so the
+# result is read back and the project confirmed before any offset moves.
+
+WRITING_TOOLS = ("write_note", "edit_note")
+_PROJECT_LINE = re.compile(r"^project:\s*(\S+)", re.M)
+_PERMALINK_LINE = re.compile(r"^permalink:\s*(\S+)", re.M)
+
+
+def verify_write(calls: list[dict], expected_project: str) -> dict:
+    """Confirm at least one write landed, and landed in the intended project."""
+    writes = [c for c in calls if c.get("name") in WRITING_TOOLS]
+    if not writes:
+        return {"ok": False, "project": None, "permalink": None,
+                "reason": "no write_note/edit_note call was made"}
+
+    last = writes[-1]
+    if last.get("is_error"):
+        return {"ok": False, "project": None, "permalink": None,
+                "reason": f"{last['name']} failed"}
+    result = last.get("result") or ""
+    project_match = _PROJECT_LINE.search(result)
+    permalink_match = _PERMALINK_LINE.search(result)
+
+    if not project_match:
+        return {"ok": False, "project": None,
+                "permalink": permalink_match.group(1) if permalink_match else None,
+                "reason": "write result reported no project"}
+
+    project = project_match.group(1)
+    if project != expected_project:
+        return {"ok": False, "project": project,
+                "permalink": permalink_match.group(1) if permalink_match else None,
+                "reason": f"write landed in {project}, expected {expected_project}"}
+
+    return {"ok": True, "project": project,
+            "permalink": permalink_match.group(1) if permalink_match else None,
+            "reason": ""}
+
+
+async def run_once(client, registry: dict, *, home: Path | None = None,
+                   directory: Path | None = None, now: float, mcp_command: list[str] | None = None,
+                   mcp_env: dict | None = None) -> dict:
+    """Process one bounded batch and advance offsets only after worker-owned writes verify."""
+    home = Path(home) if home is not None else Path.home()
+    directory = Path(directory) if directory is not None else ensure_state_dir(home)
+    sessions = eligible_sessions(registry, home=home, directory=directory, now=now)
+    summary = {"scanned": len(registry), "eligible": len(sessions), "distilled": 0, "errors": []}
+    environment = {**os.environ, **(mcp_env or {})}
+
+    async with mcp_session(command=mcp_command, env=environment) as session:
+        tools = to_anthropic_tools((await session.list_tools()).tools)
+        for item in sessions:
+            transcript = item["transcript"]
+            reduced = reduce(read_unread(transcript, item["offset"]))
+            if not reduced.strip():
+                continue
+            result = await run_tool_loop(
+                client, session, None,
+                "Distil this transcript into durable observations. Do not write notes; return the "
+                "distillation as text for the worker to store.\n\n" + reduced,
+                tools,
+            )
+            if not result["text"].strip():
+                summary["errors"].append(f"{transcript}: model returned no distillation")
+                continue
+
+            writes = await append_distillation(session, item["bm_project"], result["text"])
+            body = await _read_note_text(session, MACHINE_NOTE_TITLE, item["bm_project"])
+            if body is not None:
+                writes.extend(await rollover_machine_note(session, item["bm_project"], body))
+            writes.extend(await refresh_maintenance_signals(session, item["bm_project"]))
+            verdict = verify_write(writes, item["bm_project"])
+            if not verdict["ok"]:
+                summary["errors"].append(f"{transcript}: {verdict['reason']}")
+                continue
+
+            end = transcript.stat().st_size
+            save_state(session_state_path(directory, transcript), end, compute_guard_sha(transcript, end))
+            summary["distilled"] += 1
+    return summary
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="memory-distiller",
+        description="Distil quiescent Claude Code transcripts into basic-memory.",
+    )
+    sub = parser.add_subparsers(dest="command")
+    sub.add_parser("run", help="process every registered project once (default)")
+    reg = sub.add_parser("register", help="register a project for distillation")
+    reg.add_argument("project_root")
+    reg.add_argument("--bm-project", required=True, help="basic-memory project name")
+    unreg = sub.add_parser("unregister", help="stop distilling a project")
+    unreg.add_argument("project_root")
+    sub.add_parser("list", help="list registered projects")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    ensure_state_dir()
+    path = registry_path()
+    if args.command == "register":
+        register_project(path, args.project_root, args.bm_project)
+        print(f"registered {normalize_root(args.project_root)} -> {args.bm_project}")
+    elif args.command == "unregister":
+        unregister_project(path, args.project_root)
+        print(f"unregistered {normalize_root(args.project_root)}")
+    elif args.command == "list":
+        for root, config in sorted(load_registry(path).items()):
+            print(f"{root}\t{config.get('bm_project')}")
+    else:
+        from anthropic import AsyncAnthropic
+        result = asyncio.run(run_once(AsyncAnthropic(), load_registry(path), now=time.time()))
+        print(f"run: {result['distilled']} distilled, {len(result['errors'])} errors")
+        return 0 if not result["errors"] else 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
