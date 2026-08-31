@@ -22,6 +22,7 @@ import contextlib
 import asyncio
 import hashlib
 import logging
+from logging.handlers import RotatingFileHandler
 import json
 import os
 import re
@@ -42,6 +43,9 @@ TOTAL_CHAR_BUDGET = 100_000
 # --- Scheduling / eligibility ----------------------------------------------
 QUIET_WINDOW_SECONDS = 300
 MAX_SESSIONS_PER_RUN = 10
+RETRY_AFTER_SECONDS = 300
+MAX_LOG_BYTES = 1_000_000
+LOG_BACKUP_COUNT = 3
 
 # --- MCP ------------------------------------------------------------------
 MCP_SERVER_COMMAND = ["uvx", "--python", "3.12", "basic-memory", "mcp"]
@@ -321,6 +325,27 @@ def log_path(home: Path | None = None) -> Path:
     return state_dir(home) / "distiller.log"
 
 
+def configure_logging(home: Path | None = None) -> Path:
+    """Send every unattended outcome to a bounded, machine-local log."""
+    directory = ensure_state_dir(home)
+    path = directory / "distiller.log"
+    if not any(getattr(handler, "baseFilename", None) == str(path) for handler in LOG.handlers):
+        handler = RotatingFileHandler(path, maxBytes=MAX_LOG_BYTES, backupCount=LOG_BACKUP_COUNT)
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        LOG.addHandler(handler)
+    LOG.setLevel(logging.INFO)
+    return path
+
+
+def record_missing_api_key(directory: Path) -> bool:
+    """Record the absent-key condition once; return whether this run should log it."""
+    marker = Path(directory) / "no-api-key.logged"
+    if marker.exists():
+        return False
+    marker.touch()
+    return True
+
+
 def session_state_path(directory: Path, transcript: Path) -> Path:
     """State file for one transcript.
 
@@ -334,16 +359,19 @@ def session_state_path(directory: Path, transcript: Path) -> Path:
 def load_state(path: Path) -> dict:
     try:
         data = json.loads(Path(path).read_text())
-        return {"offset": int(data.get("offset", 0)), "guard_sha": data.get("guard_sha")}
+        return {"offset": int(data.get("offset", 0)), "guard_sha": data.get("guard_sha"),
+                "retry_after": data.get("retry_after")}
     except (OSError, ValueError, TypeError):
-        return {"offset": 0, "guard_sha": None}
+        return {"offset": 0, "guard_sha": None, "retry_after": None}
 
 
-def save_state(path: Path, offset: int, guard_sha: str | None) -> None:
+def save_state(path: Path, offset: int, guard_sha: str | None,
+               retry_after: float | None = None) -> None:
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps({"offset": offset, "guard_sha": guard_sha}))
+    tmp.write_text(json.dumps({"offset": offset, "guard_sha": guard_sha,
+                               "retry_after": retry_after}))
     tmp.replace(path)
 
 
@@ -577,6 +605,8 @@ def eligible_sessions(registry: dict, home: Path, directory: Path, now: float,
     for project_root, config in sorted(registry.items()):
         for transcript in discover_transcripts(project_root, home=home):
             state = load_state(session_state_path(directory, transcript))
+            if state.get("retry_after") is not None and state["retry_after"] > now:
+                continue
             offset = resolve_start_offset(transcript, state)
             if not is_eligible(transcript, offset, now):
                 continue
@@ -778,44 +808,78 @@ def verify_write(calls: list[dict], expected_project: str) -> dict:
 
 async def run_once(client, registry: dict, *, home: Path | None = None,
                    directory: Path | None = None, now: float, mcp_command: list[str] | None = None,
-                   mcp_env: dict | None = None) -> dict:
+                   mcp_env: dict | None = None, max_sessions: int = MAX_SESSIONS_PER_RUN,
+                   char_budget: int = TOTAL_CHAR_BUDGET) -> dict:
     """Process one bounded batch and advance offsets only after worker-owned writes verify."""
     home = Path(home) if home is not None else Path.home()
     directory = Path(directory) if directory is not None else ensure_state_dir(home)
-    sessions = eligible_sessions(registry, home=home, directory=directory, now=now)
-    summary = {"scanned": len(registry), "eligible": len(sessions), "distilled": 0, "errors": []}
+    missing_projects = [root for root in registry if not Path(root).is_dir()]
+    for root in missing_projects:
+        LOG.warning("registered project directory is missing; skipping without deregistering: %s", root)
+    active_registry = {root: config for root, config in registry.items() if root not in missing_projects}
+    sessions = eligible_sessions(active_registry, home=home, directory=directory, now=now,
+                                 max_sessions=max_sessions)
+    summary = {"scanned": len(registry), "eligible": len(sessions), "distilled": 0,
+               "usage": {"input_tokens": 0, "output_tokens": 0}, "errors": [],
+               "missing_projects": missing_projects}
     environment = {**os.environ, **(mcp_env or {})}
+    by_project: dict[str, list[dict]] = {}
+    for item in sessions:
+        by_project.setdefault(item["project_root"], []).append(item)
 
-    async with mcp_session(command=mcp_command, env=environment) as session:
-        tools = to_anthropic_tools((await session.list_tools()).tools)
-        for item in sessions:
-            transcript = item["transcript"]
-            reduced = reduce(read_unread(transcript, item["offset"]))
-            if not reduced.strip():
-                continue
-            result = await run_tool_loop(
-                client, session, None,
-                "Distil this transcript into durable observations. Do not write notes; return the "
-                "distillation as text for the worker to store.\n\n" + reduced,
-                tools,
-            )
-            if not result["text"].strip():
-                summary["errors"].append(f"{transcript}: model returned no distillation")
-                continue
-
-            writes = await append_distillation(session, item["bm_project"], result["text"])
-            body = await _read_note_text(session, MACHINE_NOTE_TITLE, item["bm_project"])
-            if body is not None:
-                writes.extend(await rollover_machine_note(session, item["bm_project"], body))
-            writes.extend(await refresh_maintenance_signals(session, item["bm_project"]))
-            verdict = verify_write(writes, item["bm_project"])
-            if not verdict["ok"]:
-                summary["errors"].append(f"{transcript}: {verdict['reason']}")
-                continue
-
-            end = transcript.stat().st_size
-            save_state(session_state_path(directory, transcript), end, compute_guard_sha(transcript, end))
-            summary["distilled"] += 1
+    for project_root, project_sessions in by_project.items():
+        command = mcp_command(project_root) if callable(mcp_command) else mcp_command
+        try:
+            async with mcp_session(command=command, env=environment) as session:
+                tools = to_anthropic_tools((await session.list_tools()).tools)
+                for item in project_sessions:
+                    transcript = item["transcript"]
+                    state_path = session_state_path(directory, transcript)
+                    reduced = reduce(read_unread(transcript, item["offset"]), char_budget)
+                    if not reduced.strip():
+                        continue
+                    try:
+                        result = await run_tool_loop(
+                            client, session, None,
+                            "Distil this transcript into durable observations. Do not write notes; return the "
+                            "distillation as text for the worker to store.\n\n" + reduced,
+                            tools,
+                        )
+                        summary["usage"]["input_tokens"] += result["usage"]["input_tokens"]
+                        summary["usage"]["output_tokens"] += result["usage"]["output_tokens"]
+                        if not result["text"].strip():
+                            raise RuntimeError("model returned no distillation")
+                        writes = await append_distillation(session, item["bm_project"], result["text"])
+                        body = await _read_note_text(session, MACHINE_NOTE_TITLE, item["bm_project"])
+                        if body is not None:
+                            writes.extend(await rollover_machine_note(session, item["bm_project"], body))
+                        writes.extend(await refresh_maintenance_signals(session, item["bm_project"]))
+                        verdict = verify_write(writes, item["bm_project"])
+                        if not verdict["ok"]:
+                            raise RuntimeError(verdict["reason"])
+                    except Exception as exc:
+                        delay = getattr(exc, "retry_after", RETRY_AFTER_SECONDS)
+                        try:
+                            retry_after = now + float(delay)
+                        except (TypeError, ValueError):
+                            retry_after = now + RETRY_AFTER_SECONDS
+                        prior = load_state(state_path)
+                        save_state(state_path, prior["offset"], prior["guard_sha"], retry_after)
+                        message = f"{transcript}: {exc}; retry_after={retry_after:.0f}"
+                        summary["errors"].append(message)
+                        LOG.warning(message)
+                        continue
+                    end = transcript.stat().st_size
+                    save_state(state_path, end, compute_guard_sha(transcript, end))
+                    summary["distilled"] += 1
+        except Exception as exc:
+            message = f"{project_root}: MCP startup failed; {exc}"
+            summary["errors"].append(message)
+            LOG.warning(message)
+            continue
+    LOG.info("run complete: scanned=%d eligible=%d distilled=%d input_tokens=%d output_tokens=%d errors=%d",
+             summary["scanned"], summary["eligible"], summary["distilled"],
+             summary["usage"]["input_tokens"], summary["usage"]["output_tokens"], len(summary["errors"]))
     return summary
 
 
@@ -837,7 +901,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    ensure_state_dir()
+    directory = ensure_state_dir()
+    configure_logging()
     path = registry_path()
     if args.command == "register":
         register_project(path, args.project_root, args.bm_project)
@@ -849,8 +914,16 @@ def main(argv: list[str] | None = None) -> int:
         for root, config in sorted(load_registry(path).items()):
             print(f"{root}\t{config.get('bm_project')}")
     else:
-        from anthropic import AsyncAnthropic
-        result = asyncio.run(run_once(AsyncAnthropic(), load_registry(path), now=time.time()))
+        if not os.environ.get("ANTHROPIC_API_KEY"):
+            if record_missing_api_key(directory):
+                LOG.warning("ANTHROPIC_API_KEY is absent; worker is a no-op until it is configured")
+            return 0
+        try:
+            from anthropic import AsyncAnthropic
+            result = asyncio.run(run_once(AsyncAnthropic(), load_registry(path), now=time.time()))
+        except Exception as exc:
+            LOG.exception("worker failed before distillation: %s", exc)
+            return 1
         print(f"run: {result['distilled']} distilled, {len(result['errors'])} errors")
         return 0 if not result["errors"] else 1
     return 0

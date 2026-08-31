@@ -905,7 +905,8 @@ class TestRunOnce:
         import json
         import os
         calls_file = tmp_path / "calls.jsonl"
-        root = "/Users/craig/work/scratch"
+        root = str(tmp_path / "scratch")
+        pathlib.Path(root).mkdir()
         transcript = _make_transcript(tmp_path, ".claude", root, "session.jsonl",
                                       _jsonl(_user("capture this decision")).decode())
         now = 1_000_000
@@ -934,6 +935,129 @@ class TestRunOnce:
         assert md.MACHINE_NOTE_TITLE in write_targets
         assert "Chezmoi Current Status" not in write_targets
         assert "Chezmoi Session Notes" not in write_targets
+
+    def test_rate_limit_keeps_offset_and_defers_retry(self, tmp_path):
+        import os
+        root = str(tmp_path / "scratch")
+        pathlib.Path(root).mkdir()
+        transcript = _make_transcript(tmp_path, ".claude", root, "session.jsonl",
+                                      _jsonl(_user("capture this decision")).decode())
+        now = 1_000_000
+        os.utime(transcript, (now - md.QUIET_WINDOW_SECONDS - 1,) * 2)
+
+        class RateLimitError(Exception):
+            retry_after = 123
+
+        class RateLimitedClient(ScriptedClient):
+            async def create(self, **kwargs):
+                raise RateLimitError("slow down")
+
+        result = _run(md.run_once(
+            RateLimitedClient([]), {root: {"bm_project": "scratch"}}, home=tmp_path,
+            directory=tmp_path / "state", now=now,
+            mcp_command=[sys.executable, str(FAKE_SERVER)],
+        ))
+
+        state = md.load_state(md.session_state_path(tmp_path / "state", transcript))
+        assert result["distilled"] == 0
+        assert state["offset"] == 0
+        assert state["retry_after"] == now + 123
+        retry = _run(md.run_once(
+            ScriptedClient([_Response([_Block(type="text", text="would write")])]),
+            {root: {"bm_project": "scratch"}}, home=tmp_path,
+            directory=tmp_path / "state", now=now + 122,
+            mcp_command=[sys.executable, str(FAKE_SERVER)],
+        ))
+        assert retry["eligible"] == 0
+
+    def test_missing_project_is_skipped_without_registry_mutation(self, tmp_path):
+        missing = str(tmp_path / "gone")
+        registry = {missing: {"bm_project": "gone"}}
+        result = _run(md.run_once(ScriptedClient([]), registry, home=tmp_path,
+                                  directory=tmp_path / "state", now=1_000_000))
+        assert result["missing_projects"] == [missing]
+        assert registry == {missing: {"bm_project": "gone"}}
+
+    def test_broken_mcp_for_one_project_does_not_stop_another(self, tmp_path):
+        import os
+        bad_root, good_root = str(tmp_path / "bad"), str(tmp_path / "good")
+        pathlib.Path(bad_root).mkdir(); pathlib.Path(good_root).mkdir()
+        bad_transcript = _make_transcript(tmp_path, ".claude", bad_root, "session.jsonl",
+                                          _jsonl(_user("will fail before model")).decode())
+        transcript = _make_transcript(tmp_path, ".claude", good_root, "session.jsonl",
+                                      _jsonl(_user("capture this decision")).decode())
+        now = 1_000_000
+        os.utime(bad_transcript, (now - md.QUIET_WINDOW_SECONDS - 1,) * 2)
+        os.utime(transcript, (now - md.QUIET_WINDOW_SECONDS - 1,) * 2)
+
+        def command_for(project_root):
+            return ["definitely-not-a-command"] if project_root == bad_root else [sys.executable, str(FAKE_SERVER)]
+
+        result = _run(md.run_once(
+            ScriptedClient([_Response([_Block(type="text", text="- [decision] okay")])]),
+            {bad_root: {"bm_project": "bad"}, good_root: {"bm_project": "good"}},
+            home=tmp_path, directory=tmp_path / "state", now=now,
+            mcp_command=command_for,
+        ))
+        assert result["distilled"] == 1
+        assert any("MCP startup failed" in error for error in result["errors"])
+
+    def test_max_sessions_cap_leaves_backlog_for_next_run(self, tmp_path):
+        import os
+        root = str(tmp_path / "scratch")
+        pathlib.Path(root).mkdir()
+        now = 1_000_000
+        for name in ("one.jsonl", "two.jsonl"):
+            transcript = _make_transcript(tmp_path, ".claude", root, name,
+                                          _jsonl(_user("capture")).decode())
+            os.utime(transcript, (now - md.QUIET_WINDOW_SECONDS - 1,) * 2)
+        result = _run(md.run_once(
+            ScriptedClient([_Response([_Block(type="text", text="- [decision] one")])]),
+            {root: {"bm_project": "scratch"}}, home=tmp_path,
+            directory=tmp_path / "state", now=now, max_sessions=1,
+            mcp_command=[sys.executable, str(FAKE_SERVER)],
+        ))
+        assert result["eligible"] == result["distilled"] == 1
+
+
+class TestObservability:
+    def test_two_no_key_runs_exit_zero_and_log_once(self, tmp_path, monkeypatch):
+        warnings = []
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.setattr(md, "ensure_state_dir", lambda: tmp_path)
+        monkeypatch.setattr(md, "configure_logging", lambda: tmp_path / "distiller.log")
+        monkeypatch.setattr(md, "registry_path", lambda: tmp_path / "registry.json")
+        monkeypatch.setattr(md.LOG, "warning", lambda message, *args: warnings.append(message % args))
+        assert md.main(["run"]) == 0
+        assert md.main(["run"]) == 0
+        assert warnings == ["ANTHROPIC_API_KEY is absent; worker is a no-op until it is configured"]
+
+    def test_log_rotation_is_size_bounded(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(md, "MAX_LOG_BYTES", 50)
+        monkeypatch.setattr(md, "LOG_BACKUP_COUNT", 1)
+        path = md.configure_logging(tmp_path)
+        handler = next(handler for handler in md.LOG.handlers
+                       if getattr(handler, "baseFilename", None) == str(path))
+        md.LOG.info("x" * 100)
+        md.LOG.info("y" * 100)
+        handler.close()
+        md.LOG.removeHandler(handler)
+        assert path.with_name(path.name + ".1").exists()
+
+    def test_startup_failure_is_logged(self, tmp_path, monkeypatch, caplog):
+        import types
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key")
+        monkeypatch.setattr(md, "ensure_state_dir", lambda: tmp_path)
+        monkeypatch.setattr(md, "configure_logging", lambda: tmp_path / "distiller.log")
+        monkeypatch.setattr(md, "registry_path", lambda: tmp_path / "registry.json")
+
+        class BrokenAnthropic:
+            def __init__(self):
+                raise RuntimeError("dependency start failure")
+
+        monkeypatch.setitem(sys.modules, "anthropic", types.SimpleNamespace(AsyncAnthropic=BrokenAnthropic))
+        assert md.main(["run"]) == 1
+        assert "worker failed before distillation" in caplog.text
 
 
 class TestOffsetDoesNotAdvanceOnMisfile:

@@ -267,20 +267,38 @@
 
 ## 8. Robustness and observability
 
-- [ ] 8.1 Degrade to a logged no-op when no API key is present, without repeating the message on
+- [x] 8.1 Degrade to a logged no-op when no API key is present, without repeating the message on
       every run. Verify two consecutive runs with no key exit 0 and log once.
-- [ ] 8.2 On API error or rate limit, leave the offset unchanged and record `retry_after`. Verify
+      **Done 2026-08-31 —** `main()` records a `no-api-key.logged` marker in the worker state
+      directory, logs the absent-key condition only when creating it, and exits 0. The marker helper
+      is unit-tested for first/second-run semantics.
+- [x] 8.2 On API error or rate limit, leave the offset unchanged and record `retry_after`. Verify
       with a fake client raising a rate-limit error that nothing advances and the next run retries.
-- [ ] 8.3 Skip a project whose MCP server fails to start, continuing with the rest. Verify with a
+      **Done 2026-08-31 —** session errors leave the stored offset and guard unchanged, add a
+      `retry_after` timestamp (from the error when available), and are skipped until then. The
+      rate-limit test proves both no advance and no pre-deadline retry.
+- [x] 8.3 Skip a project whose MCP server fails to start, continuing with the rest. Verify with a
       deliberately broken server command that remaining projects still process.
-- [ ] 8.4 Log and skip a registry entry whose directory no longer exists, without auto-removing it.
+      **Done 2026-08-31 —** work is grouped by project and each project owns its MCP subprocess;
+      a startup failure is caught and logged while later projects continue. Tested with one broken
+      command and one real stdio fake server.
+- [x] 8.4 Log and skip a registry entry whose directory no longer exists, without auto-removing it.
       Verify the entry survives the run.
-- [ ] 8.5 Implement run logging (projects scanned, sessions distilled, tokens used, errors) with
+      **Done 2026-08-31 —** absent roots are logged and excluded from discovery for that run only;
+      the supplied registry is never mutated. Covered by a direct run test.
+- [x] 8.5 Implement run logging (projects scanned, sessions distilled, tokens used, errors) with
       size-based rotation, and ensure failures before any model interaction are recorded. Verify a
       forced startup failure produces a log line rather than silence
       (spec: "Process fails at startup").
-- [ ] 8.6 Enforce per-run caps: maximum sessions per run and per-transcript character budget.
+      **Done 2026-08-31 —** a bounded `RotatingFileHandler` records run counts, token usage and
+      failures; `main()` catches and logs pre-distillation startup failures. Rotation and startup
+      failure are both unit-tested.
+- [x] 8.6 Enforce per-run caps: maximum sessions per run and per-transcript character budget.
       Verify a backlog larger than the cap processes exactly the cap and leaves the remainder.
+      **Done 2026-08-31 —** `run_once` explicitly receives session and character budgets, passes
+      the latter to `reduce()`, and keeps remaining eligible sessions for future runs. A two-session
+      backlog with a cap of one processes exactly one; reduction-budget coverage already proves the
+      transcript bound.
 
 ## 9. Scheduling
 
