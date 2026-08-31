@@ -8,8 +8,11 @@
       session's JSONL size and checksum-of-prefix, resume the session, and verify the original
       prefix bytes are unchanged. If false, replace byte offsets with a content-hash strategy
       before writing any state code (design.md Risks).
-- [ ] 1.3 Confirm the current Haiku model ID and pricing via the `claude-api` skill; record the
+- [x] 1.3 Confirm the current Haiku model ID and pricing via the `claude-api` skill; record the
       chosen ID as a named constant. Verify a one-line API call succeeds with that ID.
+      **Done 2026-08-31 —** `MODEL_ID = "claude-haiku-4-5-20251001"`; Anthropic lists Haiku 4.5
+      at $1/MTok input and $5/MTok output. A one-token Messages API call succeeded with that
+      model (`input_tokens=11`, `output_tokens=1`).
 - [x] 1.4 Settle transcript-reduction heuristics with the user and write them into design.md
       before implementing 3.3. **Done 2026-08-27** — measured against all 80 transcripts in this
       project (77 MB) rather than assumed; recorded as design.md Decision 10 with the full
@@ -20,10 +23,15 @@
 
 ## 2. Credentials and scaffolding
 
-- [ ] 2.1 Add `ANTHROPIC_API_KEY` to `home/private_dot_zsh_secrets.tmpl` inside the existing
+- [x] 2.1 Add `ANTHROPIC_API_KEY` to `home/private_dot_zsh_secrets.tmpl` inside the existing
       `has "ai" .tags` block, sourced from KeePassXC like its siblings. Verify with
       `chezmoi execute-template` that it renders, and that a machine without the `ai` tag renders
       the file without it.
+      **Done 2026-08-31 —** reads `Anthropic` / `API key` from KeePassXC. The applied live file
+      contains the variable and authenticated the task 1.3 API check. An isolated
+      `chezmoi execute-template` check confirmed the no-KeePassXC/no-`ai` gate emits no secret;
+      full noninteractive rendering remains unavailable because existing KeePassXC lookups require
+      `/dev/tty`.
 - [ ] 2.2 Create `home/dot_local/bin/executable_memory-distiller` with PEP 723 inline metadata
       declaring `anthropic` and `mcp`. Verify `uv run ~/.local/bin/memory-distiller --help`
       resolves dependencies and prints usage after `chezmoi apply`.
