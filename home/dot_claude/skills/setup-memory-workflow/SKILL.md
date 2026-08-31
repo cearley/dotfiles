@@ -1,6 +1,6 @@
 ---
 name: setup-memory-workflow
-description: Set up, verify, or repair the basic-memory session workflow in the current project so Claude remembers context across sessions. Installs the save-session skill, configures the basic-memory MCP server, and adds a hook that primes Claude with prior session notes at every prompt. Safe to re-run any time — it self-heals by checking that basic-memory is still installed, the project is still registered, and the generated skill/config files haven't drifted from the current template. Use whenever the user says "set up memory", "add basic-memory", "configure save-session", "initialize memory workflow", "set up session notes", "check memory workflow health", "repair memory setup", "verify memory workflow is still working", or expresses frustration about losing context between sessions or about the memory setup seeming broken — even if they don't use those exact words.
+description: Set up, verify, or repair the basic-memory session workflow in the current project so Claude remembers context across sessions. Installs the save-session and save-session-maintenance skills, configures the basic-memory MCP server, and adds a SessionStart reminder to read prior context. Safe to re-run any time — it self-heals by checking that basic-memory is still installed, the project is still registered, and the generated skill/config files haven't drifted from the current template. Use whenever the user says "set up memory", "add basic-memory", "configure save-session", "initialize memory workflow", "set up session notes", "check memory workflow health", "repair memory setup", "verify memory workflow is still working", or expresses frustration about losing context between sessions or about the memory setup seeming broken — even if they don't use those exact words.
 ---
 
 This skill bootstraps *and* self-heals the basic-memory session workflow in the current
@@ -23,9 +23,9 @@ The script:
 - Stops immediately if `basic-memory` isn't installed (tell the user to run
   `uv tool install basic-memory` first, then stop — nothing else can proceed without it).
 - Always performs the safe, idempotent pieces directly: registering the basic-memory
-  project, and creating the save-session skill / `.mcp.json` entry / hook **only when
-  each is entirely missing** — there's nothing to lose by creating something that doesn't
-  exist yet.
+  project, and creating the save-session and save-session-maintenance skills / `.mcp.json`
+  entry / SessionStart reminder **only when each is entirely missing** — there's nothing to
+  lose by creating something that doesn't exist yet.
 - Reports `UP-TO-DATE` for anything that already matches canonical — leave those alone.
 - Reports `DRIFT` (with current vs. canonical shown side by side) for anything that
   exists but differs — **never overwrites these itself.**
@@ -43,10 +43,9 @@ If the user confirms an update, apply it with:
 
 ```bash
 ~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply save-session-skill
+~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply save-session-maintenance-skill
 ~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply mcp-config
 ~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply hook-config
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply sync-memory-skill
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply sync-memory-script
 ```
 
 ## Step 3: Confirm
@@ -57,8 +56,9 @@ repaired (user approved), or drift found and left as-is (user declined):
 ```
 ✓ basic-memory project registered — <project-name> → ~/.local/share/basic-memory/<project-name>
 ✓ .claude/skills/save-session/SKILL.md — <created | up to date | repaired (was vN) | left as-is (user declined update)>
+✓ .claude/skills/save-session-maintenance/SKILL.md — <created | up to date | repaired (was vN) | left as-is (user declined update)>
 ✓ .mcp.json — <configured | already registered globally | up to date | repaired | left as-is>
-✓ .claude/settings.local.json — <hook added | up to date | repaired (was vN) | left as-is>
+✓ .claude/settings.local.json — <SessionStart reminder added | up to date | repaired (was vN) | left as-is>
 ✓ .claude/skills/sync-memory/SKILL.md — <created | up to date | repaired (was vN) | left as-is (user declined update)>
 ✓ .claude/skills/sync-memory/scripts/sync-memory.py — <created | up to date | drift found (left as-is unless user confirms overwrite)>
 ```
@@ -68,26 +68,28 @@ Remind the user that:
   basic-memory, or add it to `.gitignore` if this is a personal setup
 - `.claude/settings.local.json` is personal to this machine — add it to `.gitignore` if
   it's not already there
-- At the end of each session, run `/save-session` to persist decisions and next steps
-- `sync-memory` is user-invoked only (it's marked `disable-model-invocation: true`) — run
-  `/sync-memory` explicitly whenever you want to distill unsynced SpecStory session logs
-  into basic-memory; it never runs on the model's own initiative
-- For unattended/cron use, `sync-memory.py --standalone` calls the Anthropic API directly
-  and requires `ANTHROPIC_API_KEY` in the environment — this skill does not configure any
-  scheduling itself
+- `/save-session` may run proactively when a session produces decision-worthy content; explicit
+  invocation remains appropriate at a session boundary. `/save-session-maintenance` is manual-only
+  and handles size/triage work separately.
+- The SessionStart hook is an instruction to call `search_notes` and `recent_activity` before
+  responding. It does not itself invoke basic-memory; Basic Memory must be available through MCP
+  and the model must follow the reminder.
+- `sync-memory` is still installed by the current script for compatibility, but is legacy. The
+  `memory-distiller` worker is the planned replacement for unattended transcript capture; this
+  setup skill does not schedule it yet.
 - Notes are stored outside the repo at `~/.local/share/basic-memory/<project-name>/`
 - This skill is safe to re-run any time to check the setup is still healthy — nothing gets
   overwritten without asking first
 
 ## Updating the canonical templates
 
-The canonical save-session skill body lives in `assets/save-session-skill.md.template`; the
-canonical hook message lives in `assets/hook-message.txt.template`; the canonical
-sync-memory skill body lives in `assets/sync-memory-skill.md.template`; the canonical
-sync-memory script lives in `scripts/sync-memory.py.template`. All four use `__PROJECT__`
-and `__SMW_VERSION__` placeholders substituted at render time via the shared
+The canonical save-session and save-session-maintenance skill bodies live in
+`assets/save-session-skill.md.template` and `assets/save-session-maintenance-skill.md.template`;
+the canonical SessionStart message lives in `assets/hook-message.txt.template`. The script also
+currently carries legacy `sync-memory` templates. All rendered pieces use `__PROJECT__` and
+`__SMW_VERSION__` placeholders substituted at render time via the shared
 `check_templated_file()`/`apply_templated_file()` helpers in `scripts/check-drift.sh`.
-Whenever you edit any of these four canonical assets, bump the `SMW_VERSION` constant at
+Whenever you edit a canonical rendered asset, bump the `SMW_VERSION` constant at
 the top of `scripts/check-drift.sh` so existing installs get flagged as drifted on their
 next check.
 
