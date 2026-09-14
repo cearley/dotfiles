@@ -55,13 +55,18 @@ export ARCHFLAGS="-arch $(uname -m)"
 
 {{ if has "ai" .tags -}}
 # SpecStory https://specstory.com/specstory-cli
-claude-spec() {
+# These shadow the agent binaries for interactive use only. No recursion:
+# specstory resolves the agent via PATH (binaries only; shell functions aren't
+# inherited). Bypass with `command claude ...` etc. when needed.
+claude() {
     specstory run claude --no-cloud-sync "$@"
 }
-codex-spec() {
+codex() {
     specstory run codex --no-cloud-sync "$@"
 }
-gemini-spec() {
+# Deliberately supersedes the zsh-functions `gemini` install-on-demand proxy
+# autoloaded from .zshenv (still active in non-interactive shells).
+gemini() {
     specstory run gemini --no-cloud-sync "$@"
 }
 # OpenSpecUI
