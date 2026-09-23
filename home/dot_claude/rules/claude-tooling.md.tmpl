@@ -9,6 +9,7 @@ paths:
   - "**/dot_claude/**"
   - "**/dot_claude-*/**"
   - "**/.chezmoidata/packages.yaml"
+  - "**/.claude*/projects/**"
 ---
 
 {{- $sourceDir := .chezmoi.sourceDir }}
@@ -55,7 +56,7 @@ Also declared under `packages.darwin.ai.agents.claude_code` in that same `packag
 - `plugin_marketplaces` / `plugins` — installed by
   `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`,
   which runs `claude plugins install <id> --scope user` per entry; that CLI command is what
-  actually records `enabledPlugins: true` in `~/.claude/settings.json`, not the script directly
+  actually records `enabledPlugins: true` in each persona's `settings.json`, not the script directly
 
 ## Disabling, Removing, or Overriding Requires a packages.yaml Cross-Check (e.g. /doctor audits)
 
@@ -107,9 +108,13 @@ per-persona copy to keep in sync. For anything under `skills/` or `rules/`, the 
 the source file under `{{ $sourceDir }}/dot_claude/`, not the deployed copy under `~/.claude/`.
 
 What's **not** shared per persona: `settings.json`, `.claude.json`, `plugins/`, session
-history (`projects/`), and `CLAUDE.md`. `$CLAUDE_CONFIG_DIR/.claude.json` is the correct reference for all of
-these, not the bare `~/.claude.json`, which belongs to a different persona and won't reflect
-(or affect) the active one. Each persona's `modify_settings.json.tmpl` chezmoi-manages a
+history (`projects/`), and `CLAUDE.md`. Each resolves as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/<name>`
+— compute it explicitly rather than substituting a bare `~/.claude/` path — except
+`.claude.json`, which is `$CLAUDE_CONFIG_DIR/.claude.json` when `CLAUDE_CONFIG_DIR` is set and
+`~/.claude.json` (in the home directory, not in `~/.claude/`) when it is unset. Reading or
+writing the wrong persona's file silently uses its skillUsage/pluginUsage/mcpServers, settings,
+or transcripts. When an audit, health check, or cleanup could mean every persona rather than
+just the active one, ask which is wanted before running. Each persona's `modify_settings.json.tmpl` chezmoi-manages a
 baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
 workload (see the comment at the top of
 `{{ $sourceDir }}/dot_claude-personal/modify_settings.json.tmpl` — these postures are derived
