@@ -205,18 +205,20 @@ packages:
           - 'vercel-labs/skills --skill find-skills'
           - 'microsoft/azure-skills --skill microsoft-foundry'
           plugin_marketplaces: # Registered via `claude plugins marketplace add`
+          - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace (chezmoi-personal), deployed under home/dot_local/share/claude-plugins/
           - 'anthropics/claude-plugins-official'
           - 'anthropics/skills'
           - 'aws/agent-toolkit-for-aws'
           - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev'
+          - 'https://github.com/Yeachan-Heo/oh-my-claudecode'
           - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
-          - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace (chezmoi-personal), deployed under home/dot_local/share/claude-plugins/
           plugins: # Installed via `claude plugins install`
           - 'claude-md-management@claude-plugins-official'
-          # - 'example-skills@anthropic-agent-skills'  # removed 2026-08-21 /doctor: 5 lifetime uses, last Aug 2
-          # - 'fulcrum-skills@viewpoint-tools' # Project/local-only plugin
+          - 'oh-my-claudecode@omc'
           - 'ralph-loop@claude-plugins-official'
           - 'superpowers@claude-plugins-official'
+          # - 'example-skills@anthropic-agent-skills'  # removed 2026-08-21 /doctor: 5 lifetime uses, last Aug 2
+          # - 'fulcrum-skills@viewpoint-tools' # Project/local-only plugin
         # codex:
         #   mcp_servers: []
         #   skills: []
