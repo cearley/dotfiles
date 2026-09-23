@@ -221,3 +221,19 @@ for_each_claude_env() {
         "$callback_fn" "$env_dir"
     done
 }
+
+# Run the claude CLI against one Claude environment directory (as passed by for_each_claude_env).
+# Usage: run_claude_in_env <env_dir> <claude args...>
+# $HOME/.claude is the unnamed default: claude runs with CLAUDE_CONFIG_DIR removed (not just
+# omitted — chezmoi apply inherits the shell's exported persona), because an explicit
+# CLAUDE_CONFIG_DIR=$HOME/.claude puts .claude.json at $HOME/.claude/.claude.json instead of the
+# $HOME/.claude.json that default sessions read. Any other directory is passed as CLAUDE_CONFIG_DIR.
+run_claude_in_env() {
+    local env_dir="$1"
+    shift
+    if [[ "$env_dir" == "$HOME/.claude" ]]; then
+        env -u CLAUDE_CONFIG_DIR claude "$@"
+    else
+        CLAUDE_CONFIG_DIR="$env_dir" claude "$@"
+    fi
+}

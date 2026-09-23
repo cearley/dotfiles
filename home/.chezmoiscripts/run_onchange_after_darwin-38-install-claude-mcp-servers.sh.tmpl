@@ -57,14 +57,14 @@ _register_mcp_for_env() {
     if [[ "$_skip_server" == false ]]; then
         # shellcheck disable=SC2086
         _mcp_exit=0
-        _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope {{ $scope }} "{{ $name }}"${_env_flags} -- {{ $cmd }} 2>&1) || _mcp_exit=$?
+        _mcp_output=$(run_claude_in_env "$env_dir" mcp add --scope {{ $scope }} "{{ $name }}"${_env_flags} -- {{ $cmd }} 2>&1) || _mcp_exit=$?
         if [[ $_mcp_exit -eq 0 ]]; then
             print_message "success" "Registered MCP server: {{ $name }}"
         elif echo "$_mcp_output" | grep -q "already exists"; then
-            CLAUDE_CONFIG_DIR="$env_dir" claude mcp remove "{{ $name }}" --scope {{ $scope }} 2>/dev/null || true
+            run_claude_in_env "$env_dir" mcp remove "{{ $name }}" --scope {{ $scope }} 2>/dev/null || true
             # shellcheck disable=SC2086
             _mcp_exit=0
-            _mcp_output=$(CLAUDE_CONFIG_DIR="$env_dir" claude mcp add --scope {{ $scope }} "{{ $name }}"${_env_flags} -- {{ $cmd }} 2>&1) || _mcp_exit=$?
+            _mcp_output=$(run_claude_in_env "$env_dir" mcp add --scope {{ $scope }} "{{ $name }}"${_env_flags} -- {{ $cmd }} 2>&1) || _mcp_exit=$?
             if [[ $_mcp_exit -eq 0 ]]; then
                 print_message "success" "Updated MCP server: {{ $name }}"
             else

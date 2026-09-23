@@ -43,13 +43,13 @@ _install_plugins_for_env() {
     print_message "info" "Configuring Claude Code plugins for $(basename "$env_dir")..."
 
     for source in "${MARKETPLACES[@]}"; do
-        if ! CLAUDE_CONFIG_DIR="$env_dir" claude plugins marketplace add "$source" --scope user 2>&1; then
+        if ! run_claude_in_env "$env_dir" plugins marketplace add "$source" --scope user 2>&1; then
             print_message "warning" "Could not add marketplace '$source' to $(basename "$env_dir") — skipping"
         fi
     done
 
     for plugin in "${PLUGINS[@]}"; do
-        if ! CLAUDE_CONFIG_DIR="$env_dir" claude plugins install "$plugin" --scope user 2>&1; then
+        if ! run_claude_in_env "$env_dir" plugins install "$plugin" --scope user 2>&1; then
             print_message "warning" "Could not install plugin '$plugin' in $(basename "$env_dir") — skipping"
         fi
     done
