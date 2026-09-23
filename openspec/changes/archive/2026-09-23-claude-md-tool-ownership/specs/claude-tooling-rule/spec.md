@@ -4,7 +4,7 @@
 The rule SHALL declare a `paths:` frontmatter field so it loads only when Claude reads or edits a file matching one of these:
 - a Claude settings file (`settings.json`, `.claude.json`) under any persona directory
 - `packages.yaml`
-- deployed `skills/`, `rules/`, or `plugins/` content, or `CLAUDE.md`, under any persona directory
+- deployed `skills/`, `rules/`, or `plugins/` content, session transcripts (`projects/`), or `CLAUDE.md`, under any persona directory
 - the chezmoi source `dot_claude/` or `dot_claude-*/` trees
 
 The frontmatter SHALL contain a glob that actually matches each of these locations.
@@ -24,6 +24,10 @@ The frontmatter SHALL contain a glob that actually matches each of these locatio
 
 #### Scenario: Loads when a deployed rule is touched
 - **WHEN** Claude reads or edits `~/.claude/rules/global-preferences.md` or any other file under a persona's `rules/`
+- **THEN** Claude Code SHALL auto-load `claude-tooling.md` into context
+
+#### Scenario: Loads when a persona transcript is touched
+- **WHEN** Claude reads a file under any persona's `projects/` directory
 - **THEN** Claude Code SHALL auto-load `claude-tooling.md` into context
 
 #### Scenario: Does not load for unrelated files
