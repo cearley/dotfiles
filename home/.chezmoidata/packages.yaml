@@ -51,6 +51,7 @@ packages:
       - 'pwgen'                        # Password generator
       - 'python3'                      # Python programming language interpreter
       - 'rclone'                       # Rsync for cloud storage
+      - 'ripgrep'                      # Fast search tool for the command line
       - 'tree'                         # Display directories as trees (with optional color/HTML output)
       - 'yq'                           # YAML/JSON/XML processor - like jq but for YAML
       - 'zoxide'                       # Shell extension to navigate your filesystem faster
