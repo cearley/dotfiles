@@ -35,3 +35,6 @@ PROJECT_REVIEW.md
 
 # OpenSpec
 openspec/.cache/
+
+# oh-my-claudecode runtime state
+.omc/
