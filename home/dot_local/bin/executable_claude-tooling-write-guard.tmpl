@@ -1,7 +1,7 @@
 #!/bin/bash
 # claude-tooling-write-guard — PreToolUse hook (Bash|Edit|Write matcher). Redirects
 # direct edits to chezmoi-managed Claude Code tooling files (settings.json, skills/,
-# CLAUDE.md, plugins/) to their real source, using `chezmoi managed`/`source-path`.
+# rules/, plugins/) to their real source, using `chezmoi managed`/`source-path`.
 #
 # Edit/Write give a structured tool_input.file_path; Bash only gives a command string,
 # so mutation detection there is heuristic. A command referencing a deployed path that
@@ -177,7 +177,7 @@ Bash)
   [[ -z "$command" ]] && exit 0
 
   # Does this command reference a deployed .claude*/... path at all?
-  broad_pattern='\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/|CLAUDE\.md)'
+  broad_pattern='\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/)'
   [[ "$command" =~ $broad_pattern ]] || exit 0
 
   target=$(extract_bash_target "$command")

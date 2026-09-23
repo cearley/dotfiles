@@ -5,15 +5,21 @@ paths:
   - "**/.claude*/plugins/**"
   - "**/.claude*/skills/**"
   - "**/.claude*/CLAUDE.md"
+  - "**/.claude*/rules/**"
+  - "**/dot_claude/**"
+  - "**/dot_claude-*/**"
+  - "**/.chezmoidata/packages.yaml"
 ---
 
 {{- $sourceDir := .chezmoi.sourceDir }}
 {{- $repoRoot := trimSuffix "/home" $sourceDir }}
 # Claude Code Tooling in the chezmoi Dotfiles Repo
 
-This machine's Claude Code skills, MCP servers, plugins, and CLAUDE.md are managed by the
-chezmoi dotfiles repo at `{{ $repoRoot }}` (source tree at `{{ $sourceDir }}`) — regardless of
-which project or repo you're currently working in, that is where the guidance below applies.
+This machine's Claude Code skills, MCP servers, plugins, and global preferences are managed by
+the chezmoi dotfiles repo at `{{ $repoRoot }}` (source tree at `{{ $sourceDir }}`) — regardless
+of which project or repo you're currently working in, that is where the guidance below applies.
+Global preferences are the rule `rules/global-preferences.md`; edit
+`{{ $sourceDir }}/dot_claude/rules/global-preferences.md.tmpl`, not any `CLAUDE.md`.
 This machine may run multiple named Claude Code profiles ("personas") in addition to the
 unnamed default, each with its own `CLAUDE_CONFIG_DIR` — the guidance below refers to them as
 "personas" throughout, whether or not any are currently configured on this machine.
@@ -29,7 +35,7 @@ the chezmoi repo above. `ls` there is authoritative over any hand-maintained lis
 anti-drift principle as `{{ $sourceDir }}/.chezmoiscripts/`, where `ls` is likewise
 authoritative over any hand-maintained table.
 Deployed by `chezmoi apply` to `~/.claude/skills/`, symlinked from each persona's
-`~/.claude-<name>/skills` (see "Personas Share Skills, Rules, and CLAUDE.md via Symlink" below).
+`~/.claude-<name>/skills` (see "Personas Share Skills and Rules via Symlink" below).
 
 **External skills**: declared in `packages.darwin.ai.agents.claude_code.skills` in
 `{{ $sourceDir }}/.chezmoidata/packages.yaml`, fetched from third-party GitHub repos
@@ -92,30 +98,16 @@ Each flagged entry needs the user's input on which way it should go:
   editing the live `settings.json` directly) is correct, since nothing in chezmoi asked for it.
   This direction stays manual — `check-claude-overrides` never modifies a live `settings.json`.
 
-## Personas Share Skills, Rules, and CLAUDE.md via Symlink
+## Personas Share Skills and Rules via Symlink
 
-Each persona (`{{ $sourceDir }}/dot_claude-<name>/`) gets `symlink_skills.tmpl`,
-`symlink_rules.tmpl`, and `symlink_CLAUDE.md.tmpl` pointing back at `~/.claude/skills`,
-`~/.claude/rules`, and `~/.claude/CLAUDE.md` — so a skill edit, a rule edit, or a
-`CLAUDE.md.tmpl` edit takes effect for every persona after one `chezmoi apply`, with no
-per-persona copy to keep in sync.
+Each persona (`{{ $sourceDir }}/dot_claude-<name>/`) gets `symlink_skills.tmpl` and
+`symlink_rules.tmpl` pointing back at `~/.claude/skills` and `~/.claude/rules` — so a skill
+edit or a rule edit takes effect for every persona after one `chezmoi apply`, with no
+per-persona copy to keep in sync. For anything under `skills/` or `rules/`, the edit target is
+the source file under `{{ $sourceDir }}/dot_claude/`, not the deployed copy under `~/.claude/`.
 
-**Not a "local" file, despite the path**: `~/.claude*/CLAUDE.md` is this symlink — checked-in
-content sourced from `{{ $sourceDir }}/dot_claude/CLAUDE.md.tmpl`, not personal/local
-content. Any check that distinguishes "LOCAL/personal" CLAUDE.md from "checked-in" (e.g. a
-`/doctor`-style dedup pass) classifies it as checked-in. A genuinely personal,
-non-chezmoi-managed layer only exists if the user separately created a `CLAUDE.local.md`
-alongside it, and its actual presence — not an assumption — is what confirms that.
-
-Being checked-in doesn't mean uneditable — it means edits go through the source, the same
-principle as `packages.yaml`. If `/doctor` (or any diagnosis) concludes `~/.claude*/CLAUDE.md`
-should change, the edit target is `{{ $sourceDir }}/dot_claude/CLAUDE.md.tmpl`, not the symlink;
-a commit there propagates on the next `chezmoi apply` (the user's own or any other persona's).
-The same applies to any skill or rule under `{{ $sourceDir }}/dot_claude/` (`skills/`, `rules/`):
-the source file there is the edit target, not the deployed copy under `~/.claude/`.
-
-What's **not** shared per persona: `settings.json`, `.claude.json`, `plugins/`, and session
-history (`projects/`). `$CLAUDE_CONFIG_DIR/.claude.json` is the correct reference for all of
+What's **not** shared per persona: `settings.json`, `.claude.json`, `plugins/`, session
+history (`projects/`), and `CLAUDE.md`. `$CLAUDE_CONFIG_DIR/.claude.json` is the correct reference for all of
 these, not the bare `~/.claude.json`, which belongs to a different persona and won't reflect
 (or affect) the active one. Each persona's `modify_settings.json.tmpl` chezmoi-manages a
 baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical

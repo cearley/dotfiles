@@ -1,0 +1,46 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $claudeEnvs := default (list) (index $settings "claude_envs") -}}
+#!/bin/bash
+# Removes legacy per-persona CLAUDE.md symlinks (~/.claude-<name>/CLAUDE.md -> ~/.claude/CLAUDE.md).
+# chezmoi no longer manages any CLAUDE.md: global preferences live in
+# ~/.claude/rules/global-preferences.md, and each persona's CLAUDE.md is owned by whatever
+# tool writes it (e.g. `omc setup`, which refuses to write through a symlink).
+#
+# Deleting a symlink_ source doesn't remove the deployed link, and .chezmoiremove can't tell a
+# symlink from a real file, so this only removes a path that is a symlink to exactly
+# ~/.claude/CLAUDE.md. Regular files and other symlinks are left alone. Idempotent.
+#
+# run_onchange trigger - re-runs when the persona list changes:
+# claude_envs={{ join "," $claudeEnvs }}
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+{{- if not $claudeEnvs }}
+
+print_message "skip" "No claude_envs configured for this machine — no persona CLAUDE.md symlinks to migrate"
+exit 0
+{{- else }}
+
+SHARED_TARGET="$HOME/.claude/CLAUDE.md"
+PERSONA_DIRS=({{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
+
+for dir in "${PERSONA_DIRS[@]}"; do
+    path="$dir/CLAUDE.md"
+    if [ -L "$path" ]; then
+        target="$(readlink "$path")"
+        if [ "$target" = "$SHARED_TARGET" ]; then
+            rm "$path"
+            print_message "success" "Removed legacy CLAUDE.md symlink: $path"
+        else
+            print_message "skip" "$path is a symlink to $target (not $SHARED_TARGET) — leaving it"
+        fi
+    elif [ -e "$path" ]; then
+        print_message "skip" "$path is a regular file (tool-owned) — leaving it"
+    fi
+done
+{{- end }}
+
+{{ end -}}
