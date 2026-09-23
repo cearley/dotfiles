@@ -69,6 +69,15 @@ codex() {
 gemini() {
     specstory run gemini --no-cloud-sync "$@"
 }
+# `cmux omc` launches the claude binary directly, bypassing claude() above, so
+# capture relies on a `specstory watch claude` pane. Remind if none is running.
+cmux() {
+    if [[ $1 == omc ]] && ! pgrep -qf 'specstory watch claude'; then
+        print -P '%F{yellow}No SpecStory watcher running — in another pane:%f'
+        print '  specstory watch claude --no-cloud-sync'
+    fi
+    command cmux "$@"
+}
 # OpenSpecUI
 alias openspecui='npx openspecui@latest'
 {{- end }}
