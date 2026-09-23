@@ -2,10 +2,13 @@
       "skillOverrides" (dict)
       "enabledPlugins" (dict)
       "extraKnownMarketplaces" (dict)
-      "permissions" (dict)
+      "permissions" (dict
+        "defaultMode" "auto"
+        "allow" (list
+          "mcp__basic-memory__search_notes"
+          "mcp__basic-memory__recent_activity"
+          "mcp__basic-memory__list_memory_projects"
+          "mcp__basic-memory__read_note"))
       "env" (dict "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" "1")
-      "statusLine" (dict
-        "type" "command"
-        "command" `f=${CLAUDE_CONFIG_DIR:-$HOME/.claude}/hud/omc-hud.mjs; [ -f "$f" ] && node "$f"`)
 -}}
 {{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}

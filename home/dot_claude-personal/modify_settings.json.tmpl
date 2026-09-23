@@ -6,7 +6,13 @@
       "enabledPlugins" (dict
         "claude-md-management@claude-plugins-official" true)
       "extraKnownMarketplaces" (dict)
-      "permissions" (dict "defaultMode" "auto")
+      "permissions" (dict
+        "defaultMode" "auto"
+        "allow" (list
+          "mcp__basic-memory__search_notes"
+          "mcp__basic-memory__recent_activity"
+          "mcp__basic-memory__list_memory_projects"
+          "mcp__basic-memory__read_note"))
       "env" (dict "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" "1")
 -}}
 {{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}
