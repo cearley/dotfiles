@@ -7,5 +7,6 @@
         "claude-md-management@claude-plugins-official" true)
       "extraKnownMarketplaces" (dict)
       "permissions" (dict "defaultMode" "auto")
+      "env" (dict "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" "1")
 -}}
 {{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}
