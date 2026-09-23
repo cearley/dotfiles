@@ -58,7 +58,9 @@
   - `~/.claude/rules/global-preferences.md` exists.
   - `find ~/.claude-* -maxdepth 1 -name CLAUDE.md -type l` prints nothing.
   - `~/.claude/CLAUDE.md` still holds the OMC block, unchanged.
-- [ ] 5.2 In each persona that uses OMC, run `/oh-my-claudecode:omc-setup`. Verify that it completes without `Refusing symlink` and that each persona's `CLAUDE.md` is a regular file containing `<!-- OMC:START -->`.
-- [ ] 5.3 Start a fresh session in one named persona and check `/memory` or `/context`. Verify that both `rules/global-preferences.md` and the persona's `CLAUDE.md` are loaded.
+- [x] 5.2 In each persona that uses OMC, run `/oh-my-claudecode:omc-setup`. Verify that it completes without `Refusing symlink` and that each persona's `CLAUDE.md` is a regular file containing `<!-- OMC:START -->`. Verified 2026-09-23: `~/.claude` and all three personas have regular 6001-byte files with the identical OMC 5.5.0 block.
+- [x] 5.3 Start a fresh session in one named persona and check `/memory` or `/context`. Verify that both `rules/global-preferences.md` and the persona's `CLAUDE.md` are loaded. Verified 2026-09-23 in bedrock: both are listed. The same run revealed the parent-folder leak in 5.6.
 - [x] 5.4 Run `chezmoi status`. Verify that the output has no `CLAUDE.md` entries.
 - [x] 5.5 Run `openspec validate claude-md-tool-ownership --strict`. Verify that it reports the change as valid.
+- [x] 5.6 On machines with named personas, move `~/.claude/CLAUDE.md` aside (design D2 amendment). Claude Code reads `.claude/CLAUDE.md` in every parent folder of the working directory, so for any project under `$HOME` it loads the unused default persona's file as project memory, on top of the persona's own copy. Verify that `~/.claude/CLAUDE.md` is absent and that `/context` in a named persona no longer lists it. Done on MacBook Pro 2026-09-23 (backup at `~/.claude/CLAUDE.md.bak-2026-09-23`).
+- [ ] 5.7 Mac Studio: pull and run `chezmoi apply` (script 44 removes the persona symlinks), run `omc setup` in each OMC persona, then move `~/.claude/CLAUDE.md` aside as in 5.6. Verify with `/context` in a named persona: exactly one `~/.claude-<name>/CLAUDE.md`, no `~/.claude/CLAUDE.md`, and `rules/global-preferences.md` present.

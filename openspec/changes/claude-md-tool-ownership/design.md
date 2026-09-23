@@ -29,6 +29,7 @@ See proposal.md, "Why", for the ownership conflict and the current damage. Two c
 - The unnamed default is where the actual clobbering happened. Leaving it chezmoi-managed would keep the `MM` tug-of-war running there.
 - Removing `!.claude/CLAUDE.md` from `.chezmoiignore.tmpl` makes `.claude/*` ignore the path, which is belt-and-braces. Removing the template makes it unmanaged anyway, but the ignore also prevents an accidental `chezmoi add` from re-managing it.
 - The live file's current content (the OMC block) stays in place untouched.
+- **Amended 2026-09-23 after verification:** on machines with named personas, `~/.claude/CLAUDE.md` must not exist. Claude Code reads `.claude/CLAUDE.md` in every parent folder of the working directory, and `$HOME` is a parent of every project there. So the unused default persona's file loads as project memory in every persona, on top of that persona's own copy. While the persona files were symlinks to it, it presumably loaded once. The removal is a manual step: it deletes a tool-owned real file, so it isn't automated. On machines without personas, the file is the real user memory, and the parent-folder copy is the same file.
 
 ### D3. A symlink-only removal script instead of `.chezmoiremove`
 - New file: `run_onchange_after_darwin-44-migrate-claude-md-symlinks.sh.tmpl`. Position 44 is free, and it sits after the Claude block (36–41).
@@ -75,7 +76,8 @@ Run these steps once on each machine (MacBook Pro, Mac Studio):
    - `chezmoi managed | grep CLAUDE.md` returns nothing.
    - `find ~/.claude-* -maxdepth 1 -name CLAUDE.md -type l` returns nothing.
 3. In each persona that uses OMC, start `claude` under that `CLAUDE_CONFIG_DIR` and run `/oh-my-claudecode:omc-setup`. It now writes a real per-persona `CLAUDE.md`.
-4. Optionally, delete `~/.claude/CLAUDE.md.backup.2026-09-15T13-07-17-*` once `global-preferences.md` is confirmed loaded.
-5. On persona dirs, `CLAUDE.md.bak.*` files such as `~/.claude-bedrock/CLAUDE.md.bak.5.4.0` are OMC leftovers. Leave them; they're harmless.
+4. On machines with named personas, move `~/.claude/CLAUDE.md` aside (see the D2 amendment), and don't run `omc setup` there with `CLAUDE_CONFIG_DIR` unset or set to `~/.claude`.
+5. Optionally, delete `~/.claude/CLAUDE.md.backup.2026-09-15T13-07-17-*` once `global-preferences.md` is confirmed loaded.
+6. On persona dirs, `CLAUDE.md.bak.*` files such as `~/.claude-bedrock/CLAUDE.md.bak.5.4.0` are OMC leftovers. Leave them; they're harmless.
 
 **Rollback:** `git revert` the change, then `chezmoi apply`. That restores the template and symlinks. For any persona where OMC wrote a real `CLAUDE.md`, the `symlink_` apply would prompt or fail, so delete that file first.
