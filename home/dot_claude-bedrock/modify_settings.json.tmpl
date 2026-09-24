@@ -10,5 +10,6 @@
           "mcp__basic-memory__list_memory_projects"
           "mcp__basic-memory__read_note"))
       "env" (dict "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" "1")
+      "syncClaudeAiSkills" false
 -}}
 {{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}
