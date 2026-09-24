@@ -179,10 +179,10 @@ packages:
       - 'ralph-tui'                    # AI agent loop orchestrator TUI
       casks:
       - 'block-goose'                  # Open source, extensible AI agent that goes beyond code suggestions
+      - 'chatgpt'                      # OpenAI's ChatGPT desktop app
       - 'claude'                       # Anthropic's official Claude AI desktop app
       - 'manaflow-ai/cmux/cmux'        # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
       - 'codex'                        # OpenAI's coding agent that runs in your terminal
-      - 'codex-app'                    # OpenAI's Codex desktop app for managing coding agents
       #- 'copilot-cli'
       - 'copilot-cli@prerelease'       # Brings the power of Copilot coding agent directly to your terminal
       - 'google-gemini'                # Google's Gemini AI desktop app
