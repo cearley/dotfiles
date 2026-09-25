@@ -6,7 +6,9 @@
 # Edit/Write give a structured tool_input.file_path; Bash only gives a command string,
 # so mutation detection there is heuristic. A command referencing a deployed path that
 # isn't a recognized mutation (a read, an unrecognized shape) falls back to an
-# informational nudge, once per session.
+# informational nudge, once per session. That nudge makes no permission decision —
+# the call goes through Claude Code's normal permission flow. The guard never returns
+# an allow decision: it can't vouch for a command it didn't classify.
 #
 # Tiers:
 #   - Managed: file is templated/merged from a tracked source — a direct edit gets
@@ -211,7 +213,7 @@ Bash)
   # skills for scenarios this hook doesn't resolve itself.
   message="This command touches Claude Code tooling that the chezmoi dotfiles repo at {{ $repoRoot }} manages. This machine runs independent personas ({{ $personaList }}) — settings.json/plugins/.claude.json aren't shared between them, so a check scoped to one won't see the others. For installed-but-undeclared drift see the clean-claude-orphans skill; for declared-but-locally-suppressed drift see check-claude-overrides."
   jq -n --arg message "$message" '{
-    hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", additionalContext: $message },
+    hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: $message },
     systemMessage: $message
   }'
   ;;
