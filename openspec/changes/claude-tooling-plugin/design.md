@@ -77,7 +77,7 @@ and the persona values it already uses. Two readers need one stable, machine-cor
 Neither plugin location works for the pre-brief. The installed copy moves with every
 version (`plugins/cache/…/1.0.0-<hash>/`), and a marketplace copy would still carry
 placeholders. Rendering it once also removes the guard's `sed` step, and editing the
-context needs no plugin update.
+context (digest included) needs no plugin update.
 
 *Alternative:* ship `context/claude-tooling.md` in the plugin with `@@…@@` placeholders,
 substituted by the guard with `sed`. Rejected because the pre-brief reader would need its
@@ -103,10 +103,34 @@ file under that plugin's directory except `plugin.json.tmpl`, in sorted order, u
 *Alternative:* a git SHA of the plugin directory. Rejected because uncommitted edits would
 be invisible to it, and `chezmoi apply` from a dirty tree is the normal workflow here.
 
-### D4. The guard delivers the tooling context
+### D4. The guard delivers a pointer plus digest
 The existing informational branch keeps its marker. Instead of the one-line message, it
-emits the rendered `~/.config/claude-tooling/claude-tooling.md` (D2). If that file is
-missing, it emits nothing.
+emits a short **tooling notice** as `additionalContext`. The notice has two parts:
+1. **Pointer:** one line telling the model to `Read` `~/.config/claude-tooling/claude-tooling.md`
+   (D2) in full before acting on Claude Code tooling.
+2. **Digest:** the section of that same file between `<!-- digest -->` and
+   `<!-- /digest -->`, which the guard extracts with `awk`. It holds the rules that must not
+   be missed even if the pointer is ignored:
+   - cross-check `packages.yaml` before disabling or removing anything
+   - edit chezmoi source, not deployed copies
+   - which files are per persona
+   - hooks live in the plugin's `hooks.json`
+
+If the rendered file or its digest markers are missing, the guard emits nothing.
+
+The whole notice must stay at or under **1 KB**. Hook `additionalContext` payloads larger
+than a few KB are cut to a preview of about 2 KB, and the rest goes to a file the model
+usually doesn't open ([[Claude Code Hook additionalContext/systemMessage Payloads Truncate
+Past a Few KB]] in basic-memory). In an earlier incident, the model read only that preview
+and skipped the guidance. An explicit `Read` is not truncated this way. The previous guard
+already switched to a pointer for this reason (`9df01c5`); the digest adds the parts that
+matter most in case the pointer isn't followed.
+
+The digest lives inside the full file rather than in a separate file, so each fact has one
+home, and anyone reading the full file sees the digest first.
+
+*Alternative:* inject the whole rendered file. Rejected because even 80 lines is several
+KB, above the truncation threshold.
 
 - The marker is keyed per context window: `<session_id>` in the main conversation, and
   `<session_id>.<agent_id>` when the hook payload carries an `agent_id`. A subagent has its
@@ -123,7 +147,8 @@ missing, it emits nothing.
 - The path list moves from the rule's `paths:` frontmatter into one `case` pattern set in
   the guard.
 - Target size for the rendered context file: 80 lines or fewer, covering every topic in
-  the modified `claude-tooling-rule` Content Coverage requirement.
+  the modified `claude-tooling-rule` Content Coverage requirement. It is read in full on
+  every followed pointer, so its length is a token cost, not a truncation risk.
 
 ### D5. `check-claude-overrides` stays in `~/.local/bin`
 It depends heavily on render-time values (baseline rendering, `packages.yaml` paths) and is
@@ -191,9 +216,13 @@ removes the legacy `session-topic-capture` hooks.
   handful of small files, which takes milliseconds.
 - **Hash inputs use source filenames** (`executable_…`, `dot_…`) → renaming a source file
   changes the version, which is correct: the installed tree changed too.
-- **The context is injected in full once per context window (main conversation and each
-  subagent that touches a tooling path) and again after compaction** → this costs tokens,
-  which is why the 80-line target in D4 exists.
+- **The notice is injected once per context window (main conversation and each subagent
+  that touches a tooling path) and again after compaction** → it costs at most 1 KB each
+  time. The full file costs tokens only when the model follows the pointer, which is why
+  the 80-line target in D4 exists.
+- **The model may not follow the pointer** (as in the truncation incident) → the digest
+  carries the rules that must not be missed inline, so ignoring the pointer loses detail
+  but not the guardrails.
 
 ## Migration Plan
 

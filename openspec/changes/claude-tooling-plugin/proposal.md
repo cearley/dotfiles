@@ -42,7 +42,9 @@ plugin mechanics this relies on. The findings are in design.md.
   plugin's `version` and script 39's `run_onchange` trigger. When the content changes,
   script 39 runs `claude plugin update … -y` in every persona. Nobody bumps versions by hand.
 - **BREAKING:** `~/.claude/rules/claude-tooling.md` is retired as a rule. The guard
-  delivers the tooling context instead. It fires the first time a tooling path is read or
+  delivers the tooling context instead, as a short notice of 1 KB or less: a pointer to
+  `Read` the rendered file, plus a digest of the rules that must not be missed. Hook
+  payloads larger than a few KB are cut to a preview, so the full text is never inlined. It fires the first time a tooling path is read or
   modified in each context window (the main conversation and each subagent), and again
   after compaction or clear.
 - **Security fix:** the guard never returns `permissionDecision: "allow"`. It emits only

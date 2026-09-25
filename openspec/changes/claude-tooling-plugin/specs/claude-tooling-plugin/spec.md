@@ -52,7 +52,8 @@ plugin SHALL NOT ship the tooling context. Its guard SHALL read the chezmoi-rend
 #### Scenario: Context edit needs no plugin update
 - **WHEN** only `home/dot_config/claude-tooling/claude-tooling.md.tmpl` changes
 - **AND** `chezmoi apply` runs
-- **THEN** the guard SHALL inject the new content in new sessions
+- **THEN** new sessions SHALL receive the new digest in the tooling notice, and the rendered
+  file the notice points to SHALL contain the new content
 - **AND** the plugin's version SHALL be unchanged
 
 #### Scenario: Missing config degrades gracefully

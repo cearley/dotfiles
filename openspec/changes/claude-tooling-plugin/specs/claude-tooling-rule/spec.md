@@ -6,8 +6,12 @@
 chezmoi SHALL render the tooling guidance from
 `home/dot_config/claude-tooling/claude-tooling.md.tmpl` to
 `~/.config/claude-tooling/claude-tooling.md`. The `claude-tooling` plugin's write guard SHALL
-inject that file's content as `additionalContext` the first time, in each context window
-(the main conversation and each subagent), that a tool call reads or modifies one of these:
+inject a **tooling notice** as `additionalContext` the first time a tool call reads or
+modifies one of the paths below, once in each context window (the main conversation and
+each subagent). The notice SHALL consist of a pointer line instructing the model to `Read`
+that rendered file in full, followed by the file's digest section (delimited by
+`<!-- digest -->` and `<!-- /digest -->`). The whole notice SHALL be at most 1,024 bytes.
+The paths:
 - a Claude settings file (`settings.json`, `.claude.json`) under any persona directory
 - `packages.yaml`
 - deployed `skills/`, `rules/`, or `plugins/` content, session transcripts (`projects/`),
@@ -19,41 +23,60 @@ The hook matcher SHALL include `Read` as well as `Bash`, `Edit`, and `Write`.
 #### Scenario: Injected when a persona's settings.json is read
 - **WHEN** a session first uses the Read tool on `~/.claude-personal/settings.json` (or the
   equivalent file under any other persona)
-- **THEN** the guard SHALL emit the tooling context as `additionalContext`
+- **THEN** the guard SHALL emit the tooling notice as `additionalContext`
 
 #### Scenario: Injected when packages.yaml is edited
 - **WHEN** a session first edits `home/.chezmoidata/packages.yaml`
-- **THEN** the guard SHALL emit the tooling context as `additionalContext`
+- **THEN** the guard SHALL emit the tooling notice as `additionalContext`
 
 #### Scenario: Injected when the chezmoi Claude Code source tree is touched
 - **WHEN** a session first reads or edits a file under `home/dot_claude/` or
   `home/dot_claude-<name>/`
-- **THEN** the guard SHALL emit the tooling context as `additionalContext`
+- **THEN** the guard SHALL emit the tooling notice as `additionalContext`
 
 #### Scenario: Injected when a persona transcript is read
 - **WHEN** a session first reads a file under any persona's `projects/` directory
-- **THEN** the guard SHALL emit the tooling context as `additionalContext`
+- **THEN** the guard SHALL emit the tooling notice as `additionalContext`
 
 #### Scenario: Injected at most once per context window
-- **WHEN** the tooling context has already been injected in the current context window
+- **WHEN** the tooling notice has already been injected in the current context window
 - **AND** another matching tool call occurs in that same context window
 - **THEN** the guard SHALL NOT inject it again
 
 #### Scenario: Injected separately in a subagent
-- **WHEN** the tooling context has already been injected in the main conversation
+- **WHEN** the tooling notice has already been injected in the main conversation
 - **AND** a subagent of that session then makes a matching tool call
-- **THEN** the guard SHALL inject the tooling context for that subagent
+- **THEN** the guard SHALL inject the tooling notice for that subagent
 
 #### Scenario: Re-injected after compaction or clear
 - **WHEN** a session is compacted or cleared (`SessionStart` with source `compact` or
   `clear`)
 - **AND** a matching tool call then occurs
-- **THEN** the guard SHALL inject the tooling context again
+- **THEN** the guard SHALL inject the tooling notice again
 
 #### Scenario: Not injected for unrelated files
 - **WHEN** a tool call touches only paths outside the list above (e.g. a script under
   `home/.chezmoiscripts/`)
-- **THEN** the guard SHALL NOT inject the tooling context on account of that call
+- **THEN** the guard SHALL NOT inject the tooling notice on account of that call
+
+#### Scenario: Notice stays under the truncation threshold
+- **WHEN** the guard emits the tooling notice
+- **THEN** the notice SHALL be at most 1,024 bytes
+- **AND** it SHALL name `~/.config/claude-tooling/claude-tooling.md` as the file to `Read`
+
+#### Scenario: Digest carries the must-not-miss guardrails
+- **WHEN** the tooling notice is injected
+- **THEN** its digest SHALL state that declared skills, MCP servers, and plugins are removed
+  by editing `packages.yaml`, not disabled locally
+- **AND** that edits go to the chezmoi source, not deployed copies
+- **AND** that `settings.json`, `.claude.json`, `plugins/`, `projects/`, and `CLAUDE.md` are
+  per-persona
+- **AND** that chezmoi-managed hooks are declared in the `claude-tooling` plugin's
+  `hooks/hooks.json`
+
+#### Scenario: Missing digest emits nothing
+- **WHEN** the rendered file is absent or lacks the digest markers
+- **THEN** the guard SHALL emit no notice and SHALL NOT block the tool call
 
 #### Scenario: Stable path for fork pre-briefs
 - **WHEN** the plugin is updated to a new version
@@ -92,32 +115,32 @@ The tooling context's content SHALL cover these topics:
   in any `settings.json`
 
 #### Scenario: Cross-check guidance present
-- **WHEN** the tooling context is injected
+- **WHEN** the rendered tooling context is read
 - **THEN** it SHALL instruct that a declared-but-unwanted skill, MCP server, or plugin must
   be removed by editing `packages.yaml`, not by a local `skillOverrides`/
   `disabledMcpServers` entry
 
 #### Scenario: Persona sharing model documented
-- **WHEN** the tooling context is injected
+- **WHEN** the rendered tooling context is read
 - **THEN** it SHALL state that `skills/` and `rules/` are shared via symlink
 - **AND** it SHALL state that `settings.json`, `.claude.json`, `plugins/`, `projects/`, and
   `CLAUDE.md` are per-persona
 
 #### Scenario: Global preferences edit target documented
-- **WHEN** the tooling context is injected
+- **WHEN** the rendered tooling context is read
 - **AND** a diagnosis concludes the global preferences should change
 - **THEN** the context SHALL direct the edit to
   `<source dir>/dot_claude/rules/global-preferences.md.tmpl`, not to any persona's
   `CLAUDE.md`
 
 #### Scenario: Override-drift script pointer present
-- **WHEN** the tooling context is injected
+- **WHEN** the rendered tooling context is read
 - **THEN** its override-drift guidance SHALL direct the reader to run
   `check-claude-overrides` to detect unexplained `skillOverrides`/`enabledPlugins` entries,
   rather than describing a fully manual per-file comparison
 
 #### Scenario: Fix-mode pointer present for the keep resolution
-- **WHEN** the tooling context is injected
+- **WHEN** the rendered tooling context is read
 - **AND** the resolve guidance covers the "keep the override" direction
 - **THEN** it SHALL direct the reader to `check-claude-overrides --fix <persona> <kind>
   <key>` instead of describing a fully manual template edit
@@ -125,7 +148,7 @@ The tooling context's content SHALL cover these topics:
   `/skill`/`/plugin` command, unchanged
 
 #### Scenario: Hook location documented
-- **WHEN** the tooling context is injected
+- **WHEN** the rendered tooling context is read
 - **THEN** it SHALL state that adding, changing, or retiring a chezmoi-managed hook means
   editing the `claude-tooling` plugin's `hooks/hooks.json`
 

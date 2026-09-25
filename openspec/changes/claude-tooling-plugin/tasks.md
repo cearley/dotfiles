@@ -4,7 +4,7 @@
 
 - [ ] 1.1 Confirm `chezmoi-managed-plugin-marketplace` is applied on this machine: `claude plugin marketplace list --json` resolves `chezmoi-personal` to `~/.local/share/claude-plugins` in every persona. Note that the MacBook Pro still needs that change's tasks 3.4–3.6.
 - [ ] 1.2 Archive `chezmoi-managed-plugin-marketplace` before archiving this change, so the main `claude-plugin-marketplace` spec contains its "chezmoi-managed and templatable" requirement that this change's delta builds on. Verify `grep -c "templatable" openspec/specs/claude-plugin-marketplace/spec.md` returns at least 1.
-- [ ] 1.3 In a logged-in scratch persona (copy of `~/.claude-personal`, never the live dir), install a minimal local plugin whose `PreToolUse` hook (matcher `Read`) emits `additionalContext` once. Verify the context reaches the model, and that it fires inside a subagent. Log the raw hook payload in both cases and record whether the subagent's payload carries the parent's `session_id` and an `agent_id`. If it has no field that tells it apart from the parent, stop and revisit the marker key in design D4. This closes the one spike question left untested.
+- [ ] 1.3 In a logged-in scratch persona (copy of `~/.claude-personal`, never the live dir), install a minimal local plugin whose `PreToolUse` hook (matcher `Read`) emits `additionalContext` once. Verify the context reaches the model, and that it fires inside a subagent. Log the raw hook payload in both cases and record whether the subagent's payload carries the parent's `session_id` and an `agent_id`. If it has no field that tells it apart from the parent, stop and revisit the marker key in design D4. Also emit a roughly 1 KB payload and a roughly 3 KB payload, and record whether each reaches the model in full or only as a preview. If 1 KB is truncated, lower the notice budget in design D4 and in the `claude-tooling-rule` spec before task 3.4. This closes the spike questions left untested.
 
 ## 2. claude-session-index plugin (external repo, before any legacy removal)
 
@@ -27,22 +27,25 @@
   - read `config.env` instead of template values
   - add `--reset`
   - add the `Read` fast path
-  - replace the informational message with the contents of the rendered `~/.config/claude-tooling/claude-tooling.md` (no substitution in the guard)
+  - replace the informational message with the tooling notice: a pointer line to `Read` the rendered `~/.config/claude-tooling/claude-tooling.md`, plus the digest section extracted between its `<!-- digest -->` markers (no substitution in the guard)
   - key the once-per-context marker on `session_id`, plus `agent_id` when present; `--reset` clears all of the session's markers
   - remove `permissionDecision: "allow"`
 
   Verify with a fixture script under `tests/` that pipes sample hook payloads through the guard and checks each case:
   - `deny` and `ask` cases unchanged
   - no `"allow"` anywhere
-  - context emitted once per session, and again after `--reset`
-  - a payload with an `agent_id` gets the context even when the parent's marker exists, and only once per `agent_id`
+  - notice emitted once per session, and again after `--reset`
+  - notice is 1,024 bytes or less (`wc -c`) against the real rendered file, and contains the pointer path
+  - no notice when the rendered file or its digest markers are missing
+  - a payload with an `agent_id` gets the notice even when the parent's marker exists, and only once per `agent_id`
   - no output for unrelated paths
-  - exit 0 with no context when `config.env` or the rendered context file is missing
+  - exit 0 with no notice when `config.env` or the rendered context file is missing
   - `Read` fast path under 50 ms (`time`)
-- [ ] 3.5 `git mv home/dot_claude/rules/claude-tooling.md.tmpl home/dot_config/claude-tooling/claude-tooling.md.tmpl`. Drop the `paths:` frontmatter, and condense the file to 80 rendered lines or fewer. It must cover every Content Coverage topic, including where hooks live, and keep `{{ .chezmoi.sourceDir }}` for source paths. Verify:
+- [ ] 3.5 `git mv home/dot_claude/rules/claude-tooling.md.tmpl home/dot_config/claude-tooling/claude-tooling.md.tmpl`. Drop the `paths:` frontmatter, and condense the file to 80 rendered lines or fewer. It must cover every Content Coverage topic, including where hooks live, and keep `{{ .chezmoi.sourceDir }}` for source paths. Open the file with a `<!-- digest -->`…`<!-- /digest -->` section holding the four must-not-miss rules from design D4. Verify:
   - a checklist diff against the modified `claude-tooling-rule` spec topics
   - `grep -c '/Users/'` on the template returns 0
   - the `tests/run-template` output is 80 lines or fewer and contains no `{{`
+  - pointer line plus the extracted digest is 1,024 bytes or less
 
 ## 4. Settings modifier, retirements, references
 
@@ -60,8 +63,8 @@
   - the rule file and the old guard binary are gone
 - [ ] 5.2 Start a new session in two personas. Verify:
   - the override check runs once
-  - reading a persona `settings.json` injects the tooling context once
-  - after `/compact`, a matching read injects it again
-  - a subagent that reads a persona `settings.json` after the parent already got the context receives it too
+  - reading a persona `settings.json` injects the tooling notice once, and the model follows the pointer and reads the rendered file
+  - after `/compact`, a matching read injects the notice again
+  - a subagent that reads a persona `settings.json` after the parent already got the notice receives it too
   - topic capture writes one record per prompt
 - [ ] 5.3 Edit a comment in the guard and run `chezmoi apply`. Verify every persona's `installed_plugins.json` shows the new `1.0.0+<hash>` version, and that the previous cache directory still exists.
