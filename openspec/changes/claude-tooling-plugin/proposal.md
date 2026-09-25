@@ -69,7 +69,7 @@ plugin mechanics this relies on. The findings are in design.md.
   prefixes to their names, force `skillOverrides` keys to be rewritten, and change the
   native-skill list `check-claude-overrides` uses, for little benefit.
 - Extra-settings ownership (`permissions`, `env`, `skillOverrides`). That belongs to the
-  `claude-settings-ledger` change, which lands after this one.
+  `claude-settings-ledger` change, which is independent and lands first.
 - Renaming `claude-settings-hooks-modifier`. A follow-up can do it once hooks are gone
   from it.
 - Deleting old plugin cache versions during apply, because running sessions still use them.
@@ -124,9 +124,12 @@ plugin mechanics this relies on. The findings are in design.md.
   first on that machine, and that change must be **archived before this one**, because
   this change's `claude-plugin-marketplace` delta builds on its templatable-content
   requirement.
-- **Related:** `claude-settings-ledger` edits the same modifier template and lands after
-  this change. This change owns the legacy hook removal list, including its eventual
-  deletion.
+- **Optional:** this change may never be implemented. No other change depends on it; in
+  particular, `claude-settings-ledger` does not.
+- **Related:** `claude-settings-ledger` lands first and replaces the modifier's
+  extra-settings stage with the ledger pipeline. This change edits only the hook stage,
+  keeps the ledger stage intact, and owns the legacy hook removal list, including its
+  eventual deletion.
 - **Tags:** darwin with the `ai` tag. All four personas (`~/.claude`, `~/.claude-personal`,
   `~/.claude-work`, `~/.claude-bedrock`).
 - **Security:**

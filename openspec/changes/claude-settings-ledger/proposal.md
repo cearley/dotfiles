@@ -13,9 +13,10 @@ That merge drifts in both directions:
   `chezmoi apply`, which wipes entries added outside chezmoi. The live `permissions.allow`
   lists currently match the source lists exactly.
 
-Hooks were originally part of this change. They move to the `claude-tooling` plugin in the
-`claude-tooling-plugin` change, which lands first, so this change covers extra settings
-only.
+Hooks were originally part of this change. They are out of scope here: the modifier's
+existing hook stage (the `managed_hooks` upsert and the `retired_commands` strip) is left
+as it is. The optional `claude-tooling-plugin` change may later move hooks out of
+`settings.json`, but this change neither depends on it nor assumes it will happen.
 
 ## What Changes
 
@@ -30,13 +31,14 @@ only.
   apply. Entries chezmoi added and later dropped from source are retracted through the
   record.
 - The `extra_settings='…'` line stays byte-compatible for `check-claude-overrides`.
-- The legacy hook removal added by `claude-tooling-plugin` is left untouched. That change
-  owns the list, including its eventual deletion.
+- The modifier's hook stage runs before the extra-settings stage and is left untouched.
 
 ## Non-goals
 
-- Anything about hooks (owned by `claude-tooling-plugin`).
-- Renaming `claude-settings-hooks-modifier` (a follow-up once both changes land).
+- Anything about hooks. The hook stage keeps its current upsert and `retired_commands`
+  behavior.
+- Renaming `claude-settings-hooks-modifier`. The name stays accurate while the hook stage
+  exists; a rename only makes sense if `claude-tooling-plugin` ever removes it.
 - Managing `settings.local.json`, project settings, or `managed-settings.json`.
 - Changing drift detection in `check-claude-overrides`.
 
@@ -56,8 +58,10 @@ only.
 - **Code:** the extra-settings stage of `home/.chezmoitemplates/claude-settings-hooks-modifier`.
   The four `modify_settings.json.tmpl` callers are unchanged.
 - **Tests:** a fixture-driven modifier test under `tests/`.
-- **Depends on:** `claude-tooling-plugin` (same file; that change removes the hook upsert
-  first).
+- **Depends on:** nothing. It can be implemented and archived on its own.
+- **Related:** the optional `claude-tooling-plugin` change edits the hook stage of the same
+  modifier. If it is ever implemented, it lands after this change and keeps the ledger
+  stage intact.
 - **Tags:** darwin machines with the `ai` tag, all four personas.
 - **Live state:** the first apply seeds the record and retracts nothing. Stale keys left by
   removals made before this change need one manual cleanup (task).

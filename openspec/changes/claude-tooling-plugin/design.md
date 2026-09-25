@@ -163,8 +163,9 @@ The chezmoi apply order already does what's needed:
 2. `run_onchange_after` script 39 installs or updates the plugins.
 
 This change owns the legacy removal list for its whole life, including its eventual
-deletion. `claude-settings-ledger` rewrites the modifier's extra-settings stage later but
-leaves the removal untouched. Once every persona on every `ai` machine has applied, the
+deletion. `claude-settings-ledger` is expected to have already replaced the modifier's
+extra-settings stage. This change rewrites only the hook stage and leaves the ledger stage
+as it finds it. Once every persona on every `ai` machine has applied, the
 list and its fixture are deleted as a tracked follow-up (task 4.5). This change does not
 wait for that step before it is archived.
 

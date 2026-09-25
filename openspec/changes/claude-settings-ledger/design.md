@@ -2,9 +2,13 @@
 
 ## Context
 
-After `claude-tooling-plugin` lands, `claude-settings-hooks-modifier` does two things:
-(a) removes six legacy hook commands (owned by that change and unchanged here), and
-(b) merges the caller's `$extra` with jq `. * $extra`. This change replaces (b).
+`claude-settings-hooks-modifier` runs one jq pipeline in two stages:
+(a) the **hook stage** upserts the `managed_hooks` commands and strips `retired_commands`;
+(b) the **extra-settings stage** merges the caller's `$extra` with `. * $extra`.
+
+This change replaces (b) and leaves (a) untouched. `$extra` never contains `hooks`, so the
+two stages write disjoint keys. The optional `claude-tooling-plugin` change would later
+rewrite (a) alone.
 
 Other writers also change the same `settings.json`: Claude Code's `/permissions`,
 `/plugin`, and model picker, plugins, and tools such as `bd setup`. See proposal.md (Why)
@@ -104,8 +108,8 @@ after it and is covered by the position-stability fixture in task 2.1.
 
 ## Migration Plan
 
-1. After `claude-tooling-plugin` is applied everywhere, land this change. The next apply
-   seeds the ledger in each persona and retracts nothing.
+1. Land this change. It has no prerequisite change. The next apply seeds the ledger in
+   each persona and retracts nothing.
 2. Remove any stale keys found in the audit by hand (task 3.2).
 
 **Rollback:** revert. The old `* $extra` merge ignores `_chezmoiManaged`, which does nothing

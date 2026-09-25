@@ -3,7 +3,7 @@
 ## 1. Pre-implementation check
 
 - [ ] 1.1 In a throwaway `CLAUDE_CONFIG_DIR` (a scratch copy of `~/.claude-personal`, never the live directory), add a top-level `"_chezmoiManaged": []` key, start `claude`, and run `/doctor`. Verify there is no settings validation error, and that saving a change through `/permissions` keeps the key. If either check fails, switch design D1 to the `env.CHEZMOI_CLAUDE_MANAGED` fallback and update the spec's ledger scenario before continuing.
-- [ ] 1.2 Confirm `claude-tooling-plugin` has landed: the modifier contains only the legacy-hook removal plus `. * $extra`. Verify with `grep -c 'managed_hooks' home/.chezmoitemplates/claude-settings-hooks-modifier`, which should print 0.
+- [ ] 1.2 Confirm the modifier's extra-settings stage is still the single `. * $extra` step at the end of the jq pipeline, after the hook stage. Verify with `grep -c '\. \* \$extra' home/.chezmoitemplates/claude-settings-hooks-modifier`, which should print 1. If `claude-tooling-plugin` has already been implemented, the hook stage will differ; that's fine, as long as the extra-settings step is unchanged.
 
 ## 2. Test harness and implementation
 
@@ -17,12 +17,12 @@
   - an emptied container is kept
   - the first run without a ledger retracts nothing
   - union keeps an externally added allow entry, with no duplicates
-  - unmanaged keys (including `hooks`) are preserved
+  - unmanaged keys (including foreign `hooks` entries such as `bd prime`) are preserved, and the managed hooks come out exactly as the current hook stage produces them
   - pass-through on a machine without the `ai` tag
 
   Add `tests/test-claude-settings-ledger.sh`: for each case it renders the partial with `tests/run-template` (overriding `claudeExtraSettings`), pipes the input through, and diffs the result against the expected output. Verify it fails against the current partial (the expected red).
-- [ ] 2.2 In `home/.chezmoitemplates/claude-settings-hooks-modifier`, replace `. * $extra` with the retract (previous ledger minus current) → apply (union) → write-ledger pipeline from D1–D3, keeping `extra_settings='…'` as an unchanged standalone line and the legacy-hook removal as is. Verify that every fixture in `tests/test-claude-settings-ledger.sh` passes, including idempotence.
-- [ ] 2.3 Update the partial's header comment (describe the ledger and union semantics) and the `home/.chezmoitemplates/CLAUDE.md` catalog. Add one line on ledger ownership to the tooling context template `home/dot_config/claude-tooling/claude-tooling.md.tmpl`. Verify by reading the header back and checking the rendered context stays at 80 lines or fewer.
+- [ ] 2.2 In `home/.chezmoitemplates/claude-settings-hooks-modifier`, replace `. * $extra` with the retract (previous ledger minus current) → apply (union) → write-ledger pipeline from D1–D3, keeping `extra_settings='…'` as an unchanged standalone line and the hook stage as is. Verify that every fixture in `tests/test-claude-settings-ledger.sh` passes, including idempotence.
+- [ ] 2.3 Update the partial's header comment (describe the ledger and union semantics) and the `home/.chezmoitemplates/CLAUDE.md` catalog. In the tooling rule `home/dot_claude/rules/claude-tooling.md.tmpl`, rewrite the **Drift note** paragraph: it currently says a `modify_` script "doesn't strip additions". It should say that chezmoi now retracts entries it wrote once they leave source, but ad hoc `/skill`/`/plugin` toggles still survive. Verify by reading the header and the Drift note back.
 - [ ] 2.4 Run `check-claude-overrides` for every persona. Verify every baseline still resolves (no skip notices) and the `## drift` output matches its output before the change.
 
 ## 3. Rollout

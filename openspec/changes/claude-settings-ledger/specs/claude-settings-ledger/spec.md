@@ -88,7 +88,7 @@ rather than replacing it. Scalar leaves from extra settings SHALL overwrite the 
 ### Requirement: Unmanaged Settings Preserved
 Apart from JSON re-serialization, the modifier SHALL leave unchanged every key that is not
 a leaf listed in the previous or current ledger, is not the ledger itself, and is not a
-legacy hook command removed under the `claude-tooling-plugin` capability.
+hook entry that the modifier's separate hook stage writes or removes.
 
 #### Scenario: Claude Code-managed keys survive
 - **WHEN** the live `settings.json` contains keys such as `model`, `statusLine`, `hooks`

@@ -41,7 +41,7 @@
   - no output for unrelated paths
   - exit 0 with no notice when `config.env` or the rendered context file is missing
   - `Read` fast path under 50 ms (`time`)
-- [ ] 3.5 `git mv home/dot_claude/rules/claude-tooling.md.tmpl home/dot_config/claude-tooling/claude-tooling.md.tmpl`. Drop the `paths:` frontmatter, and condense the file to 80 rendered lines or fewer. It must cover every Content Coverage topic, including where hooks live, and keep `{{ .chezmoi.sourceDir }}` for source paths. Open the file with a `<!-- digest -->`…`<!-- /digest -->` section holding the four must-not-miss rules from design D4. Verify:
+- [ ] 3.5 `git mv home/dot_claude/rules/claude-tooling.md.tmpl home/dot_config/claude-tooling/claude-tooling.md.tmpl`. Drop the `paths:` frontmatter, and condense the file to 80 rendered lines or fewer. It must cover every Content Coverage topic, including where hooks live, and keep `{{ .chezmoi.sourceDir }}` for source paths. Keep the ledger's retraction note in the Drift paragraph, if `claude-settings-ledger` has landed. Open the file with a `<!-- digest -->`…`<!-- /digest -->` section holding the four must-not-miss rules from design D4. Verify:
   - a checklist diff against the modified `claude-tooling-rule` spec topics
   - `grep -c '/Users/'` on the template returns 0
   - the `tests/run-template` output is 80 lines or fewer and contains no `{{`
@@ -49,7 +49,7 @@
 
 ## 4. Settings modifier, retirements, references
 
-- [ ] 4.1 In `home/.chezmoitemplates/claude-settings-hooks-modifier`, remove `managed_hooks` and `retired_commands`, and remove the six legacy commands at the inner-hook level, pruning groups and events left empty. Update the header comment. Verify by piping a copy of each persona's live `settings.json` through the rendered modifier: only the legacy commands disappear, and `bd prime` and every other key are unchanged.
+- [ ] 4.1 In `home/.chezmoitemplates/claude-settings-hooks-modifier`, remove `managed_hooks` and `retired_commands`, and remove the six legacy commands at the inner-hook level, pruning groups and events left empty. Update the header comment. Leave the extra-settings stage (the `claude-settings-ledger` pipeline, if landed) untouched. If `tests/test-claude-settings-ledger.sh` exists, update the hook expectations in its fixtures (managed hooks are no longer upserted) and confirm it passes. Verify by piping a copy of each persona's live `settings.json` through the rendered modifier: only the legacy commands disappear, and `bd prime` and every other key are unchanged.
 - [ ] 4.2 Delete `home/dot_local/bin/executable_claude-tooling-write-guard.tmpl` (the rule template was moved in 3.5). Create `home/.chezmoiremove` listing `.local/bin/claude-tooling-write-guard` and `.claude/rules/claude-tooling.md`. Verify `chezmoi managed | grep claude-tooling` shows only plugin paths and `.config/claude-tooling/`.
 - [ ] 4.3 Update script 39: add the `plugin-content-hash` trigger comment and the per-persona `claude plugin update claude-tooling@chezmoi-personal --scope user -y` step. Verify the rendered script passes `bash -n` and that the trigger line changes when plugin content changes.
 - [ ] 4.4 Point the three `claude-tooling.md` references (`global-preferences.md.tmpl:37`, `check-claude-overrides.tmpl:47`, `clean-claude-orphans/SKILL.md.tmpl:26`) at `~/.config/claude-tooling/claude-tooling.md`. Verify `grep -rn "rules/claude-tooling" home` returns nothing.
