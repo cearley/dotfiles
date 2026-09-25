@@ -38,14 +38,19 @@ The entries come from recursively flattening `$extra`: objects recurse, arrays e
 entry per element, and anything else is a scalar. Empty dicts contribute nothing.
 
 Each run:
-1. **Retract** what the previous ledger lists. A scalar is deleted only if the live value
-   still equals the recorded value; an array element is removed if present.
+1. **Retract** only what source dropped: the previous ledger minus the current one. A scalar
+   is retracted when its path is absent from the current ledger, and deleted only if the
+   live value still equals the recorded value. An array element is retracted when its
+   `{path, elem}` pair is absent from the current ledger, and removed if present.
 2. **Apply** `$extra`. Scalars overwrite. Array elements are appended only when absent,
    which gives an order-preserving union.
 3. **Write** the new ledger.
 
-Retracting before applying means an unchanged key is deleted and immediately set again, so
-the net output is identical.
+Entries still in source are never retracted, so they keep their position. Retracting the
+whole previous ledger and then re-applying would not be idempotent in practice. jq moves a
+deleted-and-reset key to the end of its object, and re-appends a removed element behind any
+entries the user added. Every user addition would then reorder the file and show up as a
+diff on the next apply.
 
 *Alternatives:*
 - **`* $extra` plus a retired-keys list:** the same maintenance trap the hooks had.
@@ -61,7 +66,13 @@ If the user changes a managed scalar (e.g. `defaultMode` to `plan`) and source l
 that key, the user's value is kept. While the key remains in source, chezmoi's value wins on
 every apply, as it does today.
 
-### D3. Keep the `extra_settings='…'` line
+### D3. Emptied containers are kept
+Retraction never deletes an object or array, even when it leaves one empty (e.g.
+`"skillOverrides": {}` after its last managed key is retracted). An empty container behaves
+the same as an absent one for these keys. Pruning it would also delete a container another
+writer created, and the ledger doesn't record who created containers.
+
+### D4. Keep the `extra_settings='…'` line
 `extra_settings='{{ … | toJson }}'` stays a standalone line. The ledger is computed in jq,
 not in Go, so the grep contract that `check-claude-overrides` relies on is untouched.
 
@@ -72,6 +83,9 @@ The extra-settings half of the pipeline (about 15 lines of jq) was run against a
 - a removed skill override and a removed allow element were retracted
 - a second run was byte-identical
 - all other keys were unchanged
+
+The prototype retracted the whole previous ledger. D1's set-difference refinement came
+after it and is covered by the position-stability fixture in task 2.1.
 
 ## Risks / Trade-offs
 

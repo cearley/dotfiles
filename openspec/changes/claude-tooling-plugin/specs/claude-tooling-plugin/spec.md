@@ -39,7 +39,9 @@ path or the exec form.
 Apart from `.claude-plugin/plugin.json.tmpl`, files in the plugin SHALL NOT be chezmoi
 templates. Machine-specific values the plugin's scripts need (the chezmoi source directory,
 the repo root, and the persona list) SHALL be read at run time from
-`~/.config/claude-tooling/config.env`, which chezmoi renders from machine settings.
+`~/.config/claude-tooling/config.env`, which chezmoi renders from machine settings. The
+plugin SHALL NOT ship the tooling context. Its guard SHALL read the chezmoi-rendered
+`~/.config/claude-tooling/claude-tooling.md` instead.
 
 #### Scenario: Persona list change needs no plugin update
 - **WHEN** a persona is added to the machine's `claude_envs`
@@ -47,8 +49,14 @@ the repo root, and the persona list) SHALL be read at run time from
 - **THEN** `config.env` SHALL list the new persona
 - **AND** the plugin's version SHALL be unchanged
 
+#### Scenario: Context edit needs no plugin update
+- **WHEN** only `home/dot_config/claude-tooling/claude-tooling.md.tmpl` changes
+- **AND** `chezmoi apply` runs
+- **THEN** the guard SHALL inject the new content in new sessions
+- **AND** the plugin's version SHALL be unchanged
+
 #### Scenario: Missing config degrades gracefully
-- **WHEN** `config.env` is absent or unreadable
+- **WHEN** `config.env` or the rendered tooling context is absent or unreadable
 - **THEN** each plugin hook SHALL exit 0 without blocking the tool call
 
 ### Requirement: Content-Derived Plugin Version
@@ -59,6 +67,10 @@ the version-bearing manifest. The same hash SHALL appear in the plugin install s
 #### Scenario: Content edit changes the version
 - **WHEN** any file in the plugin other than `plugin.json.tmpl` changes
 - **THEN** the rendered `plugin.json` `version` SHALL change
+
+#### Scenario: Manifest-only edit keeps the version
+- **WHEN** only `plugin.json.tmpl` changes and its manual version prefix is not bumped
+- **THEN** the rendered `version` SHALL be unchanged
 
 #### Scenario: No content change keeps the version
 - **WHEN** `chezmoi apply` runs twice with no plugin file changes

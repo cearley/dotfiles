@@ -30,9 +30,13 @@ be rewritten on every run to reflect exactly the current extra settings.
 
 ### Requirement: Retraction of Previously Written Settings
 Before applying the current extra settings, the modifier SHALL retract every entry listed in
-the previous ledger: it SHALL delete a scalar leaf only if the live value still equals the
-value recorded in the ledger, and SHALL remove a recorded array element from the live array
-if present. When no previous ledger exists, the modifier SHALL retract nothing.
+the previous ledger that the current extra settings no longer contain. A scalar leaf whose
+key path is absent from the current extra settings SHALL be deleted only if its live value
+still equals the value recorded in the ledger. An array element absent from the current
+extra settings' array SHALL be removed from the live array if present. Entries present in
+both the previous ledger and the current extra settings SHALL NOT be removed and re-added.
+The modifier SHALL NOT delete an object or array that retraction leaves empty. When no
+previous ledger exists, the modifier SHALL retract nothing.
 
 #### Scenario: Key removed from source is removed from live file
 - **WHEN** the previous ledger records `skillOverrides.audit-skills = "off"`
@@ -50,6 +54,16 @@ if present. When no previous ledger exists, the modifier SHALL retract nothing.
 - **WHEN** the previous ledger records element `"A"` of `permissions.allow`
 - **AND** `"A"` is no longer in the extra settings' `permissions.allow`
 - **THEN** the output's `permissions.allow` SHALL NOT contain `"A"`
+
+#### Scenario: Entries still in source keep their position
+- **WHEN** the live `permissions.allow` is `["A", "X"]`
+- **AND** the previous ledger records `"A"`, which is still in the extra settings
+- **AND** `"X"` was added outside chezmoi
+- **THEN** the output's `permissions.allow` SHALL be `["A", "X"]`
+
+#### Scenario: Emptied container is kept
+- **WHEN** retraction removes the only key of `skillOverrides`
+- **THEN** the output SHALL contain `"skillOverrides": {}`
 
 #### Scenario: First run without a ledger retracts nothing
 - **WHEN** the live `settings.json` has no ledger

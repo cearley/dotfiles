@@ -3,9 +3,11 @@
 ## ADDED Requirements
 
 ### Requirement: Tooling Context Delivered by the Write Guard
-The `claude-tooling` plugin SHALL ship the tooling guidance as `context/claude-tooling.md`.
-Its write guard SHALL inject that content as `additionalContext` the first time in a session
-that a tool call reads or modifies one of these:
+chezmoi SHALL render the tooling guidance from
+`home/dot_config/claude-tooling/claude-tooling.md.tmpl` to
+`~/.config/claude-tooling/claude-tooling.md`. The `claude-tooling` plugin's write guard SHALL
+inject that file's content as `additionalContext` the first time, in each context window
+(the main conversation and each subagent), that a tool call reads or modifies one of these:
 - a Claude settings file (`settings.json`, `.claude.json`) under any persona directory
 - `packages.yaml`
 - deployed `skills/`, `rules/`, or `plugins/` content, session transcripts (`projects/`),
@@ -32,10 +34,15 @@ The hook matcher SHALL include `Read` as well as `Bash`, `Edit`, and `Write`.
 - **WHEN** a session first reads a file under any persona's `projects/` directory
 - **THEN** the guard SHALL emit the tooling context as `additionalContext`
 
-#### Scenario: Injected at most once per session
-- **WHEN** the tooling context has already been injected in the current session
-- **AND** another matching tool call occurs
+#### Scenario: Injected at most once per context window
+- **WHEN** the tooling context has already been injected in the current context window
+- **AND** another matching tool call occurs in that same context window
 - **THEN** the guard SHALL NOT inject it again
+
+#### Scenario: Injected separately in a subagent
+- **WHEN** the tooling context has already been injected in the main conversation
+- **AND** a subagent of that session then makes a matching tool call
+- **THEN** the guard SHALL inject the tooling context for that subagent
 
 #### Scenario: Re-injected after compaction or clear
 - **WHEN** a session is compacted or cleared (`SessionStart` with source `compact` or
@@ -48,17 +55,23 @@ The hook matcher SHALL include `Read` as well as `Bash`, `Edit`, and `Write`.
   `home/.chezmoiscripts/`)
 - **THEN** the guard SHALL NOT inject the tooling context on account of that call
 
-### Requirement: Machine Paths Resolved at Run Time
-The shipped context file SHALL NOT contain a literal machine-specific source path. The
-guard SHALL substitute the chezmoi source directory, repo root, and persona list from
-`~/.config/claude-tooling/config.env` into the context at injection time.
-
-#### Scenario: Injected path is machine-correct
-- **WHEN** the chezmoi source directory is not at the default location
-- **THEN** every source-tree path in the injected context SHALL resolve to that machine's
-  actual source directory
+#### Scenario: Stable path for fork pre-briefs
+- **WHEN** the plugin is updated to a new version
+- **THEN** `~/.config/claude-tooling/claude-tooling.md` SHALL remain at the same path with
+  machine-specific values already substituted
 
 ## MODIFIED Requirements
+
+### Requirement: Path References Use sourceDir Variable
+Any reference to the chezmoi source directory within the tooling context's rendered content
+SHALL use `{{ .chezmoi.sourceDir }}` rather than a hardcoded path. This matches the
+convention applied in `home/dot_claude/rules/global-preferences.md.tmpl`.
+
+#### Scenario: Rendered path is machine-correct
+- **WHEN** `home/dot_config/claude-tooling/claude-tooling.md.tmpl` is rendered on a machine
+  whose chezmoi source directory is not the default location
+- **THEN** any path reference to `packages.yaml` or other source-tree files in the rendered
+  content SHALL resolve to that machine's actual source directory
 
 ### Requirement: Content Coverage
 The tooling context's content SHALL cover these topics:
@@ -122,17 +135,13 @@ The tooling context's content SHALL cover these topics:
 **Reason**: The guidance is now delivered by the `claude-tooling` plugin's write guard, which
 reaches subagents and is re-injected after compaction; path-scoped rules are not guaranteed
 to do either.
-**Migration**: Delete `home/dot_claude/rules/claude-tooling.md.tmpl`. `chezmoi apply` then
-removes `~/.claude/rules/claude-tooling.md`. References to the file (in
+**Migration**: Move `home/dot_claude/rules/claude-tooling.md.tmpl` to
+`home/dot_config/claude-tooling/claude-tooling.md.tmpl`. `home/.chezmoiremove` removes the
+old `~/.claude/rules/claude-tooling.md` target. References to the file (in
 `global-preferences.md.tmpl`, `check-claude-overrides`, and the `clean-claude-orphans`
-SKILL.md) point to the plugin's `context/claude-tooling.md` instead.
+SKILL.md) point to `~/.config/claude-tooling/claude-tooling.md` instead.
 
 ### Requirement: Path-Scoped Auto-Load Trigger
 **Reason**: Replaced by "Tooling Context Delivered by the Write Guard", which keeps the same
 path list and adds once-per-session and post-compaction behavior.
 **Migration**: The `paths:` globs move into the guard's path-matching logic.
-
-### Requirement: Path References Use sourceDir Variable
-**Reason**: The context file is static plugin content and is no longer rendered by chezmoi.
-**Migration**: Replaced by "Machine Paths Resolved at Run Time", which reads the paths from
-`config.env`.

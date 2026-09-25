@@ -13,14 +13,16 @@
   - scalar retraction
   - a user-changed scalar is kept
   - array element retraction
+  - entries still in source keep their key and element positions (with an externally added allow entry after a managed one)
+  - an emptied container is kept
   - the first run without a ledger retracts nothing
   - union keeps an externally added allow entry, with no duplicates
   - unmanaged keys (including `hooks`) are preserved
   - pass-through on a machine without the `ai` tag
 
   Add `tests/test-claude-settings-ledger.sh`: for each case it renders the partial with `tests/run-template` (overriding `claudeExtraSettings`), pipes the input through, and diffs the result against the expected output. Verify it fails against the current partial (the expected red).
-- [ ] 2.2 In `home/.chezmoitemplates/claude-settings-hooks-modifier`, replace `. * $extra` with the retract → apply (union) → write-ledger pipeline from D1/D2, keeping `extra_settings='…'` as an unchanged standalone line and the legacy-hook removal as is. Verify that every fixture in `tests/test-claude-settings-ledger.sh` passes, including idempotence.
-- [ ] 2.3 Update the partial's header comment (describe the ledger and union semantics) and the `home/.chezmoitemplates/CLAUDE.md` catalog. Add one line on ledger ownership to the `claude-tooling` plugin's `context/claude-tooling.md`. Verify by reading the header back and checking the context file stays at 80 lines or fewer.
+- [ ] 2.2 In `home/.chezmoitemplates/claude-settings-hooks-modifier`, replace `. * $extra` with the retract (previous ledger minus current) → apply (union) → write-ledger pipeline from D1–D3, keeping `extra_settings='…'` as an unchanged standalone line and the legacy-hook removal as is. Verify that every fixture in `tests/test-claude-settings-ledger.sh` passes, including idempotence.
+- [ ] 2.3 Update the partial's header comment (describe the ledger and union semantics) and the `home/.chezmoitemplates/CLAUDE.md` catalog. Add one line on ledger ownership to the tooling context template `home/dot_config/claude-tooling/claude-tooling.md.tmpl`. Verify by reading the header back and checking the rendered context stays at 80 lines or fewer.
 - [ ] 2.4 Run `check-claude-overrides` for every persona. Verify every baseline still resolves (no skip notices) and the `## drift` output matches its output before the change.
 
 ## 3. Rollout

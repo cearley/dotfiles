@@ -21,9 +21,10 @@ only.
 
 - **Ownership record ("ledger").** The modifier records every leaf it writes from `$extra`
   in a `_chezmoiManaged` key inside `settings.json`. Scalar values are recorded with their
-  value; array elements are recorded individually. On each apply it first retracts what the
-  previous record lists. A scalar is removed only if its live value still equals the value
-  chezmoi wrote. Then the modifier applies the current `$extra` and writes a fresh record.
+  value; array elements are recorded individually. On each apply it first retracts the
+  entries in the previous record that source no longer contains. A scalar is removed only
+  if its live value still equals the value chezmoi wrote. Entries still in source are left
+  in place. Then the modifier applies the current `$extra` and writes a fresh record.
 - **BREAKING (behavior):** arrays (e.g. `permissions.allow`) are merged as an
   order-preserving union instead of being replaced. Entries added outside chezmoi survive an
   apply. Entries chezmoi added and later dropped from source are retracted through the

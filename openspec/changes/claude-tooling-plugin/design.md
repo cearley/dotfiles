@@ -67,6 +67,22 @@ The guard sources that file and exits 0 if it is missing. Because the plugin sou
 equals the installed files, a hash of the source identifies the content. Machine data
 (persona list, paths) changes without a plugin update.
 
+The tooling context is also rendered by chezmoi, outside the plugin:
+`home/dot_config/claude-tooling/claude-tooling.md.tmpl` → `~/.config/claude-tooling/claude-tooling.md`.
+It is the current rule template, moved and condensed, and keeps `{{ .chezmoi.sourceDir }}`
+and the persona values it already uses. Two readers need one stable, machine-correct path:
+- the guard (D4)
+- the fork pre-brief in `global-preferences.md.tmpl`
+
+Neither plugin location works for the pre-brief. The installed copy moves with every
+version (`plugins/cache/…/1.0.0-<hash>/`), and a marketplace copy would still carry
+placeholders. Rendering it once also removes the guard's `sed` step, and editing the
+context needs no plugin update.
+
+*Alternative:* ship `context/claude-tooling.md` in the plugin with `@@…@@` placeholders,
+substituted by the guard with `sed`. Rejected because the pre-brief reader would need its
+own substitution step, and every context edit would bump the plugin version.
+
 ### D3. `plugin-content-hash` partial
 `home/.chezmoitemplates/plugin-content-hash` takes a `plugin` name. It hashes every source
 file under that plugin's directory except `plugin.json.tmpl`, in sorted order, using
@@ -74,6 +90,10 @@ file under that plugin's directory except `plugin.json.tmpl`, in sorted order, u
 
 - `plugin.json.tmpl` sets `"version": "1.0.0+{{ hash }}"`. The `1.0.0` stays manual and
   only signals meaningful change.
+- `plugin.json.tmpl` is excluded from the hash because it contains the hash. As a result,
+  an edit that touches only the manifest (description, author, keywords) does not change
+  the version and is not pushed to installed personas. Bump `1.0.0` by hand when a manifest
+  edit needs to reach them.
 - Script 39 includes `# claude-tooling content: {{ hash }}` in its trigger comment, so any
   content change reruns it.
 - After `install`, script 39 runs
@@ -84,18 +104,25 @@ file under that plugin's directory except `plugin.json.tmpl`, in sorted order, u
 be invisible to it, and `chezmoi apply` from a dirty tree is the normal workflow here.
 
 ### D4. The guard delivers the tooling context
-The existing informational branch keeps its session marker. Instead of the one-line message,
-it emits `context/claude-tooling.md` with the `@@SOURCE_DIR@@`, `@@REPO_ROOT@@`, and
-`@@PERSONAS@@` placeholders replaced (by `sed`) from `config.env`.
+The existing informational branch keeps its marker. Instead of the one-line message, it
+emits the rendered `~/.config/claude-tooling/claude-tooling.md` (D2). If that file is
+missing, it emits nothing.
 
+- The marker is keyed per context window: `<session_id>` in the main conversation, and
+  `<session_id>.<agent_id>` when the hook payload carries an `agent_id`. A subagent has its
+  own context window, so an injection in the parent never reaches it. If the marker were
+  keyed on `session_id` alone, and subagent payloads carry the parent's `session_id`, the
+  parent's injection would suppress the subagent's. The whole reason for the plugin is to
+  reach subagents, so that would defeat it. Task 1.3 confirms which fields the subagent
+  payload carries.
 - The branch drops `permissionDecision` entirely, so the normal permission flow applies.
   The `deny` and `ask` branches are unchanged.
 - The matcher adds `Read`.
 - A second `SessionStart` entry (matcher `compact|clear`) runs `guard --reset`, which
-  deletes the session's marker.
+  deletes the session's markers (the main one and any per-agent ones).
 - The path list moves from the rule's `paths:` frontmatter into one `case` pattern set in
   the guard.
-- Target size for the condensed context file: 80 lines or fewer, covering every topic in
+- Target size for the rendered context file: 80 lines or fewer, covering every topic in
   the modified `claude-tooling-rule` Content Coverage requirement.
 
 ### D5. `check-claude-overrides` stays in `~/.local/bin`
@@ -116,7 +143,7 @@ leaves the removal untouched. Once every persona on every `ai` machine has appli
 list and its fixture are deleted as a tracked follow-up (task 4.5). This change does not
 wait for that step before it is archived.
 
-### D8. Marketplace scope widens to always-installed self-authored plugins
+### D7. Marketplace scope widens to always-installed self-authored plugins
 Until now, every self-authored `chezmoi-personal` plugin has been an opt-in, per-project
 install with a manual `1.0.0` version. `claude-tooling` is the first one declared in
 `packages.yaml` (so it is installed in every persona) and the first whose version comes
@@ -133,7 +160,7 @@ The spike showed `claude plugin validate --strict` fails when `author` is missin
 marketplace spec already requires `author` to be templated from `{{ .fullname }}` and
 `{{ .gh_commit_email }}`, so `plugin.json.tmpl` includes it.
 
-### D7. `claude-session-index` owns its hooks
+### D8. `claude-session-index` owns its hooks
 That repo adds `.claude-plugin/plugin.json` and `hooks/hooks.json`, with
 `UserPromptSubmit`, `PreCompact`, and `SessionEnd` running
 `session-topic-capture <Event>`. The CLI stays installed as a uv tool, and its skill stays
@@ -164,15 +191,16 @@ removes the legacy `session-topic-capture` hooks.
   handful of small files, which takes milliseconds.
 - **Hash inputs use source filenames** (`executable_…`, `dot_…`) → renaming a source file
   changes the version, which is correct: the installed tree changed too.
-- **The context is injected in full once per session and again after compaction** → this
-  costs tokens, which is why the 80-line target in D4 exists.
+- **The context is injected in full once per context window (main conversation and each
+  subagent that touches a tooling path) and again after compaction** → this costs tokens,
+  which is why the 80-line target in D4 exists.
 
 ## Migration Plan
 
 1. `claude-session-index`: ship the plugin upstream and pin its `sha` in the marketplace.
 2. Land this change. A single `chezmoi apply` then:
    - removes the legacy hooks from all four `settings.json` files
-   - renders the plugin and `config.env`
+   - renders the plugin, `config.env`, and the tooling context
    - removes `~/.local/bin/claude-tooling-write-guard` and `~/.claude/rules/claude-tooling.md`.
      Chezmoi leaves a target in place when its source file is deleted, so both go into a new
      `home/.chezmoiremove` (none exists yet). `rules/` is symlinked across personas, so

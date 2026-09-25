@@ -31,17 +31,20 @@ plugin mechanics this relies on. The findings are in design.md.
     - `SessionStart` override check
     - `SessionStart` re-injection after `compact` and `clear`
   - `scripts/claude-tooling-write-guard`: moved out of `~/.local/bin` and de-templated
-  - `context/claude-tooling.md`: the condensed tooling rule
-- **Static plugin code plus a runtime config file.** Machine-specific values (source dir,
-  repo root, persona list) move into a chezmoi-rendered
-  `~/.config/claude-tooling/config.env` that the scripts read at run time. The plugin tree
-  contains no chezmoi templates except `plugin.json.tmpl`.
+- **Static plugin code plus chezmoi-rendered machine files.** Machine-specific values
+  (source dir, repo root, persona list) move into a chezmoi-rendered
+  `~/.config/claude-tooling/config.env` that the scripts read at run time. The tooling rule
+  becomes `home/dot_config/claude-tooling/claude-tooling.md.tmpl`, condensed and rendered
+  to `~/.config/claude-tooling/claude-tooling.md`. That rendered file is the single stable
+  path read by both the guard and fork pre-briefs. The plugin tree contains no chezmoi
+  templates except `plugin.json.tmpl`, and it ships no context file.
 - **Version derived from content.** A new `plugin-content-hash` partial feeds both the
   plugin's `version` and script 39's `run_onchange` trigger. When the content changes,
   script 39 runs `claude plugin update … -y` in every persona. Nobody bumps versions by hand.
-- **BREAKING:** `home/dot_claude/rules/claude-tooling.md.tmpl` is retired. The guard
-  delivers the tooling context instead: once per session, the first time a tooling path is
-  read or modified, and again after compaction or clear.
+- **BREAKING:** `~/.claude/rules/claude-tooling.md` is retired as a rule. The guard
+  delivers the tooling context instead. It fires the first time a tooling path is read or
+  modified in each context window (the main conversation and each subagent), and again
+  after compaction or clear.
 - **Security fix:** the guard never returns `permissionDecision: "allow"`. It emits only
   `additionalContext`, `ask`, or `deny`.
 - **Hooks leave `settings.json`.** `claude-settings-hooks-modifier` stops writing hooks.
@@ -50,7 +53,8 @@ plugin mechanics this relies on. The findings are in design.md.
 - **`session-topic-capture` hooks move to `claude-session-index`.** That repo ships its own
   `hooks/hooks.json` and gets a `chezmoi-personal` marketplace entry (third-party `url`
   source) plus a `packages.yaml` plugin declaration.
-- Three references to `claude-tooling.md` are updated:
+- Three references to `claude-tooling.md` are updated to point at
+  `~/.config/claude-tooling/claude-tooling.md`:
   - `global-preferences.md.tmpl` (the fork pre-brief instruction)
   - `check-claude-overrides`
   - the `clean-claude-orphans` SKILL.md
@@ -81,8 +85,8 @@ plugin mechanics this relies on. The findings are in design.md.
 
 ### Modified Capabilities
 - `claude-tooling-rule`: delivery changes from a path-scoped user rule file to guard-injected
-  context. The content-coverage topics stay the same, and machine paths are resolved at run
-  time instead of render time.
+  context, rendered to `~/.config/claude-tooling/claude-tooling.md`. The content-coverage
+  topics stay the same, and machine paths are still resolved at render time.
 - `claude-override-audit`: the automatic `SessionStart` invocation is declared by the
   `claude-tooling` plugin's `hooks.json`, not by `claude-settings-hooks-modifier`.
 - `claude-plugin-marketplace`: self-authored plugins may be installed in every persona
@@ -95,6 +99,8 @@ plugin mechanics this relies on. The findings are in design.md.
   - `home/dot_local/share/claude-plugins/plugins/claude-tooling/**`
   - `home/.chezmoitemplates/plugin-content-hash`
   - `home/dot_config/claude-tooling/config.env.tmpl`
+  - `home/dot_config/claude-tooling/claude-tooling.md.tmpl` (moved and condensed from
+    `home/dot_claude/rules/claude-tooling.md.tmpl`)
   - a `marketplace.json.tmpl` entry
 - **Changed:**
   - `home/.chezmoiscripts/run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`
@@ -108,7 +114,7 @@ plugin mechanics this relies on. The findings are in design.md.
   - `home/dot_claude/skills/clean-claude-orphans/SKILL.md.tmpl`
 - **Removed:**
   - `home/dot_local/bin/executable_claude-tooling-write-guard.tmpl`
-  - `home/dot_claude/rules/claude-tooling.md.tmpl`
+  - `home/dot_claude/rules/claude-tooling.md.tmpl` (moved, see New)
 - **External:** `cearley/claude-session-index` gains `.claude-plugin/plugin.json` and
   `hooks/hooks.json`.
 - **Depends on:** `chezmoi-managed-plugin-marketplace` (marketplace deployed to
@@ -126,4 +132,5 @@ plugin mechanics this relies on. The findings are in design.md.
   - If the plugin is disabled or uninstalled in a persona, the guard stops running there.
     `check-claude-overrides` already flags `enabledPlugins: false` for plugins declared in
     `packages.yaml`, which covers this case.
-  - No secrets involved; `config.env` holds only paths and persona names.
+  - No secrets involved. `config.env` and the rendered context hold only paths, persona
+    names, and guidance.
