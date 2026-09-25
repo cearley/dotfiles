@@ -1,0 +1,88 @@
+{
+  "model": "opus",
+  "statusLine": {
+    "type": "command",
+    "command": "x"
+  },
+  "enabledPlugins": {
+    "foo@bar": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bd prime"
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "check-claude-overrides --session-start"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "session-topic-capture PreCompact"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-tooling-write-guard"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "session-topic-capture SessionEnd"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "session-topic-capture UserPromptSubmit"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "X": "1"
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "env",
+        "X"
+      ],
+      "value": "1"
+    }
+  ]
+}

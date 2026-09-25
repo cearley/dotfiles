@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "defaultMode": "plan"
+  },
+  "env": {
+    "X": "1"
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "env",
+        "X"
+      ],
+      "value": "1"
+    },
+    {
+      "path": [
+        "permissions",
+        "defaultMode"
+      ],
+      "value": "auto"
+    }
+  ]
+}

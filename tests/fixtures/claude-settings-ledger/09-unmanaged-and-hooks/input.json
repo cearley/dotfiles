@@ -1,0 +1,23 @@
+{
+  "model": "opus",
+  "statusLine": {
+    "type": "command",
+    "command": "x"
+  },
+  "enabledPlugins": {
+    "foo@bar": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bd prime"
+          }
+        ]
+      }
+    ]
+  }
+}

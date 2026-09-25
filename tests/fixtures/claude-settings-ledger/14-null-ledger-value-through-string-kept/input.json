@@ -1,0 +1,12 @@
+{
+  "a": "str",
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "a",
+        "b"
+      ],
+      "value": null
+    }
+  ]
+}

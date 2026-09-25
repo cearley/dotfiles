@@ -1,0 +1,22 @@
+{
+  "skillOverrides": {
+    "audit-skills": "off",
+    "keep": "off"
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "skillOverrides",
+        "audit-skills"
+      ],
+      "value": "off"
+    },
+    {
+      "path": [
+        "skillOverrides",
+        "keep"
+      ],
+      "value": "off"
+    }
+  ]
+}

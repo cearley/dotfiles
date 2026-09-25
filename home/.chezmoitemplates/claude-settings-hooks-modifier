@@ -1,10 +1,21 @@
 {{- /* Merges hooks and any per-environment extra settings the caller wants chezmoi-managed.
 
      Params (merge with the chezmoi context before calling):
-       claudeExtraSettings: optional dict, default {}. Merged over the existing
-                    settings.json (jq `*`) after the hooks merge — e.g. skillOverrides,
+       claudeExtraSettings: optional dict, default {}. Applied to the existing
+                    settings.json after the hooks merge — e.g. skillOverrides,
                     enabledPlugins, permissions. Only pass this for an environment
                     whose posture has actually been analyzed; other callers get {}.
+
+     Extra settings are ledger-tracked: every leaf written from claudeExtraSettings is
+     recorded in settings.json's top-level _chezmoiManaged array (scalars as
+     {path, value}, array elements as {path, elem}). Each run first retracts what the
+     previous ledger lists but the current dict no longer has — a scalar only if its
+     live value still equals what chezmoi wrote — then applies the dict (scalars
+     overwrite; arrays merge as an order-preserving union, so entries added outside
+     chezmoi survive) and rewrites the ledger. Entries still in source are never
+     touched, and containers emptied by retraction are kept. No ledger yet means
+     nothing is retracted. Tests: tests/test-claude-settings-ledger.sh.
+     Keep extra_settings='…' a standalone line: check-claude-overrides greps it.
 
      Example:
        {{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" (dict "permissions" (dict "defaultMode" "auto"))) .) }}
@@ -40,7 +51,7 @@ managed_hooks='{
 # 2026-08-21: claude-tooling-guard folded into claude-tooling-write-guard.
 retired_commands='["claude-tooling-guard"]'
 
-extra_settings='{{ get . "claudeExtraSettings" | default (dict) | toJson }}'
+extra_settings='{{ get . "claudeExtraSettings" | default (dict) | toJson | replace "'" "\\u0027" }}'
 
 echo "$existing" | jq --argjson managed "$managed_hooks" --argjson retired "$retired_commands" --argjson extra "$extra_settings" '
   .hooks = ((.hooks // {}) | with_entries(
@@ -54,6 +65,41 @@ echo "$existing" | jq --argjson managed "$managed_hooks" --argjson retired "$ret
       + $managed[$event]
     )
   )
-  | . * $extra
+  # Extra settings, ledger-tracked in ._chezmoiManaged (see header).
+  | def flat($p):
+      if type == "object" then to_entries[] as $kv | $kv.value | flat($p + [$kv.key])
+      elif type == "array" then .[] | {path: $p, elem: .}
+      else {path: $p, value: .} end;
+    # True only when every parent on $p is an object that holds the final key.
+    def exists($p): try (getpath($p[:-1]) | type == "object" and has($p[-1])) catch false;
+    # Replace any non-object parent on $p with {} (what `. * $extra` used to do).
+    def ensure_obj($p): reduce range(1; $p | length) as $i (.;
+      if (getpath($p[:$i]) | type) as $t | $t == "object" or $t == "null" then .
+      else setpath($p[:$i]; {}) end);
+    (reduce ([$extra | flat([])][]) as $x ([]; if any(.[]; . == $x) then . else . + [$x] end)) as $cur
+  | [$cur[] | select(has("value")) | .path] as $cur_scalar_paths
+  # Previous ledger, keeping only well-formed entries so a hand-edited one cannot crash apply.
+  | ((._chezmoiManaged | if type == "array" then . else [] end)
+      | map(select(type == "object" and (has("value") or has("elem"))
+                   and (.path | type) == "array" and (.path | length) > 0
+                   and all(.path[]; type == "string")))) as $prev
+  # Retract only what source dropped (previous ledger minus current).
+  | reduce $prev[] as $e (.;
+      if ($e | has("value")) then
+        if any($cur_scalar_paths[]; . == $e.path) then .
+        elif exists($e.path) and getpath($e.path) == $e.value then delpaths([$e.path])
+        else . end
+      elif any($cur[]; . == $e) then .
+      elif exists($e.path) and (getpath($e.path) | type) == "array" then
+        setpath($e.path; getpath($e.path) - [$e.elem])
+      else . end)
+  # Apply: scalars overwrite; array elements are an order-preserving union.
+  | reduce $cur[] as $e (ensure_obj([]);
+      ensure_obj($e.path)
+      | if ($e | has("value")) then setpath($e.path; $e.value)
+        else (getpath($e.path) | if type == "array" then . else [] end) as $a
+          | if any($a[]; . == $e.elem) then . else setpath($e.path; $a + [$e.elem]) end
+        end)
+  | if ($cur | length) > 0 then ._chezmoiManaged = $cur else del(._chezmoiManaged) end
 '
 {{- end }}

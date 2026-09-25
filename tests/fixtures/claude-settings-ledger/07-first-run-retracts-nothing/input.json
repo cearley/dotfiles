@@ -1,0 +1,10 @@
+{
+  "skillOverrides": {
+    "stale": "off"
+  },
+  "permissions": {
+    "allow": [
+      "Z"
+    ]
+  }
+}

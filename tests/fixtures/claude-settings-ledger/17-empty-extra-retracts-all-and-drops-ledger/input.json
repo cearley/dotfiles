@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "defaultMode": "auto",
+    "allow": [
+      "A",
+      "U"
+    ]
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "permissions",
+        "allow"
+      ],
+      "elem": "A"
+    },
+    {
+      "path": [
+        "permissions",
+        "defaultMode"
+      ],
+      "value": "auto"
+    }
+  ]
+}

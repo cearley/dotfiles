@@ -1,0 +1,15 @@
+{
+  "a": "str",
+  "env": {
+    "X": "1"
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "env",
+        "X"
+      ],
+      "value": "1"
+    }
+  ]
+}

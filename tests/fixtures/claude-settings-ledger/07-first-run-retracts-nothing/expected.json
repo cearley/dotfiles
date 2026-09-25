@@ -1,0 +1,20 @@
+{
+  "skillOverrides": {
+    "stale": "off"
+  },
+  "permissions": {
+    "allow": [
+      "Z",
+      "A"
+    ]
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "permissions",
+        "allow"
+      ],
+      "elem": "A"
+    }
+  ]
+}

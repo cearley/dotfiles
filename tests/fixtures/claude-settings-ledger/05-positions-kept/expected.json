@@ -1,0 +1,26 @@
+{
+  "model": "opus",
+  "permissions": {
+    "defaultMode": "auto",
+    "allow": [
+      "A",
+      "X"
+    ]
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "permissions",
+        "allow"
+      ],
+      "elem": "A"
+    },
+    {
+      "path": [
+        "permissions",
+        "defaultMode"
+      ],
+      "value": "auto"
+    }
+  ]
+}

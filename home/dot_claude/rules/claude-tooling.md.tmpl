@@ -121,11 +121,13 @@ workload (see the comment at the top of
 from `/doctor` runs per-persona, and copying them verbatim between personas skips re-running
 that analysis for a different workload).
 
-**Drift note**: ad hoc `/skill`/`/plugin` toggles made directly in a session survive `chezmoi
-apply` — a `modify_` script only enforces the specific keys it sets, it doesn't strip
-additions — so the live `~/.claude*/settings.json` can carry more `skillOverrides`/
+**Drift note**: chezmoi records what it wrote from each persona's `$extra` dict in a
+`_chezmoiManaged` ledger inside `settings.json`, so an entry removed from the template is
+retracted from the live file on the next `chezmoi apply`. Ad hoc `/skill`/`/plugin` toggles
+made directly in a session still survive — the ledger only retracts entries chezmoi itself
+wrote — so the live `~/.claude*/settings.json` can carry more `skillOverrides`/
 `enabledPlugins` entries than the chezmoi template declares. "Checking for Override Drift"
-above covers how to find and resolve these.
+above covers how to find and resolve these. Don't hand-edit `_chezmoiManaged`.
 
 ## Two Deliberately Different Install Models
 

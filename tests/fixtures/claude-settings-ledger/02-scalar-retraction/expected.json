@@ -1,0 +1,14 @@
+{
+  "skillOverrides": {
+    "keep": "off"
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "skillOverrides",
+        "keep"
+      ],
+      "value": "off"
+    }
+  ]
+}

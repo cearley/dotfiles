@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "B"
+    ]
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "permissions",
+        "allow"
+      ],
+      "elem": "B"
+    }
+  ]
+}
