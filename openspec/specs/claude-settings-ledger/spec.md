@@ -3,8 +3,8 @@
 ## Purpose
 
 Defines how the chezmoi `modify_` script for each Claude Code persona's `settings.json`
-tracks which extra-settings entries chezmoi owns, so that removals in source reach the live
-file and entries written by Claude Code, plugins, or the user are preserved.
+tracks every setting chezmoi manages there, hooks included, so that removals in source
+reach the live file and entries written by Claude Code, plugins, or the user are preserved.
 
 ## Requirements
 

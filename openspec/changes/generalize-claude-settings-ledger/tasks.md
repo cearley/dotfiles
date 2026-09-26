@@ -60,9 +60,9 @@
   - the ledger gains exactly 5 hook entries;
   - the `PreToolUse` `claude-tooling-write-guard` group is present;
   - the second pass is byte-identical to the first.
-- [ ] 4.2 Run `chezmoi apply` scoped to the four `settings.json` targets. Do not use `--exclude=templates`, and use `chezmoi status` rather than `chezmoi diff`, which needs a TTY. Verify:
+- [x] 4.2 Run `chezmoi apply` scoped to the four `settings.json` targets. Do not use `--exclude=templates`, and use `chezmoi status` rather than `chezmoi diff`, which needs a TTY. Verify:
   - each persona's ledger has 5 `hooks` entries;
   - `chezmoi status` shows no pending change for those targets afterward;
   - in a new session, the `SessionStart` drift check runs, and the write guard's notice appears when a tooling path is read.
 - [x] 4.3 Record a follow-up as an Open item in the `chezmoi` basic-memory "Chezmoi Current Status" note (beads was removed from this repo in `829ed9a`, so there is no `bd` tracker): "Delete the legacy-hook migration from claude-settings-modifier once every ai machine has applied generalize-claude-settings-ledger". List the machines, the migration block, and fixtures 26–30. Verify by reading the note back.
-- [ ] 4.4 At archive time, update the `## Purpose` of `openspec/specs/claude-settings-ledger/spec.md` so it covers all managed settings, hooks included, not only "extra-settings entries". Delta specs cannot change Purpose. Verify with `openspec validate --specs claude-settings-ledger --strict`.
+- [x] 4.4 At archive time, update the `## Purpose` of `openspec/specs/claude-settings-ledger/spec.md` so it covers all managed settings, hooks included, not only "extra-settings entries". Delta specs cannot change Purpose. Verify with `openspec validate --specs claude-settings-ledger --strict`.
