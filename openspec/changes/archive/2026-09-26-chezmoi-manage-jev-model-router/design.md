@@ -103,19 +103,54 @@ require a key to be present (see `claude-function-hooks-mods` - the
 "Each persona declares..." requirement is independent of whether a key is
 ever set), so the user can adopt the key on their own timeline per persona.
 
+**Correction (2026-09-26, post-archive): this endpoint override never
+reached the mod.** The four `.claude-settings.json` files declared it at
+`pluginConfigs.jev-model-router.options`, but Claude Code resolves a
+plugin's options by the loaded id, `pluginConfigs["jev-model-router@skills-dir"].options`
+— confirmed via `claude --debug hooks`, which logs `no
+pluginConfigs["<name>@<source>"].options in user, --settings or managed
+settings` for an unrelated plugin during the same resolution pass. Every
+non-secret field (this endpoint, tier models, thresholds) silently fell
+back to its schema default; only `typesafeApiKey` (set via `/plugin
+configure`, stored outside `settings.json` — see the correction above)
+still reached the mod, which is what made it look like it was mostly
+working: it announced normally and made a real HTTP call, just to
+TypeSafe's default endpoint (`api.typesafe.ai`) with a
+Vercel/OpenRouter-shaped key, which returned 401 on every turn and
+degraded to "no decision" every time. Fixed by renaming the settings key
+in all four personas to `jev-model-router@skills-dir`; see
+`claude-function-hooks-mods`'s matching correction on the "Each persona
+declares..." requirement.
+
 **Do not declare `typesafeApiKey` anywhere in `.claude-settings.json`, and do
 not route it through `private_dot_zsh_secrets.tmpl` either.** Confirmed by
 reading `hooks/jev-model-router.ts`: `options` (from which `typesafeApiKey`
-is read) comes from Claude Code's own plugin-options mechanism, sourced from
-`settings.json`; there is no `process.env` read anywhere in the mod. An env
-var would silently do nothing. The only two places the key could
-meaningfully live are a chezmoi-rendered `settings.json` value (which this
-repo's "no hardcoded secrets" convention and the two-tier secret model would
-push toward a SOPS+age-encrypted source) or Claude Code's own `/config`,
-which writes directly to the live file and is preserved by the
-`claude-settings-ledger` modifier's retraction rules. The user chose
-`/config` for its simplicity — no encrypted file to maintain — accepting
-that the key then isn't reproduced automatically on a fresh machine.
+is read) comes from Claude Code's own plugin-options mechanism. An env var
+would silently do nothing, since there is no `process.env` read anywhere in
+the mod.
+
+**Correction (2026-09-26, post-archive):** this decision originally claimed
+the key would be set through Claude Code's `/config` UI, writing into the
+live `settings.json` and preserved by the `claude-settings-ledger`
+modifier's retraction rules. That's wrong — verified live against Claude
+Code's actual behavior. `/config` never shows a row for any `userConfig`
+field a plugin marks `sensitive` (which `typesafeApiKey` and `gatewayApiKey`
+both are), for any plugin, not just skills-dir-loaded ones. The vendored mod
+is a real registered plugin regardless of never going through the
+marketplace — Claude Code assigns it the id `jev-model-router@skills-dir`
+(`claude plugin list` shows it under "Skills-directory plugins"). The
+correct — and only — way to set a sensitive option is
+`/plugin configure jev-model-router@skills-dir` (or `/plugin` → Installed →
+Configure), which stores the value in the OS secure store (macOS Keychain),
+not in `settings.json` at all. This is actually a cleaner outcome than the
+original assumption: since the key never touches any file, there is nothing
+for `claude-settings-ledger`'s retraction rules to interact with, and no
+risk of it ever landing in a chezmoi-managed source by accident. The
+trade-off noted below (the key isn't reproduced automatically on a fresh
+machine) still holds — `/plugin configure` must be run once per persona on
+each machine. See the `chezmoi` basic-memory project,
+`known-issues/Sensitive Plugin Options Never Appear in /config — Use
+/plugin configure Instead`, for the full verification trail.
 
 ## Risks / Trade-offs
 

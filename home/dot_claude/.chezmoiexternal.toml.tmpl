@@ -2,6 +2,19 @@
 {{- $modFile := dict "type" "file" "refreshPeriod" "168h" -}}
 {{- $modBase := "https://raw.githubusercontent.com/davila7/claude-code-templates/main/cli-tool/components/mods/productivity/jev-model-router" -}}
 
+# jev-model-router: chezmoi vendors these files and the non-secret
+# pluginConfigs["jev-model-router@skills-dir"].options in each persona's
+# .claude-settings.json, but NOT its API key (never chezmoi-managed — see
+# openspec/specs/claude-function-hooks-mods "A mod's secret credentials are
+# never chezmoi-managed"). After `chezmoi apply` on a new machine or persona,
+# run once per persona to get real Jev routing instead of the built-in
+# classifier fallback:
+#   /plugin configure jev-model-router@skills-dir
+#   /reload-plugins
+# The pluginConfigs key MUST be the full loaded id ("<name>@skills-dir"),
+# not the bare mod name — Claude Code silently ignores options declared
+# under the bare name (see design.md's 2026-09-26 correction).
+
 ["skills/jev-model-router/.claude-plugin/plugin.json"]
     {{- toToml $modFile | nindent 4 }}
     url = "{{ $modBase }}/.claude-plugin/plugin.json"

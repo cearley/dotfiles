@@ -2,7 +2,7 @@
   "syncClaudeAiSkills": false,
   "syncClaudeAiPlugins": false,
   "pluginConfigs": {
-    "jev-model-router": {
+    "jev-model-router@skills-dir": {
       "options": {
         "provider": "typesafe",
         "typesafeBaseUrl": "https://openrouter.ai/api",

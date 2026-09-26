@@ -49,9 +49,16 @@ distinct from the two this repo already automates (`npx skills add -g` and
 - `typesafeApiKey` is deliberately **not** declared in any `.claude-settings.json`
   — the mod's hook code reads plugin options only from `settings.json`
   (verified by reading `hooks/jev-model-router.ts`; there is no `process.env`
-  fallback), so it must be set once per persona through Claude Code's own
-  `/config` UI. The settings-ledger modifier's runtime-key preservation keeps
-  a `/config`-set key across future `chezmoi apply` runs.
+  fallback), so it must be set once per persona.
+  **Correction (2026-09-26, post-archive):** this originally said "through
+  Claude Code's own `/config` UI, preserved by the settings-ledger
+  modifier's runtime-key preservation." That's wrong — `/config` never shows
+  a `sensitive`-marked `userConfig` field for any plugin. The vendored mod
+  is still a real registered plugin (`jev-model-router@skills-dir`), and the
+  correct command is `/plugin configure jev-model-router@skills-dir`, which
+  stores the value in the OS Keychain — not in `settings.json` at all, so
+  the settings-ledger has nothing to preserve here. See `design.md`'s
+  matching correction for the verification trail.
 
 ## Capabilities
 
@@ -82,7 +89,7 @@ requirements change)
 - Tags affected: `ai` only (same gate every other Claude Code tooling item
   already uses).
 - Security implications: once a `typesafeApiKey` is configured (by hand, via
-  `/config`, out of scope for this change), the mod sends prompt text to
+  `/plugin configure`, out of scope for this change), the mod sends prompt text to
   OpenRouter for classification on every routed turn — this is opt-in per
   persona (no key, no external call; falls back to the built-in classifier)
   and involves no chezmoi-side secret handling, so there's nothing for SOPS
@@ -92,7 +99,7 @@ requirements change)
 ## Non-goals
 
 - Not chezmoi-managing the `typesafeApiKey` secret itself (KeePassXC or
-  SOPS+age) — set by hand per persona via `/config`.
+  SOPS+age) — set by hand per persona via `/plugin configure`.
 - Not smoke-testing OpenRouter's `/v1/systemone` request/response shape
   against this mod's exact wire format before merging — the endpoint-path
   and body-shape match is inferred from reading both sides' code/docs, not
