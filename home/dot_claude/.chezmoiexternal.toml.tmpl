@@ -1,0 +1,20 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+{{- $modFile := dict "type" "file" "refreshPeriod" "168h" -}}
+{{- $modBase := "https://raw.githubusercontent.com/davila7/claude-code-templates/main/cli-tool/components/mods/productivity/jev-model-router" -}}
+
+["skills/jev-model-router/.claude-plugin/plugin.json"]
+    {{- toToml $modFile | nindent 4 }}
+    url = "{{ $modBase }}/.claude-plugin/plugin.json"
+
+["skills/jev-model-router/hooks/hooks.json"]
+    {{- toToml $modFile | nindent 4 }}
+    url = "{{ $modBase }}/hooks/hooks.json"
+
+["skills/jev-model-router/hooks/jev-model-router.ts"]
+    {{- toToml $modFile | nindent 4 }}
+    url = "{{ $modBase }}/hooks/jev-model-router.ts"
+
+["skills/jev-model-router/hooks/policy.ts"]
+    {{- toToml $modFile | nindent 4 }}
+    url = "{{ $modBase }}/hooks/policy.ts"
+{{- end }}

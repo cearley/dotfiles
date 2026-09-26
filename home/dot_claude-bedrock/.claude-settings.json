@@ -1,6 +1,25 @@
 {
   "syncClaudeAiSkills": false,
   "syncClaudeAiPlugins": false,
+  "pluginConfigs": {
+    "jev-model-router": {
+      "options": {
+        "provider": "typesafe",
+        "typesafeBaseUrl": "https://openrouter.ai/api",
+        "typesafeModel": "~typesafe/jev-latest",
+        "fastModel": "haiku",
+        "balancedModel": "sonnet",
+        "deepModel": "opus",
+        "minUpgradeConfidence": 0.3,
+        "minDowngradeConfidence": 0.6,
+        "routeSubagentModel": true,
+        "routeMainEffort": true,
+        "routeMainModel": false,
+        "timeoutMs": 800,
+        "logDecisions": true
+      }
+    }
+  },
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },

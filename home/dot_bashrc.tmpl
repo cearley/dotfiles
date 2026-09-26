@@ -14,6 +14,9 @@ export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || pr
 {{- if $claudeDefault }}
 export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
 {{- end }}
+{{- if has "ai" .tags }}
+export CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1
+{{- end }}
 
 {{ if has "ai" .tags -}}
 alias openspecui='npx openspecui@latest'

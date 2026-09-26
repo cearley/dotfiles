@@ -20,6 +20,9 @@ zstyle ':omz:update' mode disabled  # disable automatic updates
 {{- if $claudeDefault }}
 export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
 {{- end }}
+{{- if has "ai" .tags }}
+export CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1
+{{- end }}
 
 plugins=(
     aws
