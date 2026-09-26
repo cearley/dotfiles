@@ -1,0 +1,49 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "bd prime",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "check-claude-overrides --session-start"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "/Users/craig/.config/iterm2/cc-status",
+            "type": "command"
+          }
+        ]
+      }
+    ]
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "hooks",
+        "SessionStart"
+      ],
+      "elem": {
+        "hooks": [
+          {
+            "command": "check-claude-overrides --session-start",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    }
+  ]
+}

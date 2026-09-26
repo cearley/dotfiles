@@ -79,7 +79,7 @@ relevant whenever auditing tooling health (`/doctor`-style checks) or when a ski
 behaving despite being installed and declared — it checks every persona's live `settings.json`
 against that persona's own `modify_settings.json.tmpl` baseline (the
 `$extra`/`claudeExtraSettings` dict, if any, passed to
-`includeTemplate "claude-settings-hooks-modifier"`) and flags:
+`includeTemplate "claude-settings-modifier"`) and flags:
 
 - `skillOverrides.<skill>: "off"` for a **native** skill (listed under
   `{{ $sourceDir }}/dot_claude/skills/`) the baseline doesn't explain — someone toggled it
@@ -114,7 +114,9 @@ history (`projects/`), and `CLAUDE.md`. Each resolves as `${CLAUDE_CONFIG_DIR:-$
 `~/.claude.json` (in the home directory, not in `~/.claude/`) when it is unset. Reading or
 writing the wrong persona's file silently uses its skillUsage/pluginUsage/mcpServers, settings,
 or transcripts. When an audit, health check, or cleanup could mean every persona rather than
-just the active one, ask which is wanted before running. Each persona's `modify_settings.json.tmpl` chezmoi-manages a
+just the active one, ask which is wanted before running. Each persona's `modify_settings.json.tmpl` `$extra` dict declares everything chezmoi manages in
+that persona's `settings.json` — its `hooks` (the same five in every persona, repeated on
+purpose so each file is self-contained: a hook edit means editing all four templates) plus a
 baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
 workload (see the comment at the top of
 `{{ $sourceDir }}/dot_claude-personal/modify_settings.json.tmpl` — these postures are derived

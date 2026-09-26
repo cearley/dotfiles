@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PreCompact": [],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "check-claude-overrides --session-start"
+          }
+        ]
+      }
+    ]
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "hooks",
+        "SessionStart"
+      ],
+      "elemJson": "{\"hooks\":[{\"command\":\"check-claude-overrides --session-start\",\"type\":\"command\"}],\"matcher\":\"\"}"
+    }
+  ]
+}

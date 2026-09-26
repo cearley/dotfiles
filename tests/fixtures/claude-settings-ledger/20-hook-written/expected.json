@@ -1,0 +1,25 @@
+{
+  "model": "opus",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "check-claude-overrides --session-start",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ]
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "hooks",
+        "SessionStart"
+      ],
+      "elemJson": "{\"hooks\":[{\"command\":\"check-claude-overrides --session-start\",\"type\":\"command\"}],\"matcher\":\"\"}"
+    }
+  ]
+}

@@ -12,5 +12,11 @@
       "env" (dict "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" "1")
       "syncClaudeAiSkills" false
       "syncClaudeAiPlugins" false
+      "hooks" (dict
+        "UserPromptSubmit" (list (dict "matcher" "" "hooks" (list (dict "type" "command" "command" "session-topic-capture UserPromptSubmit"))))
+        "PreCompact" (list (dict "matcher" "" "hooks" (list (dict "type" "command" "command" "session-topic-capture PreCompact"))))
+        "SessionEnd" (list (dict "matcher" "" "hooks" (list (dict "type" "command" "command" "session-topic-capture SessionEnd"))))
+        "PreToolUse" (list (dict "matcher" "Bash|Edit|Write" "hooks" (list (dict "type" "command" "command" "claude-tooling-write-guard"))))
+        "SessionStart" (list (dict "matcher" "" "hooks" (list (dict "type" "command" "command" "check-claude-overrides --session-start")))))
 -}}
-{{ includeTemplate "claude-settings-hooks-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}
+{{ includeTemplate "claude-settings-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}

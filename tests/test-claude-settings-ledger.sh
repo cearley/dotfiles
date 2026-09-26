@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fixture tests for the claude-settings-hooks-modifier extra-settings ledger
+# Fixture tests for the claude-settings-modifier settings ledger
 # (openspec capability: claude-settings-ledger).
 #
 # Each case under tests/fixtures/claude-settings-ledger/<case>/ holds:
@@ -14,9 +14,8 @@
 # backticks.
 #   exact          optional marker: compare key/element order too (jq ., not jq -S)
 #
-# Comparison ignores the "hooks" key unless expected.json has one, so only the hooks
-# case pins the hook stage's output. Every case is also re-run on its own output and
-# must come back byte-identical (idempotence). A crashing modifier counts as a failure.
+# Every case is also re-run on its own output and must come back byte-identical
+# (idempotence). A crashing modifier counts as a failure.
 #
 # Usage: tests/test-claude-settings-ledger.sh
 
@@ -46,7 +45,7 @@ for dir in "$FIXTURES"/*/; do
   [[ -f "$dir/tags.json" ]] && tags=$(jq -c . "$dir/tags.json")
   overrides="(dict \"claudeExtraSettings\" (fromJson \`$extra\`) \"tags\" (fromJson \`$tags\`))"
   "$SCRIPT_DIR/run-template" --inline \
-    "{{ includeTemplate \"claude-settings-hooks-modifier\" (merge $overrides .) }}" \
+    "{{ includeTemplate \"claude-settings-modifier\" (merge $overrides .) }}" \
     > "$scratch/$name.sh"
 
   if ! out1=$(bash "$scratch/$name.sh" < "$dir/input.json" 2>"$scratch/$name.err"); then
@@ -61,9 +60,7 @@ for dir in "$FIXTURES"/*/; do
   else
     order_flag="-S"
     [[ -f "$dir/exact" ]] && order_flag=""
-    strip='.'
-    jq -e 'has("hooks")' "$dir/expected.json" >/dev/null || strip='del(.hooks)'
-    got=$(jq $order_flag "$strip" <<<"$out1")
+    got=$(jq $order_flag . <<<"$out1")
     want=$(jq $order_flag . "$dir/expected.json")
     if [[ "$got" == "$want" ]]; then
       check "$name: matches expected" 1
@@ -73,6 +70,12 @@ for dir in "$FIXTURES"/*/; do
     fi
   fi
   check "$name: idempotent" "$([[ "$out1" == "$out2" ]] && echo 1)"
+  # Claude Code flags hook-shaped objects outside "hooks", so structured ledger
+  # elements must be stored as elemJson strings, never as raw elem objects.
+  check "$name: ledger holds no structured elem" "$(jq -e \
+    '[._chezmoiManaged? // [] | .[]? | objects | select(has("elem")) | .elem
+      | select(type == "object" or type == "array")] | length == 0' \
+    <<<"$out1" >/dev/null 2>&1 && echo 1)"
 done
 
 # check-claude-overrides greps the rendered modifier for exactly one extra_settings line.

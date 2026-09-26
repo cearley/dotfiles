@@ -64,7 +64,7 @@ require_cmd() {
 
 # ---------------------------------------------------------------------------
 # Baseline extraction: render a persona's modify_settings.json.tmpl and extract the
-# extra_settings='...' JSON literal claude-settings-hooks-modifier already computes — never
+# extra_settings='...' JSON literal claude-settings-modifier already computes — never
 # hand-parse the source template's Go dict(...) syntax. Done at runtime, on every
 # invocation, since the template's content (unlike the persona list above) can change
 # without a chezmoi apply having run yet.

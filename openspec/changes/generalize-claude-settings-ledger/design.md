@@ -45,7 +45,8 @@ a single standalone line.
 ### D1. Hooks are ordinary extra settings
 The hook stage (`managed_hooks`, the command-name upsert, `retired_commands`) is deleted
 outright. Each persona template adds a `"hooks" (dict …)` entry to its `$extra`, written in
-the same Go `dict`/`list` style as the rest of the dict. The ledger stage is not modified.
+the same Go `dict`/`list` style as the rest of the dict. The ledger stage's logic is not
+modified; only how it serializes structured elements changes (D6).
 
 *Alternative:* write the hooks in each template as a JSON string with `fromJson`. It's
 shorter, but it mixes two notations in one dict, and a JSON string inside a Go template has
@@ -118,6 +119,34 @@ every case. Without the hook stage, the output's hooks come only from input and 
 so that strip becomes unnecessary and is removed: every case compares the full output.
 Fixture 09's expectation drops the five hooks the stage used to inject.
 
+### D6. Structured ledger elements are stored as JSON strings
+Recording a hook group as `{path: ["hooks","PreToolUse"], elem: G}` puts a hook-shaped
+object at `_chezmoiManaged[i].elem`, outside `hooks`. Claude Code's settings validation
+flags that (2026-09-25, `~/.claude-personal`): "PreToolUse/PermissionRequest hooks are
+declared outside "hooks" … nothing it sits in is applied until the entry is fixed or
+removed." The real hooks were correctly placed; only the ledger copy tripped it.
+
+So the ledger is written with structured elements (objects and arrays) as
+`{path, elemJson: (elem | tojson)}`. Scalars and scalar elements (e.g. `permissions.allow`
+strings) keep `{path, value}` / `{path, elem}`. On read, `elemJson` is decoded back to
+`{path, elem}` before anything else, so retraction and the D2 trigger see one shape, and
+comparison stays by full value (D3). An `elemJson` that doesn't parse is dropped, like
+any other malformed entry. A raw object `elem` is still accepted on read, so ledgers
+written before this decision convert on the next apply without retracting and re-adding
+the groups, and foreign hooks keep their positions.
+
+The harness asserts for every case that the output ledger holds no object or array
+`elem`. Input fixtures 21–24 and 30 keep the raw form, covering the legacy read path.
+
+*Alternative:* move the ledger to a sidecar file. That breaks the stateless `modify_`
+constraint (stdin→stdout only). Rejected.
+
+*Alternative:* encode every element, scalars included. Uniform, but it turns readable
+`permissions.allow` entries into escaped strings for no benefit. Rejected.
+
+*Alternative:* store a hash of the group. Compact, but retraction needs the value itself to
+remove it from the live array. Rejected.
+
 ## Risks / Trade-offs
 
 - [A migration bug deletes the write-guard hook, and tooling writes go unguarded] → The
@@ -153,4 +182,6 @@ safe rollback is:
    `path[0] == "hooks"` (`jq '._chezmoiManaged |= map(select(.path[0] != "hooks"))'`);
 3. apply.
 
-The hook stage then upserts as before, and nothing is retracted.
+The hook stage then upserts as before, and nothing is retracted. Step 2 matters for D6
+too: the old pipeline treats `elemJson` entries as malformed and skips them, which is safe,
+but deleting them keeps the ledger clean.

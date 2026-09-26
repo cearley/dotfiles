@@ -1,0 +1,104 @@
+{{- /* Writes the settings a persona wants chezmoi-managed into its settings.json.
+
+     Params (merge with the chezmoi context before calling):
+       claudeExtraSettings: optional dict, default {}. Everything chezmoi manages in
+                    this persona's settings.json, hooks included — e.g. hooks,
+                    skillOverrides, enabledPlugins, permissions. Each persona declares
+                    its own; there is no shared default.
+
+     Every leaf written from claudeExtraSettings is recorded in settings.json's
+     top-level _chezmoiManaged array (scalars as {path, value}, array elements as
+     {path, elem}; a hook group in hooks.<Event> is one array element, compared by full
+     value, and is stored as {path, elemJson} — the group as a JSON string — so the
+     ledger holds no hook-shaped object outside "hooks"). Each run first retracts what the previous ledger lists but the current dict
+     no longer has — a scalar only if its live value still equals what chezmoi wrote —
+     then applies the dict (scalars overwrite; arrays merge as an order-preserving
+     union, so entries added outside chezmoi survive in place) and rewrites the ledger.
+     Entries still in source are never touched, and containers emptied by retraction
+     are kept. No ledger yet means nothing is retracted.
+     Tests: tests/test-claude-settings-ledger.sh.
+     Keep extra_settings='…' a standalone line: check-claude-overrides greps it.
+
+     Legacy-hook migration: hooks were upserted outside the ledger before 2026-09, so a
+     live file whose ledger records no hook still carries chezmoi's old hook groups.
+     While that holds, every hook running one of a frozen list of the commands chezmoi
+     ever wrote is removed first (groups left empty are dropped), then source applies.
+     Delete the block, and fixtures 26–30, once every ai machine has applied.
+
+     Example:
+       {{ includeTemplate "claude-settings-modifier" (merge (dict "claudeExtraSettings" (dict "permissions" (dict "defaultMode" "auto"))) .) }}
+*/ -}}
+{{- if not (and (eq .chezmoi.os "darwin") (has "ai" .tags)) -}}
+#!/bin/bash
+# Not a darwin+ai machine — pass through unchanged
+cat
+{{- else -}}
+#!/bin/bash
+# Apply chezmoi-managed settings via the ledger; preserve everything else Claude Code manages.
+set -euo pipefail
+
+existing=$(cat)
+[ -z "$existing" ] && existing='{}'
+
+extra_settings='{{ get . "claudeExtraSettings" | default (dict) | toJson | replace "'" "\\u0027" }}'
+
+echo "$existing" | jq --argjson extra "$extra_settings" '
+  # Managed settings, ledger-tracked in ._chezmoiManaged (see header).
+  def flat($p):
+      if type == "object" then to_entries[] as $kv | $kv.value | flat($p + [$kv.key])
+      elif type == "array" then .[] | {path: $p, elem: .}
+      else {path: $p, value: .} end;
+    # True only when every parent on $p is an object that holds the final key.
+    def exists($p): try (getpath($p[:-1]) | type == "object" and has($p[-1])) catch false;
+    # Replace any non-object parent on $p with {} (what `. * $extra` used to do).
+    def ensure_obj($p): reduce range(1; $p | length) as $i (.;
+      if (getpath($p[:$i]) | type) as $t | $t == "object" or $t == "null" then .
+      else setpath($p[:$i]; {}) end);
+    (reduce ([$extra | flat([])][]) as $x ([]; if any(.[]; . == $x) then . else . + [$x] end)) as $cur
+  | [$cur[] | select(has("value")) | .path] as $cur_scalar_paths
+  # Previous ledger, keeping only well-formed entries so a hand-edited one cannot crash apply.
+  # Structured elements are read back from elemJson; a raw object elem (pre-2026-09-25) still reads.
+  | ((._chezmoiManaged | if type == "array" then . else [] end)
+      | map(if type == "object" and has("elemJson") then
+              (try {path, elem: (.elemJson | fromjson)} catch null) else . end)
+      | map(select(type == "object" and (has("value") or has("elem"))
+                   and (.path | type) == "array" and (.path | length) > 0
+                   and all(.path[]; type == "string")))) as $prev
+  # One-time migration of pre-ledger hooks (see header): while the ledger records no hook,
+  # drop every hook whose command chezmoi ever wrote, and groups that leaves empty.
+  # Frozen list — never extend it.
+  | ["session-topic-capture UserPromptSubmit", "session-topic-capture PreCompact",
+     "session-topic-capture SessionEnd", "claude-tooling-write-guard",
+     "check-claude-overrides --session-start", "claude-tooling-guard"] as $legacy
+  | def legacy: type == "object" and (.command as $c | any($legacy[]; . == $c));
+    if any($prev[]; .path[0] == "hooks") or (.hooks | type) != "object" then .
+    else .hooks |= map_values(if type != "array" then . else map(
+      if type == "object" and (.hooks | type) == "array" and any(.hooks[]; legacy)
+      then .hooks |= map(select(legacy | not)) | select(.hooks | length > 0)
+      else . end) end)
+    end
+  # Retract only what source dropped (previous ledger minus current).
+  | reduce $prev[] as $e (.;
+      if ($e | has("value")) then
+        if any($cur_scalar_paths[]; . == $e.path) then .
+        elif exists($e.path) and getpath($e.path) == $e.value then delpaths([$e.path])
+        else . end
+      elif any($cur[]; . == $e) then .
+      elif exists($e.path) and (getpath($e.path) | type) == "array" then
+        setpath($e.path; getpath($e.path) - [$e.elem])
+      else . end)
+  # Apply: scalars overwrite; array elements are an order-preserving union.
+  | reduce $cur[] as $e (ensure_obj([]);
+      ensure_obj($e.path)
+      | if ($e | has("value")) then setpath($e.path; $e.value)
+        else (getpath($e.path) | if type == "array" then . else [] end) as $a
+          | if any($a[]; . == $e.elem) then . else setpath($e.path; $a + [$e.elem]) end
+        end)
+  # Write structured elements as JSON strings, so a recorded hook group is not itself a
+  # hook-shaped object outside "hooks" (Claude Code flags that as a misplaced hook).
+  | if ($cur | length) > 0 then
+      ._chezmoiManaged = [$cur[] | if has("elem") and (.elem | type == "object" or type == "array")
+                                      then {path, elemJson: (.elem | tojson)} else . end]
+    else del(._chezmoiManaged) end
+'
+{{- end }}

@@ -1,0 +1,58 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "session-topic-capture PreCompact"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "check-claude-overrides --session-start"
+          }
+        ]
+      }
+    ]
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "hooks",
+        "PreCompact"
+      ],
+      "elem": {
+        "hooks": [
+          {
+            "command": "session-topic-capture PreCompact",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    },
+    {
+      "path": [
+        "hooks",
+        "SessionStart"
+      ],
+      "elem": {
+        "hooks": [
+          {
+            "command": "check-claude-overrides --session-start",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-tooling-write-guard"
+          }
+        ]
+      }
+    ]
+  },
+  "_chezmoiManaged": [
+    {
+      "path": [
+        "hooks",
+        "PreToolUse"
+      ],
+      "elem": {
+        "hooks": [
+          {
+            "command": "claude-tooling-write-guard",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|Edit|Write"
+      }
+    }
+  ]
+}
