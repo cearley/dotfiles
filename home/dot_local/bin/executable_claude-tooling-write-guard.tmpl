@@ -178,6 +178,14 @@ Bash)
   command=$(jq -r '.tool_input.command // ""' <<<"$payload")
   [[ -z "$command" ]] && exit 0
 
+  # `chezmoi add` of a modify_ target replaces the merge script with a full snapshot
+  # (with --force, silently); re-add is a no-op there. Either way it's the wrong tool.
+  add_pattern='(^|[;&|[:space:]])chezmoi[[:space:]]+([^;&|]*[[:space:]])?(add|re-add)[[:space:]][^;&|]*\.claude[A-Za-z0-9_-]*/settings\.json'
+  if [[ "$command" =~ $add_pattern ]]; then
+    emit_deny "A persona settings.json is a chezmoi modify_ target: chezmoi add would replace its merge script with a full snapshot of the live file (runtime keys included), and re-add does nothing. Edit {{ $sourceDir }}/.claude-settings/<persona>.json instead, then chezmoi apply."
+    exit 0
+  fi
+
   # Does this command reference a deployed .claude*/... path at all?
   broad_pattern='\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/)'
   [[ "$command" =~ $broad_pattern ]] || exit 0

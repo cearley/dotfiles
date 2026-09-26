@@ -1,5 +1,5 @@
 #!/bin/bash
-# check-claude-overrides — Detect Claude Code skillOverrides/enabledPlugins entries that
+# check-claude-overrides — Detect Claude Code skillOverrides/enabledPlugins/permissions/env entries that
 # silently diverge from a persona's chezmoi-managed baseline (its
 # .claude-settings/<persona>.json) — the mirror-image direction of the
 # installed-but-undeclared drift that audit-packages/clean-claude-orphans already cover.
@@ -12,7 +12,7 @@
 # .chezmoi.sourceDir — never hardcoded, never rediscovered at runtime.
 #
 # Usage: check-claude-overrides [--help]
-#        check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins> <key>
+#        check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins|permissions|env> <key>
 #        check-claude-overrides --session-start
 set -euo pipefail
 {{- $sourceDir := .chezmoi.sourceDir }}
@@ -33,28 +33,30 @@ PERSONA_BASELINES=("{{ $sourceDir }}/.claude-settings/default.json"{{ range $cla
 print_usage() {
     cat <<'EOF'
 Usage: check-claude-overrides [--help]
-       check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins> <key>
+       check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins|permissions|env> <key>
 
-Detects Claude Code skillOverrides/enabledPlugins entries in any ~/.claude* persona's
-settings.json that silently diverge from that persona's chezmoi-managed baseline
-(.claude-settings/<persona>.json) — i.e. an override with no
-source-of-truth record.
+Detects entries in any ~/.claude* persona's settings.json that silently diverge from that
+persona's chezmoi-managed baseline (.claude-settings/<persona>.json):
+  - skillOverrides.<native skill> = "off" / enabledPlugins.<declared plugin> = false that
+    the baseline doesn't explain — an override with no source-of-truth record;
+  - a permissions.<key> / env.<key> scalar the baseline manages whose live value differs —
+    a runtime change the next chezmoi apply will silently revert.
 
 Without --fix: read-only. Prints a "## drift" section (persona<TAB>kind<TAB>key<TAB>value),
 one line per unexplained entry; empty if none found.
 
 With --fix <persona> <kind> <key>: codifies the "keep the override" resolution by writing
-the live value into the target persona's claude-settings/<persona>.json, after
+the live value into the target persona's .claude-settings/<persona>.json, after
 re-confirming the entry is currently flagged. The value is always read from the live
-settings.json, never typed. Verifies the edited copy before touching the real file. Dropping an override instead
-remains the existing manual /skill or /plugin command — see claude-tooling.md's "Checking
+settings.json, never typed. Verifies the edited copy before touching the real file. Dropping
+an override instead remains manual (/skill, /plugin, or letting chezmoi apply revert it) — see claude-tooling.md's "Checking
 for Override Drift" section for the full resolve workflow.
 
 With --session-start: intended for automatic invocation from a Claude Code SessionStart
 hook, not interactive use. Checks only the persona matching $CLAUDE_CONFIG_DIR (never a full
 sweep), and only prints a one-line plain-text pointer when that persona's drift differs from
 what was last reported for it — silent on a clean or already-seen-and-unresolved state.
-Never modifies settings.json or any claude-settings/<persona>.json. Always exits 0.
+Never modifies settings.json or any .claude-settings/<persona>.json. Always exits 0.
 EOF
 }
 
@@ -122,6 +124,17 @@ detect_persona_drift() {
             printf '%s\tenabledPlugins\t%s\tfalse\n' "$name" "$plugin"
         fi
     done < <(declared_plugins)
+
+    # Managed permissions/env scalars changed at runtime — chezmoi apply would revert them.
+    jq -r --argjson b "$baseline_json" --arg n "$name" '
+        . as $live
+        | ("permissions", "env") as $kind
+        | ($b[$kind] | objects | to_entries[]) as {key: $k, value: $v}
+        | select(($v | type) != "object" and ($v | type) != "array")
+        | ($live[$kind] | if type == "object" and has($k) then .[$k] else empty end) as $lv
+        | select($lv != $v)
+        | [$n, $kind, $k, ($lv | if type == "string" then . else tojson end)] | @tsv
+    ' "$settings_file" 2>/dev/null || true
 }
 
 detect_all_drift() {
@@ -201,8 +214,8 @@ run_session_start() {
 run_fix() {
     local persona="$1" kind="$2" key="$3"
 
-    if [[ "$kind" != "skillOverrides" && "$kind" != "enabledPlugins" ]]; then
-        echo "error: kind must be skillOverrides or enabledPlugins" >&2
+    if [[ ! "$kind" =~ ^(skillOverrides|enabledPlugins|permissions|env)$ ]]; then
+        echo "error: kind must be skillOverrides, enabledPlugins, permissions, or env" >&2
         exit 1
     fi
 
@@ -265,7 +278,7 @@ require_cmd yq
 if [[ "${1:-}" == "--fix" ]]; then
     shift
     if [[ $# -ne 3 ]]; then
-        echo "error: --fix requires exactly 3 arguments: <persona> <skillOverrides|enabledPlugins> <key>" >&2
+        echo "error: --fix requires exactly 3 arguments: <persona> <skillOverrides|enabledPlugins|permissions|env> <key>" >&2
         exit 1
     fi
     run_fix "$1" "$2" "$3"

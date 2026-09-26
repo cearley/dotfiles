@@ -23,5 +23,13 @@
 - [x] 4.2 Dry-run each persona's rendered modifier on a copy of its live `settings.json`: the output, apart from the ledger, is byte-identical to the input, the output is idempotent, and the parsed ledger equals the source file.
 - [x] 4.3 Simulate the Mac Studio path (the `origin/main` partial, then the new one) on a legacy file: no duplicate hook groups.
 - [x] 4.3a Independent review. Fixed: `--fix` died silently with exit 141 (SIGPIPE from `awk … exit` under `pipefail`) when a persona had more than one drift entry, a pre-existing bug, now fixed with an `ENVIRON`-keyed awk that doesn't exit early; the write-guard DENY messages pointed at the removed `$extra` dict; a non-object source file now fails at render; the source files moved from `.chezmoitemplates/claude-settings/` to `.claude-settings/`, because chezmoi parsed them as templates and a `{{` would have broken every render.
+- [x] 4.3b Design review (idiom and least surprise): verdict keep, with adjustments. Done:
+  - caller comments warn against `chezmoi add`/`re-add` and say that managed values overwrite
+    runtime changes;
+  - added `home/.claude-settings/README.md` and a root `CLAUDE.md` pointer;
+  - fixed the dot-less `claude-settings/` path strings;
+  - the write guard denies `chezmoi add`/`re-add` on a persona `settings.json` (tests 12/12);
+  - `check-claude-overrides` flags managed `permissions`/`env` scalars changed at runtime, and
+    `--fix` accepts those kinds (sandbox-verified).
 - [ ] 4.4 `chezmoi apply` the four `settings.json` targets (after the user's go-ahead), then confirm `chezmoi status` is clean for them and a new session loads without a settings warning.
 - [ ] 4.5 After archiving, update the "Chezmoi Current Status" note: close the legacy-migration follow-up, and replace the `claude-settings-modifier` environment fact.

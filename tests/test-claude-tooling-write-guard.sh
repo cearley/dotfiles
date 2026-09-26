@@ -78,7 +78,18 @@ out=$(run_guard s6 Bash '{"command": "ls /tmp"}')
 all_output+="$out"$'\n'
 check "unrelated command: silent" "$([[ -z "$out" ]] && echo 1)"
 
-# 7. Sweep: nothing anywhere returns allow.
+# 7. chezmoi add/re-add of a persona settings.json → deny; other chezmoi commands don't.
+for cmd in "chezmoi add --force ~/.claude-personal/settings.json" \
+           "cd /tmp && chezmoi re-add ~/.claude/settings.json"; do
+  out=$(run_guard s7 Bash "$(jq -n --arg c "$cmd" '{command: $c}')")
+  all_output+="$out"$'\n'
+  check "chezmoi add/re-add settings.json: deny ($cmd)" "$([[ "$(decision "$out")" == deny ]] && echo 1)"
+done
+out=$(run_guard s7b Bash '{"command": "chezmoi status ~/.claude/settings.json"}')
+all_output+="$out"$'\n'
+check "chezmoi status settings.json: not denied" "$([[ "$(decision "$out")" != deny ]] && echo 1)"
+
+# 8. Sweep: nothing anywhere returns allow.
 check "sweep: no \"allow\" in any output" "$([[ $(grep -c '"allow"' <<<"$all_output" || true) -eq 0 ]] && echo 1)"
 
 echo "---"

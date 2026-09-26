@@ -36,6 +36,13 @@ two reasons:
   no longer needs `chezmoi` at runtime. `--fix` writes the live value with `jq`. It now
   creates a missing `skillOverrides`/`enabledPlugins` object instead of refusing.
 
+- **Least-surprise follow-ups (from design review):**
+  - Each caller comment and `home/.claude-settings/README.md` explain where to edit and what
+    apply does. The root `CLAUDE.md` points to the README.
+  - The write guard denies `chezmoi add`/`re-add` on a persona `settings.json`.
+  - `check-claude-overrides` also flags `permissions`/`env` scalars changed at runtime, which
+    the next apply would revert. `--fix` accepts those kinds.
+
 ## Impact
 
 - `home/.chezmoitemplates/claude-settings-modifier` (rewritten),

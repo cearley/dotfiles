@@ -1,3 +1,22 @@
+## ADDED Requirements
+
+### Requirement: Managed Scalar Drift Detection
+The script SHALL flag any key under `permissions` or `env` whose value in the persona's
+baseline is a scalar and whose value in the persona's live `settings.json` is present and
+different, reporting the live value. Such a runtime change would be reverted by the next
+`chezmoi apply`. Keys the baseline does not declare SHALL NOT be flagged.
+
+#### Scenario: Runtime change to a managed scalar flagged
+- **WHEN** a persona's baseline sets `permissions.defaultMode` to `"auto"`
+- **AND** its live `settings.json` has `permissions.defaultMode` set to `"plan"`
+- **THEN** the script SHALL report `permissions`, `defaultMode`, `plan` as drift for that
+  persona
+
+#### Scenario: Unmanaged env key not flagged
+- **WHEN** a persona's live `settings.json` has `env.MY_VAR`
+- **AND** its baseline declares no `env.MY_VAR`
+- **THEN** the script SHALL NOT report that key
+
 ## RENAMED Requirements
 
 - FROM: `### Requirement: Baseline Extraction via Template Rendering`
@@ -56,7 +75,8 @@ source file, or other Claude Code configuration file.
   modified
 
 ### Requirement: Fix Mode Invocation
-The script SHALL accept `--fix <persona> <skillOverrides|enabledPlugins> <key>` to codify a
+The script SHALL accept `--fix <persona> <skillOverrides|enabledPlugins|permissions|env> <key>`
+to codify a
 single currently-flagged drift entry as an intentional override in the target persona's
 managed-settings source file, without accepting the value to write as an argument. If the
 file has no `<kind>` object yet, the script SHALL create it.

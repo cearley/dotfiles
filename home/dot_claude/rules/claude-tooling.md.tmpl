@@ -86,16 +86,20 @@ against that persona's own managed-settings baseline,
 - `enabledPlugins.<id>: false` for a plugin that's in `packages.yaml`'s `claude_code.plugins`
   list (meaning chezmoi intends it enabled) the baseline doesn't explain — same ad hoc drift,
   opposite direction.
+- `permissions.<key>` / `env.<key>` scalars the baseline manages whose live value differs —
+  a runtime change (e.g. `/config` changing `permissions.defaultMode`) that the next
+  `chezmoi apply` will silently revert.
 
 Each flagged entry needs the user's input on which way it should go:
 
 - **Keep the override** → `check-claude-overrides --fix <persona>
-  <skillOverrides|enabledPlugins> <key>` reads the live value straight from
-  `settings.json`, writes it into that persona's `claude-settings/<persona>.json`, and
+  <skillOverrides|enabledPlugins|permissions|env> <key>` reads the live value straight from
+  `settings.json`, writes it into that persona's `.claude-settings/<persona>.json`, and
   verifies the write on a copy before the tracked file is touched (editing the JSON by hand
   also works).
 - **Drop the override** → removing the key via the equivalent `/skill` or `/plugin` command (or
-  editing the live `settings.json` directly) is correct, since nothing in chezmoi asked for it.
+  editing the live `settings.json` directly) is correct, since nothing in chezmoi asked for it;
+  for a `permissions`/`env` value, the next `chezmoi apply` restores the baseline.
   This direction stays manual — `check-claude-overrides` never modifies a live `settings.json`.
 
 ## Personas Share Skills and Rules via Symlink
