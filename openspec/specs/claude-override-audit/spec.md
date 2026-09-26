@@ -6,7 +6,7 @@ Provides an on-demand script that detects Claude Code `skillOverrides`/`enabledP
 entries silently diverging from a persona's chezmoi-managed baseline — the mirror-image
 direction of the installed-but-undeclared drift that `package-audit` already covers — and,
 via an explicit `--fix` mode, codifies a confirmed "keep" resolution directly into the
-persona's source template.
+persona's managed-settings source file (`dot_claude*/.claude-settings.json`).
 
 ## Requirements
 
@@ -36,15 +36,16 @@ unexplained `skillOverrides`/`enabledPlugins` entries.
 
 ### Requirement: Source-Directory Portability
 Every chezmoi-source-tree path the tool reads or writes (`packages.yaml`,
-`dot_claude/skills/`, each persona's `modify_settings.json.tmpl`) SHALL be resolved via
-`{{ .chezmoi.sourceDir }}` at chezmoi-apply render time, and the source template SHALL NOT
-contain a hardcoded absolute path to the chezmoi source directory anywhere in its body.
+`dot_claude/skills/`, each persona's `dot_claude*/.claude-settings.json`) SHALL
+be resolved via `{{ .chezmoi.sourceDir }}` at chezmoi-apply render time, and the source
+template SHALL NOT contain a hardcoded absolute path to the chezmoi source directory anywhere
+in its body.
 
 #### Scenario: Rendered output works regardless of checkout location
 - **WHEN** the chezmoi source repository is checked out at a different absolute path than
   the machine's default, and `chezmoi apply` is run
 - **THEN** the rendered `check-claude-overrides` SHALL still correctly locate
-  `packages.yaml`, `dot_claude/skills/`, and every persona's `modify_settings.json.tmpl`
+  `packages.yaml`, `dot_claude/skills/`, and every persona's managed-settings file
 
 #### Scenario: Only the rendered output names an absolute path
 - **WHEN** the change's source files are inspected for a hardcoded chezmoi source path
@@ -75,23 +76,21 @@ runtime.
 - **AND** `<name>` is not present in the machine's `claude_envs` list
 - **THEN** the tool SHALL NOT check that directory
 
-### Requirement: Baseline Extraction via Template Rendering
-For each persona environment, the script SHALL determine its intended managed-settings
-baseline by rendering that persona's `modify_settings.json.tmpl` with
-`chezmoi execute-template` and extracting the JSON literal produced by the
-`claude-settings-modifier` partial's `extra_settings` variable, rather than parsing the
-source template's Go `dict(...)` syntax directly. Keys in the baseline that the drift
-checks do not read, such as `hooks`, `env`, and `permissions`, SHALL NOT change drift
-detection results.
+### Requirement: Baseline Read from the Managed Settings File
+For each persona environment, the script SHALL use that persona's managed-settings source
+file, the `.claude-settings.json` in its `dot_claude*/` source directory, read directly as JSON, as its
+intended baseline. It SHALL NOT render any template to obtain it. Keys in the baseline that
+the drift checks do not read, such as `hooks`, `env`, and `permissions`, SHALL NOT change
+drift detection results.
 
 #### Scenario: Named persona baseline resolved
 - **WHEN** checking a persona declared in `claude_envs` (e.g. `~/.claude-personal`)
-- **THEN** the script SHALL render `home/dot_claude-personal/modify_settings.json.tmpl`
-  (the matching `dot_claude-<name>/` source directory) to obtain its baseline
+- **THEN** the script SHALL read `home/dot_claude-personal/.claude-settings.json` as
+  its baseline
 
 #### Scenario: Unnamed default persona baseline resolved
 - **WHEN** checking the unnamed default persona (`~/.claude`)
-- **THEN** the script SHALL render `home/dot_claude/modify_settings.json.tmpl` to obtain
+- **THEN** the script SHALL read `home/dot_claude/.claude-settings.json` as
   its baseline
 
 #### Scenario: Hooks in the baseline do not affect drift
@@ -139,8 +138,8 @@ drift is found.
 - **THEN** the script SHALL print the `## drift` header with no following lines
 
 ### Requirement: Default Read-Only Operation
-Invoked without `--fix`, the script SHALL NOT modify any `settings.json`,
-`modify_settings.json.tmpl`, or other Claude Code configuration file.
+Invoked without `--fix`, the script SHALL NOT modify any `settings.json`, managed-settings
+source file, or other Claude Code configuration file.
 
 #### Scenario: No state changed without --fix
 - **WHEN** the script runs without `--fix`
@@ -148,9 +147,11 @@ Invoked without `--fix`, the script SHALL NOT modify any `settings.json`,
   modified
 
 ### Requirement: Fix Mode Invocation
-The script SHALL accept `--fix <persona> <skillOverrides|enabledPlugins> <key>` to codify a
+The script SHALL accept `--fix <persona> <skillOverrides|enabledPlugins|permissions|env> <key>`
+to codify a
 single currently-flagged drift entry as an intentional override in the target persona's
-`modify_settings.json.tmpl`, without accepting the value to write as an argument.
+managed-settings source file, without accepting the value to write as an argument. If the
+file has no `<kind>` object yet, the script SHALL create it.
 
 #### Scenario: Value is read from live settings, not typed
 - **WHEN** the user runs `--fix <persona> <kind> <key>`
@@ -164,53 +165,43 @@ single currently-flagged drift entry as an intentional override in the target pe
 - **THEN** the script SHALL exit non-zero without modifying any file
 - **AND** SHALL print a message stating the entry is not currently flagged
 
-### Requirement: Fix Mode Requires an Existing Target Sub-Dict
-`--fix` SHALL require that the target persona's `modify_settings.json.tmpl` already declares
-an `$extra`/`claudeExtraSettings` dict containing the target `skillOverrides` or
-`enabledPlugins` sub-dict; it SHALL NOT create either from scratch.
-
-#### Scenario: Persona has no matching sub-dict
-- **WHEN** `--fix <persona> <kind> <key>` is run
-- **AND** that persona's `modify_settings.json.tmpl` has no `<kind>` sub-dict in its `$extra`
-  dict (or no `$extra` dict at all)
-- **THEN** the script SHALL exit non-zero without modifying any file
-- **AND** SHALL print a message directing the user to add the sub-dict manually once
+#### Scenario: Missing kind object is created
+- **WHEN** `--fix <persona> <kind> <key>` is run for a flagged entry
+- **AND** the persona's managed-settings file has no `<kind>` key
+- **THEN** the file SHALL gain a `<kind>` object holding `<key>` with the live value
 
 ### Requirement: Fix Mode Verifies Before Writing the Real File
-`--fix` SHALL apply its edit to a temporary copy of the target template, render that copy,
-and confirm the new key/value appears in the rendered baseline before overwriting the real
+`--fix` SHALL write its edit to a temporary copy of the target managed-settings file, confirm
+that the copy is valid JSON holding the new key/value, and only then overwrite the real
 source file.
 
 #### Scenario: Verified edit is committed to the real file
-- **WHEN** `--fix` inserts the new entry into a temporary copy
-- **AND** rendering that copy via the same baseline-extraction mechanism used for detection
-  produces the expected key/value
-- **THEN** the script SHALL overwrite the real `modify_settings.json.tmpl` with the verified
-  copy's content
+- **WHEN** `--fix` writes the new entry into a temporary copy
+- **AND** the copy holds the expected key/value
+- **THEN** the script SHALL overwrite the real managed-settings file with the copy
 
 #### Scenario: Failed verification leaves the real file untouched
-- **WHEN** rendering the temporary copy fails, or the expected key/value is absent from the
-  rendered result
+- **WHEN** writing the temporary copy fails, or the expected key/value is absent from it
 - **THEN** the script SHALL exit non-zero
-- **AND** the real `modify_settings.json.tmpl` SHALL remain byte-for-byte unchanged
+- **AND** the real managed-settings file SHALL remain byte-for-byte unchanged
 
 ### Requirement: Missing-Baseline Graceful Skip
 The script SHALL skip — not error out entirely — a persona declared in `claude_envs` (or the
-unnamed default) whose corresponding `modify_settings.json.tmpl` cannot be found or rendered,
-and SHALL continue checking remaining personas.
+unnamed default) whose managed-settings file is missing or is not valid JSON, and SHALL
+continue checking remaining personas.
 
 #### Scenario: Declared persona without a matching template
 - **WHEN** `claude_envs` declares a persona with no corresponding
-  `home/dot_claude-<name>/modify_settings.json.tmpl` in the chezmoi source
+  `home/dot_claude-<name>/.claude-settings.json` in the chezmoi source
 - **THEN** the script SHALL emit a skip notice for that persona to stderr
 - **AND** SHALL continue checking any remaining personas
 
 ### Requirement: Automatic Session-Start Invocation Scoped to Current Persona
 On Claude Code `SessionStart`, the system SHALL automatically run the drift check for the
 single persona whose session is starting (derived from `$CLAUDE_CONFIG_DIR`), via a
-`SessionStart` hook entry declared in that persona's `modify_settings.json.tmpl` and written
-by the `claude-settings-modifier` partial. This automatic invocation SHALL NOT check any
-other declared persona as part of the same session start.
+`SessionStart` hook entry declared in that persona's managed-settings file and written by the
+`claude-settings-modifier` partial. This automatic invocation SHALL NOT check any other
+declared persona as part of the same session start.
 
 #### Scenario: Session start checks only the starting persona
 - **WHEN** a Claude Code session starts under a given `$CLAUDE_CONFIG_DIR` persona
@@ -225,8 +216,8 @@ other declared persona as part of the same session start.
 When automatic invocation finds drift, the system SHALL emit a short `additionalContext`/
 `systemMessage` pointer directing the user to run `check-claude-overrides` for full detail,
 rather than the full sectioned-TSV `## drift` report the on-demand invocation produces. The
-automatic invocation SHALL NOT modify any `settings.json`, `modify_settings.json.tmpl`, or
-other Claude Code configuration file.
+automatic invocation SHALL NOT modify any `settings.json`, managed-settings file, or other
+Claude Code configuration file.
 
 #### Scenario: Drift found emits a short pointer, not the full report
 - **WHEN** automatic invocation finds one or more flagged entries for the current persona
@@ -271,3 +262,20 @@ the current fingerprint after each automatic invocation.
 - **WHEN** two different personas each have their own drift fingerprint history
 - **THEN** a fingerprint change on one persona SHALL NOT affect whether a message is emitted
   for another persona's session start
+
+### Requirement: Managed Scalar Drift Detection
+The script SHALL flag any key under `permissions` or `env` whose value in the persona's
+baseline is a scalar and whose value in the persona's live `settings.json` is present and
+different, reporting the live value. Such a runtime change would be reverted by the next
+`chezmoi apply`. Keys the baseline does not declare SHALL NOT be flagged.
+
+#### Scenario: Runtime change to a managed scalar flagged
+- **WHEN** a persona's baseline sets `permissions.defaultMode` to `"auto"`
+- **AND** its live `settings.json` has `permissions.defaultMode` set to `"plan"`
+- **THEN** the script SHALL report `permissions`, `defaultMode`, `plan` as drift for that
+  persona
+
+#### Scenario: Unmanaged env key not flagged
+- **WHEN** a persona's live `settings.json` has `env.MY_VAR`
+- **AND** its baseline declares no `env.MY_VAR`
+- **THEN** the script SHALL NOT report that key

@@ -39,5 +39,5 @@
   - the harness renders the real callers;
   - checker baselines and the write guard's messages name the exact file;
   - `chezmoi cat` shows no pending change for any persona.
-- [ ] 4.4 `chezmoi apply` the four `settings.json` targets (after the user's go-ahead), then confirm `chezmoi status` is clean for them and a new session loads without a settings warning.
-- [ ] 4.5 After archiving, update the "Chezmoi Current Status" note: close the legacy-migration follow-up, and replace the `claude-settings-modifier` environment fact.
+- [x] 4.4 `chezmoi apply` the four `settings.json` targets (after the user's go-ahead), then confirm `chezmoi status` is clean for them and a new session loads without a settings warning.
+- [x] 4.5 After archiving, update the "Chezmoi Current Status" note: close the legacy-migration follow-up, and replace the `claude-settings-modifier` environment fact.
