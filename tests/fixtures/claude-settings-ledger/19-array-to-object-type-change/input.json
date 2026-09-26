@@ -2,12 +2,5 @@
   "a": [
     "y"
   ],
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "a"
-      ],
-      "elem": "y"
-    }
-  ]
+  "_chezmoiManaged": "{\"a\":[\"y\"]}"
 }

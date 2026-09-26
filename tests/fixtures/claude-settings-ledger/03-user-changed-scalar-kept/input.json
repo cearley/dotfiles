@@ -5,20 +5,5 @@
   "env": {
     "X": "1"
   },
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "env",
-        "X"
-      ],
-      "value": "1"
-    },
-    {
-      "path": [
-        "permissions",
-        "defaultMode"
-      ],
-      "value": "auto"
-    }
-  ]
+  "_chezmoiManaged": "{\"env\":{\"X\":\"1\"},\"permissions\":{\"defaultMode\":\"auto\"}}"
 }

@@ -5,20 +5,5 @@
       "Bash(grep 'a b')"
     ]
   },
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "permissions",
-        "allow"
-      ],
-      "elem": "Bash(echo 'hi')"
-    },
-    {
-      "path": [
-        "permissions",
-        "allow"
-      ],
-      "elem": "Bash(grep 'a b')"
-    }
-  ]
+  "_chezmoiManaged": "{\"permissions\":{\"allow\":[\"Bash(echo 'hi')\",\"Bash(grep 'a b')\"]}}"
 }

@@ -1,5 +1,7 @@
 {
-  "a": "str",
+  "skillOverrides": {
+    "s": "off"
+  },
   "env": {
     "X": "1"
   },

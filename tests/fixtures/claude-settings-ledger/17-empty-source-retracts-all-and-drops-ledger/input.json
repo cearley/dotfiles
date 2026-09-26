@@ -1,9 +1,10 @@
 {
   "permissions": {
+    "defaultMode": "auto",
     "allow": [
-      "A"
-    ],
-    "defaultMode": "auto"
+      "A",
+      "U"
+    ]
   },
   "_chezmoiManaged": "{\"permissions\":{\"allow\":[\"A\"],\"defaultMode\":\"auto\"}}"
 }

@@ -23,36 +23,5 @@
       }
     ]
   },
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "hooks",
-        "PreCompact"
-      ],
-      "elem": {
-        "hooks": [
-          {
-            "command": "session-topic-capture PreCompact",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    },
-    {
-      "path": [
-        "hooks",
-        "SessionStart"
-      ],
-      "elem": {
-        "hooks": [
-          {
-            "command": "check-claude-overrides --session-start",
-            "type": "command"
-          }
-        ],
-        "matcher": ""
-      }
-    }
-  ]
+  "_chezmoiManaged": "{\"hooks\":{\"PreCompact\":[{\"hooks\":[{\"command\":\"session-topic-capture PreCompact\",\"type\":\"command\"}],\"matcher\":\"\"}],\"SessionStart\":[{\"hooks\":[{\"command\":\"check-claude-overrides --session-start\",\"type\":\"command\"}],\"matcher\":\"\"}]}}"
 }

@@ -1,7 +1,6 @@
 {
-  "env": {
-    "X": "1"
-  },
+  "syncClaudeAiSkills": false,
+  "syncClaudeAiPlugins": false,
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -38,7 +37,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Edit",
+        "matcher": "Bash|Edit|Write",
         "hooks": [
           {
             "type": "command",
@@ -58,14 +57,5 @@
         ]
       }
     ]
-  },
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "env",
-        "X"
-      ],
-      "value": "1"
-    }
-  ]
+  }
 }

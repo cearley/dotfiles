@@ -7,20 +7,5 @@
       "X"
     ]
   },
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "permissions",
-        "allow"
-      ],
-      "elem": "A"
-    },
-    {
-      "path": [
-        "permissions",
-        "defaultMode"
-      ],
-      "value": "auto"
-    }
-  ]
+  "_chezmoiManaged": "{\"permissions\":{\"allow\":[\"A\"],\"defaultMode\":\"auto\"}}"
 }

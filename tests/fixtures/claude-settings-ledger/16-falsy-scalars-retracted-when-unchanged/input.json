@@ -5,31 +5,5 @@
   "env": {
     "X": "1"
   },
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "a"
-      ],
-      "value": false
-    },
-    {
-      "path": [
-        "b"
-      ],
-      "value": ""
-    },
-    {
-      "path": [
-        "c"
-      ],
-      "value": false
-    },
-    {
-      "path": [
-        "env",
-        "X"
-      ],
-      "value": "1"
-    }
-  ]
+  "_chezmoiManaged": "{\"a\":false,\"b\":\"\",\"c\":false,\"env\":{\"X\":\"1\"}}"
 }

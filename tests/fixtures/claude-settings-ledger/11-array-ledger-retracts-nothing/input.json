@@ -7,10 +7,11 @@
   },
   "_chezmoiManaged": [
     {
-      "path": [
-        "env",
-        "X"
-      ],
+      "path": ["skillOverrides", "s"],
+      "value": "off"
+    },
+    {
+      "path": ["env", "X"],
       "value": "1"
     }
   ]

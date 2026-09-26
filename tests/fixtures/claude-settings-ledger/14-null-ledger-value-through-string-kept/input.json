@@ -1,12 +1,4 @@
 {
   "a": "str",
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "a",
-        "b"
-      ],
-      "value": null
-    }
-  ]
+  "_chezmoiManaged": "{\"a\":{\"b\":null}}"
 }

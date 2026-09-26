@@ -5,20 +5,5 @@
   "env": {
     "X": "1"
   },
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "env",
-        "X"
-      ],
-      "value": "1"
-    },
-    {
-      "path": [
-        "skillOverrides",
-        "old"
-      ],
-      "value": "off"
-    }
-  ]
+  "_chezmoiManaged": "{\"env\":{\"X\":\"1\"},\"skillOverrides\":{\"old\":\"off\"}}"
 }

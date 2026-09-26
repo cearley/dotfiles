@@ -2,13 +2,5 @@
   "skillOverrides": {
     "x": "off"
   },
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "skillOverrides",
-        "x"
-      ],
-      "value": "off"
-    }
-  ]
+  "_chezmoiManaged": "{\"skillOverrides\":{\"x\":\"off\"}}"
 }

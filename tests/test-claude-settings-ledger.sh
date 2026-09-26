@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
-# Fixture tests for the claude-settings-modifier settings ledger
+# Fixture tests for claude-settings-modifier and its _chezmoiManaged ledger
 # (openspec capability: claude-settings-ledger).
 #
 # Each case under tests/fixtures/claude-settings-ledger/<case>/ holds:
-#   extra.json     claudeExtraSettings passed to the partial
+#   managed.json   the managed settings (claudeSettings) passed to the partial
 #   input.json     the live settings.json piped in
 #   expected.json  expected output; absent means "output must equal input byte-for-byte"
 #   tags.json      optional: .tags for this case (default ["ai"], so cases don't depend on
 #                  the host's tags); e.g. ["core"] for a non-ai machine. Must be non-empty,
 #                  since merge ignores empty values. .chezmoi.os is the host's (darwin).
 #
-# extra.json and tags.json are embedded in a Go raw string, so they must not contain
-# backticks.
 #   exact          optional marker: compare key/element order too (jq ., not jq -S)
 #
+# managed.json and tags.json are embedded in a Go raw string, so they must not contain
+# backticks. The ledger is compared as parsed JSON, not as a string.
+#
 # Every case is also re-run on its own output and must come back byte-identical
-# (idempotence). A crashing modifier counts as a failure.
+# (idempotence), and every persona's real source file must render and apply cleanly.
+# A crashing modifier counts as a failure.
 #
 # Usage: tests/test-claude-settings-ledger.sh
 
@@ -29,6 +31,7 @@ trap 'rm -rf "$scratch"' EXIT
 
 pass=0
 fail=0
+parse_ledger='if has("_chezmoiManaged") then ._chezmoiManaged |= (fromjson? // .) else . end'
 
 check() {
   if [[ "$2" == 1 ]]; then
@@ -40,10 +43,10 @@ check() {
 
 for dir in "$FIXTURES"/*/; do
   name=$(basename "$dir")
-  extra=$(jq -c . "$dir/extra.json")
+  managed=$(jq -c . "$dir/managed.json")
   tags='["ai"]'
   [[ -f "$dir/tags.json" ]] && tags=$(jq -c . "$dir/tags.json")
-  overrides="(dict \"claudeExtraSettings\" (fromJson \`$extra\`) \"tags\" (fromJson \`$tags\`))"
+  overrides="(dict \"claudeSettings\" \`$managed\` \"tags\" (fromJson \`$tags\`))"
   "$SCRIPT_DIR/run-template" --inline \
     "{{ includeTemplate \"claude-settings-modifier\" (merge $overrides .) }}" \
     > "$scratch/$name.sh"
@@ -60,8 +63,8 @@ for dir in "$FIXTURES"/*/; do
   else
     order_flag="-S"
     [[ -f "$dir/exact" ]] && order_flag=""
-    got=$(jq $order_flag . <<<"$out1")
-    want=$(jq $order_flag . "$dir/expected.json")
+    got=$(jq $order_flag "$parse_ledger" <<<"$out1")
+    want=$(jq $order_flag "$parse_ledger" "$dir/expected.json")
     if [[ "$got" == "$want" ]]; then
       check "$name: matches expected" 1
     else
@@ -70,17 +73,20 @@ for dir in "$FIXTURES"/*/; do
     fi
   fi
   check "$name: idempotent" "$([[ "$out1" == "$out2" ]] && echo 1)"
-  # Claude Code flags hook-shaped objects outside "hooks", so structured ledger
-  # elements must be stored as elemJson strings, never as raw elem objects.
-  check "$name: ledger holds no structured elem" "$(jq -e \
-    '[._chezmoiManaged? // [] | .[]? | objects | select(has("elem")) | .elem
-      | select(type == "object" or type == "array")] | length == 0' \
-    <<<"$out1" >/dev/null 2>&1 && echo 1)"
+  # Claude Code flags hook-shaped objects outside "hooks", so the ledger must be a string.
+  check "$name: ledger is absent or a string" "$(jq -e \
+    '(._chezmoiManaged? // "") | type == "string"' <<<"$out1" >/dev/null 2>&1 && echo 1)"
 done
 
-# check-claude-overrides greps the rendered modifier for exactly one extra_settings line.
-lines=$(grep -c "^extra_settings='" "$scratch/01-ledger-contents.sh" || true)
-check "extra_settings is a single standalone line" "$([[ "$lines" == 1 ]] && echo 1)"
+# Every persona's real source file must render, and applying it to {} must write exactly it.
+for src in "$SCRIPT_DIR"/../home/.claude-settings/*.json; do
+  name=$(basename "$src" .json)
+  "$SCRIPT_DIR/run-template" --inline \
+    "{{ includeTemplate \"claude-settings-modifier\" (merge (dict \"claudeSettings\" (include \".claude-settings/$name.json\") \"tags\" (list \"ai\")) .) }}" \
+    > "$scratch/persona-$name.sh"
+  got=$(bash "$scratch/persona-$name.sh" <<<'{}' 2>/dev/null | jq -S 'del(._chezmoiManaged)') || got=""
+  check "persona $name: applies its source file" "$([[ "$got" == "$(jq -S . "$src")" ]] && echo 1)"
+done
 
 echo "---"
 echo "$pass passed, $fail failed"

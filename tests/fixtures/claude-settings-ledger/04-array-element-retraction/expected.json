@@ -4,13 +4,5 @@
       "B"
     ]
   },
-  "_chezmoiManaged": [
-    {
-      "path": [
-        "permissions",
-        "allow"
-      ],
-      "elem": "B"
-    }
-  ]
+  "_chezmoiManaged": "{\"permissions\":{\"allow\":[\"B\"]}}"
 }

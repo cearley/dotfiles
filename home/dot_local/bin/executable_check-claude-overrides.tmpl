@@ -1,9 +1,10 @@
 #!/bin/bash
 # check-claude-overrides — Detect Claude Code skillOverrides/enabledPlugins entries that
-# silently diverge from a persona's chezmoi-managed baseline (modify_settings.json.tmpl's
-# $extra dict) — the mirror-image direction of the installed-but-undeclared drift that
-# audit-packages/clean-claude-orphans already cover. Read-only by default; --fix codifies a
-# single confirmed "keep" resolution directly into the target persona's source template.
+# silently diverge from a persona's chezmoi-managed baseline (its
+# .claude-settings/<persona>.json) — the mirror-image direction of the
+# installed-but-undeclared drift that audit-packages/clean-claude-orphans already cover.
+# Read-only by default; --fix codifies a single confirmed "keep" resolution directly into
+# that source file.
 #
 # Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_check-claude-overrides.tmpl —
 # edit the source template, then `chezmoi apply`. The persona list and every chezmoi-source
@@ -21,12 +22,13 @@ set -euo pipefail
 PACKAGES_YAML="{{ $sourceDir }}/.chezmoidata/packages.yaml"
 NATIVE_SKILLS_DIR="{{ $sourceDir }}/dot_claude/skills"
 
-# Parallel arrays, one entry per checked persona: name / live config dir / source template.
+# Parallel arrays, one entry per checked persona: name / live config dir / managed-settings
+# source file (same shape as settings.json).
 # The unnamed default is always first; named personas come from this machine's claude_envs,
 # baked in here at chezmoi-apply time rather than rediscovered at runtime.
 PERSONA_NAMES=("default"{{ range $claudeEnvs }} "{{ trimPrefix "~/.claude-" . }}"{{ end }})
 PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
-PERSONA_TEMPLATES=("{{ $sourceDir }}/dot_claude/modify_settings.json.tmpl"{{ range $claudeEnvs }} "{{ $sourceDir }}/dot_claude-{{ trimPrefix "~/.claude-" . }}/modify_settings.json.tmpl"{{ end }})
+PERSONA_BASELINES=("{{ $sourceDir }}/.claude-settings/default.json"{{ range $claudeEnvs }} "{{ $sourceDir }}/.claude-settings/{{ trimPrefix "~/.claude-" . }}.json"{{ end }})
 
 print_usage() {
     cat <<'EOF'
@@ -35,15 +37,16 @@ Usage: check-claude-overrides [--help]
 
 Detects Claude Code skillOverrides/enabledPlugins entries in any ~/.claude* persona's
 settings.json that silently diverge from that persona's chezmoi-managed baseline
-(modify_settings.json.tmpl's $extra dict) — i.e. an override with no source-of-truth record.
+(.claude-settings/<persona>.json) — i.e. an override with no
+source-of-truth record.
 
 Without --fix: read-only. Prints a "## drift" section (persona<TAB>kind<TAB>key<TAB>value),
 one line per unexplained entry; empty if none found.
 
 With --fix <persona> <kind> <key>: codifies the "keep the override" resolution by writing
-the live value into the target persona's modify_settings.json.tmpl, after re-confirming the
-entry is currently flagged. The value is always read from the live settings.json, never
-typed. Verifies via a re-render before touching the real file. Dropping an override instead
+the live value into the target persona's claude-settings/<persona>.json, after
+re-confirming the entry is currently flagged. The value is always read from the live
+settings.json, never typed. Verifies the edited copy before touching the real file. Dropping an override instead
 remains the existing manual /skill or /plugin command — see claude-tooling.md's "Checking
 for Override Drift" section for the full resolve workflow.
 
@@ -51,7 +54,7 @@ With --session-start: intended for automatic invocation from a Claude Code Sessi
 hook, not interactive use. Checks only the persona matching $CLAUDE_CONFIG_DIR (never a full
 sweep), and only prints a one-line plain-text pointer when that persona's drift differs from
 what was last reported for it — silent on a clean or already-seen-and-unresolved state.
-Never modifies settings.json or any modify_settings.json.tmpl. Always exits 0.
+Never modifies settings.json or any claude-settings/<persona>.json. Always exits 0.
 EOF
 }
 
@@ -62,23 +65,11 @@ require_cmd() {
     fi
 }
 
+# Baseline: a persona's managed-settings source file, read as-is at runtime (it can change
+# without a chezmoi apply having run). Fails if the file is missing or not valid JSON.
 # ---------------------------------------------------------------------------
-# Baseline extraction: render a persona's modify_settings.json.tmpl and extract the
-# extra_settings='...' JSON literal claude-settings-modifier already computes — never
-# hand-parse the source template's Go dict(...) syntax. Done at runtime, on every
-# invocation, since the template's content (unlike the persona list above) can change
-# without a chezmoi apply having run yet.
-# ---------------------------------------------------------------------------
-render_baseline() {
-    local template_path="$1"
-    local rendered json_line
-    rendered="$(chezmoi execute-template < "$template_path" 2>/dev/null)" || return 1
-    json_line="$(printf '%s\n' "$rendered" | grep -m1 "^extra_settings='" || true)"
-    [[ -n "$json_line" ]] || return 1
-    json_line="${json_line#extra_settings=\'}"
-    json_line="${json_line%\'}"
-    jq -e '.' <<<"$json_line" >/dev/null 2>&1 || return 1
-    echo "$json_line"
+read_baseline() {
+    jq -ce '.' "$1" 2>/dev/null
 }
 
 # ---------------------------------------------------------------------------
@@ -100,16 +91,16 @@ declared_plugins() {
 # Drift detection for one persona: prints persona\tkind\tkey\tvalue lines to stdout
 # ---------------------------------------------------------------------------
 detect_persona_drift() {
-    local name="$1" template_path="$2" config_dir="$3"
+    local name="$1" baseline_path="$2" config_dir="$3"
     local settings_file baseline_json
 
-    if [[ ! -f "$template_path" ]]; then
-        echo "skip: ${name} — no modify_settings.json.tmpl at ${template_path}" >&2
+    if [[ ! -f "$baseline_path" ]]; then
+        echo "skip: ${name} — no managed-settings file at ${baseline_path}" >&2
         return 0
     fi
 
-    if ! baseline_json="$(render_baseline "$template_path")"; then
-        echo "skip: ${name} — could not render/extract baseline from ${template_path}" >&2
+    if ! baseline_json="$(read_baseline "$baseline_path")"; then
+        echo "skip: ${name} — ${baseline_path} is not valid JSON" >&2
         return 0
     fi
 
@@ -136,7 +127,7 @@ detect_persona_drift() {
 detect_all_drift() {
     local i
     for ((i = 0; i < ${#PERSONA_NAMES[@]}; i++)); do
-        detect_persona_drift "${PERSONA_NAMES[$i]}" "${PERSONA_TEMPLATES[$i]}" "${PERSONA_DIRS[$i]}"
+        detect_persona_drift "${PERSONA_NAMES[$i]}" "${PERSONA_BASELINES[$i]}" "${PERSONA_DIRS[$i]}"
     done
 }
 
@@ -175,17 +166,16 @@ drift_lines_without_persona() {
 # session over a config edge case (missing tool, unrecognized persona) — always exits 0.
 # ---------------------------------------------------------------------------
 run_session_start() {
-    command -v chezmoi >/dev/null 2>&1 || exit 0
     command -v jq >/dev/null 2>&1 || exit 0
     command -v yq >/dev/null 2>&1 || exit 0
 
     local idx
     idx="$(resolve_current_persona_index)" || exit 0
 
-    local name="${PERSONA_NAMES[$idx]}" template_path="${PERSONA_TEMPLATES[$idx]}" config_dir="${PERSONA_DIRS[$idx]}"
+    local name="${PERSONA_NAMES[$idx]}" baseline_path="${PERSONA_BASELINES[$idx]}" config_dir="${PERSONA_DIRS[$idx]}"
 
     local drift_tsv
-    drift_tsv="$(detect_persona_drift "$name" "$template_path" "$config_dir" 2>/dev/null)" || true
+    drift_tsv="$(detect_persona_drift "$name" "$baseline_path" "$config_dir" 2>/dev/null)" || true
 
     local new_lines=""
     if [[ -n "$drift_tsv" ]]; then
@@ -206,7 +196,7 @@ run_session_start() {
 
 # ---------------------------------------------------------------------------
 # --fix mode: codify a single, currently-flagged "keep" resolution into the target
-# persona's source template. See design.md - Decisions for the full rationale.
+# persona's managed-settings source file.
 # ---------------------------------------------------------------------------
 run_fix() {
     local persona="$1" kind="$2" key="$3"
@@ -216,84 +206,42 @@ run_fix() {
         exit 1
     fi
 
-    local template_path="" config_dir="" i
+    local baseline_path="" config_dir="" i
     for ((i = 0; i < ${#PERSONA_NAMES[@]}; i++)); do
         if [[ "${PERSONA_NAMES[$i]}" == "$persona" ]]; then
-            template_path="${PERSONA_TEMPLATES[$i]}"
+            baseline_path="${PERSONA_BASELINES[$i]}"
             config_dir="${PERSONA_DIRS[$i]}"
             break
         fi
     done
-    if [[ -z "$template_path" ]]; then
+    if [[ -z "$baseline_path" ]]; then
         echo "error: unknown persona '${persona}' (not the default, not in this machine's claude_envs)" >&2
         exit 1
     fi
 
     local flagged
-    flagged="$(detect_persona_drift "$persona" "$template_path" "$config_dir" 2>/dev/null | awk -F'\t' -v k="$kind" -v key="$key" '$2==k && $3==key {print; exit}')"
+    flagged="$(detect_persona_drift "$persona" "$baseline_path" "$config_dir" 2>/dev/null | K="$kind" KEY="$key" awk -F'\t' '$2==ENVIRON["K"] && $3==ENVIRON["KEY"] && !found {print; found=1}')"
     if [[ -z "$flagged" ]]; then
         echo "error: ${persona} ${kind}.${key} is not currently flagged as drift — nothing to fix" >&2
         exit 1
     fi
 
-    local settings_file="${config_dir}/settings.json"
     local live_value
-    live_value="$(jq -r --arg k "$key" ".${kind}[\$k]" "$settings_file")"
-
-    local anchor_pattern="\"${kind}\" (dict"
-    if ! grep -qF "$anchor_pattern" "$template_path"; then
-        echo "error: ${template_path} has no '${kind}' sub-dict to insert into — add it manually once, then re-run --fix" >&2
-        exit 1
-    fi
-
-    local value_literal
-    if [[ "$live_value" == "true" || "$live_value" == "false" ]]; then
-        value_literal="$live_value"
-    else
-        value_literal="\"${live_value}\""
-    fi
+    live_value="$(jq -c --arg k "$key" ".${kind}[\$k]" "${config_dir}/settings.json")"
 
     local tmp_file
     tmp_file="$(mktemp)"
-
-    awk -v anchor="$anchor_pattern" -v key="$key" -v val="$value_literal" '
-        {
-            print
-            if (!inserted && index($0, anchor) > 0) {
-                match($0, /^[ \t]*/)
-                indent = substr($0, RSTART, RLENGTH) "  "
-                printf "%s\"%s\" %s\n", indent, key, val
-                inserted = 1
-            }
-        }
-    ' "$template_path" > "$tmp_file"
-
-    # Preserve the original file's trailing-newline state — awk's print always terminates
-    # the last line, even when the source file didn't, which would otherwise show up as a
-    # spurious whitespace-only diff line alongside the real insertion.
-    if [[ -n "$(tail -c1 "$template_path")" ]]; then
-        printf '%s' "$(cat "$tmp_file")" > "${tmp_file}.trimmed"
-        mv "${tmp_file}.trimmed" "$tmp_file"
-    fi
-
-    local rendered_json
-    if ! rendered_json="$(render_baseline "$tmp_file")"; then
+    if ! jq --arg kind "$kind" --arg k "$key" --argjson v "$live_value" '.[$kind][$k] = $v' \
+            "$baseline_path" > "$tmp_file" \
+        || [[ "$(jq -c --arg kind "$kind" --arg k "$key" '.[$kind][$k]' "$tmp_file")" != "$live_value" ]]; then
         rm -f "$tmp_file"
-        echo "error: verification failed — rendered template did not produce valid baseline JSON; ${template_path} left unchanged" >&2
+        echo "error: verification failed — ${kind}.${key} not written as ${live_value}; ${baseline_path} left unchanged" >&2
         exit 1
     fi
 
-    local check_value
-    check_value="$(jq -r --arg k "$key" ".${kind}[\$k]" <<<"$rendered_json")"
-    if [[ "$check_value" != "$live_value" ]]; then
-        rm -f "$tmp_file"
-        echo "error: verification failed — expected ${kind}.${key}=${live_value}, got '${check_value}'; ${template_path} left unchanged" >&2
-        exit 1
-    fi
-
-    cp "$tmp_file" "$template_path"
+    cp -f "$tmp_file" "$baseline_path"
     rm -f "$tmp_file"
-    echo "fixed: ${persona} ${kind}.${key} = ${live_value} written to ${template_path}"
+    echo "fixed: ${persona} ${kind}.${key} = ${live_value} written to ${baseline_path}"
 }
 
 # ---------------------------------------------------------------------------
@@ -311,7 +259,6 @@ if [[ "${1:-}" == "--session-start" ]]; then
     run_session_start
 fi
 
-require_cmd chezmoi
 require_cmd jq
 require_cmd yq
 

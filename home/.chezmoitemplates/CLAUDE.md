@@ -21,7 +21,7 @@ Available in `home/.chezmoitemplates/`:
   {{- end }}
   {{- end }}
   ```
-- `claude-settings-modifier` - Body of each persona's `modify_settings.json.tmpl`: merges the caller's `claudeExtraSettings` dict — everything chezmoi manages in that persona's `settings.json`, hooks included — with an ownership ledger (`_chezmoiManaged` inside `settings.json`), so keys and array elements removed from source are retracted from the live file, while arrays merge as a union and entries written by Claude Code, plugins, or the user (e.g. foreign hooks) survive. Carries a one-time migration that strips pre-ledger chezmoi hooks, slated for removal. Tested by `tests/test-claude-settings-ledger.sh`; see `openspec/specs/claude-settings-ledger/`.
+- `claude-settings-modifier` - Body of each persona's `modify_settings.json.tmpl`. Each persona's managed settings live in `home/.claude-settings/<persona>.json` (`default`, `personal`, `work`, `bedrock`), written in `settings.json`'s own shape — edit those files, not the templates. The partial merges the file into the live `settings.json` (objects by key, arrays as an order-preserving union, so entries written by Claude Code, plugins, or the user survive), and saves a copy of it as the string `_chezmoiManaged`, so that whatever is later removed from the file is retracted from the live one. Tested by `tests/test-claude-settings-ledger.sh`; see `openspec/specs/claude-settings-ledger/`.
 
 **Periodic re-execution with time-bucket:**
 ```go-template

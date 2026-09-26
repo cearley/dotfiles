@@ -1,15 +1,2 @@
-{{- $extra := dict
-      "skillOverrides" (dict)
-      "enabledPlugins" (dict)
-      "extraKnownMarketplaces" (dict)
-      "permissions" (dict)
-      "syncClaudeAiSkills" false
-      "syncClaudeAiPlugins" false
-      "hooks" (dict
-        "UserPromptSubmit" (list (dict "matcher" "" "hooks" (list (dict "type" "command" "command" "session-topic-capture UserPromptSubmit"))))
-        "PreCompact" (list (dict "matcher" "" "hooks" (list (dict "type" "command" "command" "session-topic-capture PreCompact"))))
-        "SessionEnd" (list (dict "matcher" "" "hooks" (list (dict "type" "command" "command" "session-topic-capture SessionEnd"))))
-        "PreToolUse" (list (dict "matcher" "Bash|Edit|Write" "hooks" (list (dict "type" "command" "command" "claude-tooling-write-guard"))))
-        "SessionStart" (list (dict "matcher" "" "hooks" (list (dict "type" "command" "command" "check-claude-overrides --session-start")))))
--}}
-{{ includeTemplate "claude-settings-modifier" (merge (dict "claudeExtraSettings" $extra) .) }}
+{{- /* Managed settings live in .claude-settings/default.json, in settings.json's own shape. */ -}}
+{{ includeTemplate "claude-settings-modifier" (merge (dict "claudeSettings" (include ".claude-settings/default.json")) .) }}

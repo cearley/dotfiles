@@ -77,9 +77,8 @@ logic for applying it by hand.
 direction — **declared-but-locally-suppressed**. `check-claude-overrides` detects it, and is
 relevant whenever auditing tooling health (`/doctor`-style checks) or when a skill/plugin isn't
 behaving despite being installed and declared — it checks every persona's live `settings.json`
-against that persona's own `modify_settings.json.tmpl` baseline (the
-`$extra`/`claudeExtraSettings` dict, if any, passed to
-`includeTemplate "claude-settings-modifier"`) and flags:
+against that persona's own managed-settings baseline,
+`{{ $sourceDir }}/.claude-settings/<persona>.json`, and flags:
 
 - `skillOverrides.<skill>: "off"` for a **native** skill (listed under
   `{{ $sourceDir }}/dot_claude/skills/`) the baseline doesn't explain — someone toggled it
@@ -92,9 +91,9 @@ Each flagged entry needs the user's input on which way it should go:
 
 - **Keep the override** → `check-claude-overrides --fix <persona>
   <skillOverrides|enabledPlugins> <key>` reads the live value straight from
-  `settings.json`, writes it into that persona's `modify_settings.json.tmpl` `$extra` dict,
-  and verifies the write (via a re-render) before the tracked file is ever touched —
-  hand-editing the dict directly isn't the supported path.
+  `settings.json`, writes it into that persona's `claude-settings/<persona>.json`, and
+  verifies the write on a copy before the tracked file is touched (editing the JSON by hand
+  also works).
 - **Drop the override** → removing the key via the equivalent `/skill` or `/plugin` command (or
   editing the live `settings.json` directly) is correct, since nothing in chezmoi asked for it.
   This direction stays manual — `check-claude-overrides` never modifies a live `settings.json`.
@@ -114,21 +113,22 @@ history (`projects/`), and `CLAUDE.md`. Each resolves as `${CLAUDE_CONFIG_DIR:-$
 `~/.claude.json` (in the home directory, not in `~/.claude/`) when it is unset. Reading or
 writing the wrong persona's file silently uses its skillUsage/pluginUsage/mcpServers, settings,
 or transcripts. When an audit, health check, or cleanup could mean every persona rather than
-just the active one, ask which is wanted before running. Each persona's `modify_settings.json.tmpl` `$extra` dict declares everything chezmoi manages in
-that persona's `settings.json` — its `hooks` (the same five in every persona, repeated on
-purpose so each file is self-contained: a hook edit means editing all four templates) plus a
+just the active one, ask which is wanted before running. Each persona's
+`{{ $sourceDir }}/.claude-settings/<persona>.json` (`default`, `personal`,
+`work`, `bedrock`), written in `settings.json`'s own shape, declares everything chezmoi manages
+in that persona's `settings.json` — its `hooks` (the same five in every persona, repeated on
+purpose so each file is self-contained: a hook edit means editing all four files) plus a
 baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
-workload (see the comment at the top of
-`{{ $sourceDir }}/dot_claude-personal/modify_settings.json.tmpl` — these postures are derived
-from `/doctor` runs per-persona, and copying them verbatim between personas skips re-running
-that analysis for a different workload).
+workload (these postures are derived from `/doctor` runs per-persona, and copying them
+verbatim between personas skips re-running that analysis for a different workload). The
+`modify_settings.json.tmpl` files are one-line callers; don't put settings there.
 
-**Drift note**: chezmoi records what it wrote from each persona's `$extra` dict in a
-`_chezmoiManaged` ledger inside `settings.json`, so an entry removed from the template is
+**Drift note**: chezmoi saves a copy of each persona's managed JSON as the string
+`_chezmoiManaged` inside `settings.json`, so an entry removed from the JSON file is
 retracted from the live file on the next `chezmoi apply`. Ad hoc `/skill`/`/plugin` toggles
 made directly in a session still survive — the ledger only retracts entries chezmoi itself
 wrote — so the live `~/.claude*/settings.json` can carry more `skillOverrides`/
-`enabledPlugins` entries than the chezmoi template declares. "Checking for Override Drift"
+`enabledPlugins` entries than the managed JSON declares. "Checking for Override Drift"
 above covers how to find and resolve these. Don't hand-edit `_chezmoiManaged`.
 
 ## Two Deliberately Different Install Models

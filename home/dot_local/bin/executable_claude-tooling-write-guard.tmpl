@@ -85,12 +85,12 @@ check_path() {
     source_path=$(chezmoi source-path "$resolved_path" 2>/dev/null) || source_path="(run: chezmoi source-path \"$resolved_path\")"
     if [[ "$resolved_path" == *settings.json ]]; then
       if [[ "$tool" == "Write" ]]; then
-        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit ${source_path}'s \$extra dict instead, then chezmoi apply."
+        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit the .claude-settings/<persona>.json file that ${source_path} includes instead, then chezmoi apply."
       else
         local old_new
         old_new=$(jq -r '(.tool_input.old_string // "") + "\n" + (.tool_input.new_string // "")' <<<"$payload" 2>/dev/null) || old_new=""
         if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions)"' <<<"$old_new"; then
-          echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions in settings.json are chezmoi-managed baseline keys, not local toggles. Edit ${source_path}'s \$extra dict instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
+          echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions in settings.json are chezmoi-managed baseline keys, not local toggles. Edit the .claude-settings/<persona>.json file that ${source_path} includes instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
         fi
       fi
     else
