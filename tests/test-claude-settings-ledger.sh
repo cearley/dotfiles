@@ -24,6 +24,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 FIXTURES="$SCRIPT_DIR/fixtures/claude-settings-ledger"
 
 scratch=$(mktemp -d)
@@ -78,14 +79,14 @@ for dir in "$FIXTURES"/*/; do
     '(._chezmoiManaged? // "") | type == "string"' <<<"$out1" >/dev/null 2>&1 && echo 1)"
 done
 
-# Every persona's real source file must render, and applying it to {} must write exactly it.
-for src in "$SCRIPT_DIR"/../home/.claude-settings/*.json; do
-  name=$(basename "$src" .json)
-  "$SCRIPT_DIR/run-template" --inline \
-    "{{ includeTemplate \"claude-settings-modifier\" (merge (dict \"claudeSettings\" (include \".claude-settings/$name.json\") \"tags\" (list \"ai\")) .) }}" \
-    > "$scratch/persona-$name.sh"
+# Every persona's real caller must find its sibling .claude-settings.json, and applying it
+# to {} must write exactly that file. Callers are rendered by absolute path, so
+# .chezmoi.sourceFile resolves; the host needs the ai tag for the non-pass-through branch.
+for src in "$REPO_ROOT"/home/dot_claude*/.claude-settings.json; do
+  dir=$(dirname "$src"); name=$(basename "$dir")
+  "$SCRIPT_DIR/run-template" "$dir/modify_settings.json.tmpl" > "$scratch/persona-$name.sh"
   got=$(bash "$scratch/persona-$name.sh" <<<'{}' 2>/dev/null | jq -S 'del(._chezmoiManaged)') || got=""
-  check "persona $name: applies its source file" "$([[ "$got" == "$(jq -S . "$src")" ]] && echo 1)"
+  check "persona $name: caller applies its sibling source file" "$([[ "$got" == "$(jq -S . "$src")" ]] && echo 1)"
 done
 
 echo "---"

@@ -26,7 +26,7 @@ different, reporting the live value. Such a runtime change would be reverted by 
 
 ### Requirement: Source-Directory Portability
 Every chezmoi-source-tree path the tool reads or writes (`packages.yaml`,
-`dot_claude/skills/`, each persona's `.claude-settings/<persona>.json`) SHALL
+`dot_claude/skills/`, each persona's `dot_claude*/.claude-settings.json`) SHALL
 be resolved via `{{ .chezmoi.sourceDir }}` at chezmoi-apply render time, and the source
 template SHALL NOT contain a hardcoded absolute path to the chezmoi source directory anywhere
 in its body.
@@ -45,19 +45,19 @@ in its body.
 
 ### Requirement: Baseline Read from the Managed Settings File
 For each persona environment, the script SHALL use that persona's managed-settings source
-file, `.claude-settings/<persona>.json`, read directly as JSON, as its
+file, the `.claude-settings.json` in its `dot_claude*/` source directory, read directly as JSON, as its
 intended baseline. It SHALL NOT render any template to obtain it. Keys in the baseline that
 the drift checks do not read, such as `hooks`, `env`, and `permissions`, SHALL NOT change
 drift detection results.
 
 #### Scenario: Named persona baseline resolved
 - **WHEN** checking a persona declared in `claude_envs` (e.g. `~/.claude-personal`)
-- **THEN** the script SHALL read `home/.claude-settings/personal.json` as
+- **THEN** the script SHALL read `home/dot_claude-personal/.claude-settings.json` as
   its baseline
 
 #### Scenario: Unnamed default persona baseline resolved
 - **WHEN** checking the unnamed default persona (`~/.claude`)
-- **THEN** the script SHALL read `home/.claude-settings/default.json` as
+- **THEN** the script SHALL read `home/dot_claude/.claude-settings.json` as
   its baseline
 
 #### Scenario: Hooks in the baseline do not affect drift
@@ -120,7 +120,7 @@ continue checking remaining personas.
 
 #### Scenario: Declared persona without a matching template
 - **WHEN** `claude_envs` declares a persona with no corresponding
-  `home/.claude-settings/<name>.json` in the chezmoi source
+  `home/dot_claude-<name>/.claude-settings.json` in the chezmoi source
 - **THEN** the script SHALL emit a skip notice for that persona to stderr
 - **AND** SHALL continue checking any remaining personas
 

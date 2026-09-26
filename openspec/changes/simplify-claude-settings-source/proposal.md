@@ -18,9 +18,10 @@ two reasons:
 ## What Changes
 
 - **Managed settings are plain JSON in `settings.json`'s own shape.** They live in
-  `home/.claude-settings/<persona>.json`, one file per persona (`default`,
-  `personal`, `work`, `bedrock`). Each file can be copied to or from a live `settings.json`
-  as it is. Each `modify_settings.json.tmpl` becomes a one-line caller.
+  `.claude-settings.json`, next to each persona's `modify_settings.json.tmpl` in
+  `home/dot_claude*/`. Each file can be copied to or from a live `settings.json` as it is. All
+  four `modify_settings.json.tmpl` files become the same one line; the partial finds the
+  sibling file itself.
 - **The ledger is a copy of the managed JSON.** `_chezmoiManaged` becomes the managed JSON
   stored as one JSON string. It is a string so that Claude Code never sees hook-shaped objects
   outside `hooks`. On the next run, whatever that copy declares and the source no longer
@@ -37,8 +38,8 @@ two reasons:
   creates a missing `skillOverrides`/`enabledPlugins` object instead of refusing.
 
 - **Least-surprise follow-ups (from design review):**
-  - Each caller comment and `home/.claude-settings/README.md` explain where to edit and what
-    apply does. The root `CLAUDE.md` points to the README.
+  - The partial's header is the user guide: where to edit, what apply does, and what not to
+    do. The caller comment and the root `CLAUDE.md` point to it.
   - The write guard denies `chezmoi add`/`re-add` on a persona `settings.json`.
   - `check-claude-overrides` also flags `permissions`/`env` scalars changed at runtime, which
     the next apply would revert. `--fix` accepts those kinds.
@@ -46,7 +47,7 @@ two reasons:
 ## Impact
 
 - `home/.chezmoitemplates/claude-settings-modifier` (rewritten),
-  `home/.claude-settings/*.json` (new), and the four
+  `home/dot_claude*/.claude-settings.json` (new), and the four
   `home/dot_claude*/modify_settings.json.tmpl` files (now one line each).
 - `home/dot_local/bin/executable_check-claude-overrides.tmpl`.
 - Docs: `home/.chezmoitemplates/CLAUDE.md` and `home/dot_claude/rules/claude-tooling.md.tmpl`.

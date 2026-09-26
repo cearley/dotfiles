@@ -1,26 +1,42 @@
 {{- /* Writes the settings a persona wants chezmoi-managed into its settings.json.
 
-     Params (merge with the chezmoi context before calling):
-       claudeSettings: JSON text, in the same shape as settings.json, holding everything
-                       chezmoi manages for this persona. Callers pass
-                       (include ".claude-settings/<persona>.json"). chezmoi neither
-                       deploys nor template-parses dot-prefixed source paths.
+     WHERE TO EDIT: each persona's managed settings are the .claude-settings.json next to
+     its modify_settings.json.tmpl, in settings.json's own shape (copy blocks to and from
+     a live settings.json as-is):
 
-     Apply: objects merge key by key, arrays gain the managed elements they lack (live
-     order kept, so entries added outside chezmoi survive in place), and everything else
-     is overwritten. A hook group is one array element, compared by full value.
+       home/dot_claude/.claude-settings.json          ~/.claude/settings.json
+       home/dot_claude-personal/.claude-settings.json ~/.claude-personal/settings.json
+       home/dot_claude-work/.claude-settings.json     ~/.claude-work/settings.json
+       home/dot_claude-bedrock/.claude-settings.json  ~/.claude-bedrock/settings.json
 
-     Removal: the managed JSON is saved in settings.json as the string _chezmoiManaged
-     (a string, so Claude Code never sees hook-shaped objects outside "hooks"). The next
-     run retracts whatever that saved copy declares and the current source no longer does:
-     array elements always, scalars only while the live value is unchanged. Containers
-     retraction empties are kept. With no saved copy (first run, or the pre-2026-09-26
-     array ledger) nothing is retracted.
+     chezmoi ignores source paths starting with ".", so these files are neither deployed
+     nor parsed as templates ("{{" is safe in them). Every modify_settings.json.tmpl is the
+     same one line, `includeTemplate "claude-settings-modifier" .`; this partial finds the
+     sibling file from .chezmoi.sourceFile, so a new persona is a copied directory.
 
-     Tests: tests/test-claude-settings-ledger.sh.
+     WHAT chezmoi apply DOES:
+       - Objects merge key by key. Keys Claude Code, plugins, or you add at runtime are kept.
+       - Arrays gain the elements listed in source, keeping their live order; elements added
+         at runtime survive in place. A hook group is one element, compared by full value.
+       - Scalars in source overwrite the live value. A runtime change to a managed scalar
+         (e.g. /config changing permissions.defaultMode) is reverted. check-claude-overrides
+         flags these at session start; `check-claude-overrides --fix <persona> <kind> <key>`
+         keeps such a change by writing it into the source file.
+       - Removing something from source removes it from the live file on the next apply:
+         array elements always, a scalar only while its live value is still what chezmoi
+         wrote. Containers emptied this way are kept.
+     The last-applied source is saved in settings.json as the string _chezmoiManaged (a
+     string, so Claude Code never sees hook-shaped objects outside "hooks"); don't edit it.
+     With no saved copy (first run, or the pre-2026-09-26 array ledger) nothing is retracted.
 
-     Example:
-       {{ includeTemplate "claude-settings-modifier" (merge (dict "claudeSettings" (include ".claude-settings/personal.json")) .) }}
+     DON'TS:
+       - Don't `chezmoi add` or `chezmoi re-add` a persona settings.json: add replaces the
+         merge script with a full snapshot of the live file (the write guard denies it).
+       - Don't put settings in modify_settings.json.tmpl.
+
+     Params: claudeSettings (optional) — JSON text used instead of the sibling file; tests
+     pass it. Tests: tests/test-claude-settings-ledger.sh. Spec:
+     openspec/specs/claude-settings-ledger/.
 */ -}}
 {{- if not (and (eq .chezmoi.os "darwin") (has "ai" .tags)) -}}
 #!/bin/bash
@@ -34,7 +50,9 @@ set -euo pipefail
 existing=$(cat)
 [ -z "$existing" ] && existing='{}'
 
-{{- $managed := get . "claudeSettings" | default "{}" | fromJson }}
+{{- $json := get . "claudeSettings" }}
+{{- if not $json }}{{ $json = include (joinPath (dir .chezmoi.sourceFile) ".claude-settings.json") }}{{ end }}
+{{- $managed := $json | fromJson }}
 {{- if not (kindIs "map" $managed) }}{{ fail "claude-settings-modifier: claudeSettings must be a JSON object" }}{{ end }}
 managed='{{ $managed | toJson | replace "'" "\\u0027" }}'
 

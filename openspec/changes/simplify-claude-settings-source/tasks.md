@@ -2,7 +2,7 @@
 
 ## 1. Source files and modifier
 
-- [x] 1.1 Add `home/.claude-settings/{default,personal,work,bedrock}.json`, each equal (`jq -S`) to the persona's previously rendered `extra_settings` apart from the empty placeholder dicts.
+- [x] 1.1 Add the per-persona source JSON files (now `home/dot_claude*/.claude-settings.json`, see 4.3c), each equal (`jq -S`) to the persona's previously rendered `extra_settings` apart from the empty placeholder dicts.
 - [x] 1.2 Rewrite `home/.chezmoitemplates/claude-settings-modifier`: the `claudeSettings` JSON param, the recursive `apply`/`retract`, and the string ledger; delete the legacy-hook migration.
 - [x] 1.3 Reduce each `home/dot_claude*/modify_settings.json.tmpl` to a one-line caller.
 
@@ -13,7 +13,7 @@
 
 ## 3. check-claude-overrides
 
-- [x] 3.1 Read the baselines from `claude-settings/<persona>.json`, and remove the render step and the runtime `chezmoi` dependency.
+- [x] 3.1 Read the baselines from each persona's `.claude-settings.json`, and remove the render step and the runtime `chezmoi` dependency.
 - [x] 3.2 Make `--fix` a `jq` write with temp-copy verification, and let it create a missing `kind` object.
 - [x] 3.3 Verify in a sandbox (fake persona dir, scratch baseline copy): detect, `--session-start` pointer, `--fix`, and a clean state after the fix.
 
@@ -26,10 +26,18 @@
 - [x] 4.3b Design review (idiom and least surprise): verdict keep, with adjustments. Done:
   - caller comments warn against `chezmoi add`/`re-add` and say that managed values overwrite
     runtime changes;
-  - added `home/.claude-settings/README.md` and a root `CLAUDE.md` pointer;
+  - added a README (since folded into the partial's header, 4.3c) and a root `CLAUDE.md` pointer;
   - fixed the dot-less `claude-settings/` path strings;
   - the write guard denies `chezmoi add`/`re-add` on a persona `settings.json` (tests 12/12);
   - `check-claude-overrides` flags managed `permissions`/`env` scalars changed at runtime, and
     `--fix` accepts those kinds (sandbox-verified).
+- [x] 4.3c Move each source file next to its caller as `home/dot_claude*/.claude-settings.json`:
+  - the callers are the identical line `includeTemplate "claude-settings-modifier" .`, and the
+    partial finds the sibling file via `.chezmoi.sourceFile`;
+  - the README content became the partial's header, with user-facing points also in
+    `claude-tooling.md`;
+  - the harness renders the real callers;
+  - checker baselines and the write guard's messages name the exact file;
+  - `chezmoi cat` shows no pending change for any persona.
 - [ ] 4.4 `chezmoi apply` the four `settings.json` targets (after the user's go-ahead), then confirm `chezmoi status` is clean for them and a new session loads without a settings warning.
 - [ ] 4.5 After archiving, update the "Chezmoi Current Status" note: close the legacy-migration follow-up, and replace the `claude-settings-modifier` environment fact.

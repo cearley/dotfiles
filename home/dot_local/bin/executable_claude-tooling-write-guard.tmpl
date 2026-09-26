@@ -85,12 +85,12 @@ check_path() {
     source_path=$(chezmoi source-path "$resolved_path" 2>/dev/null) || source_path="(run: chezmoi source-path \"$resolved_path\")"
     if [[ "$resolved_path" == *settings.json ]]; then
       if [[ "$tool" == "Write" ]]; then
-        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit the .claude-settings/<persona>.json file that ${source_path} includes instead, then chezmoi apply."
+        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply."
       else
         local old_new
         old_new=$(jq -r '(.tool_input.old_string // "") + "\n" + (.tool_input.new_string // "")' <<<"$payload" 2>/dev/null) || old_new=""
         if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions)"' <<<"$old_new"; then
-          echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions in settings.json are chezmoi-managed baseline keys, not local toggles. Edit the .claude-settings/<persona>.json file that ${source_path} includes instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
+          echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions in settings.json are chezmoi-managed baseline keys, not local toggles. Edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
         fi
       fi
     else
@@ -182,7 +182,7 @@ Bash)
   # (with --force, silently); re-add is a no-op there. Either way it's the wrong tool.
   add_pattern='(^|[;&|[:space:]])chezmoi[[:space:]]+([^;&|]*[[:space:]])?(add|re-add)[[:space:]][^;&|]*\.claude[A-Za-z0-9_-]*/settings\.json'
   if [[ "$command" =~ $add_pattern ]]; then
-    emit_deny "A persona settings.json is a chezmoi modify_ target: chezmoi add would replace its merge script with a full snapshot of the live file (runtime keys included), and re-add does nothing. Edit {{ $sourceDir }}/.claude-settings/<persona>.json instead, then chezmoi apply."
+    emit_deny "A persona settings.json is a chezmoi modify_ target: chezmoi add would replace its merge script with a full snapshot of the live file (runtime keys included), and re-add does nothing. Edit the .claude-settings.json next to that persona's modify_settings.json.tmpl ({{ $sourceDir }}/dot_claude*/) instead, then chezmoi apply."
     exit 0
   fi
 

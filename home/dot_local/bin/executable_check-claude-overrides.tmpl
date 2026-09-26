@@ -1,7 +1,7 @@
 #!/bin/bash
 # check-claude-overrides — Detect Claude Code skillOverrides/enabledPlugins/permissions/env entries that
 # silently diverge from a persona's chezmoi-managed baseline (its
-# .claude-settings/<persona>.json) — the mirror-image direction of the
+# dot_claude*/.claude-settings.json) — the mirror-image direction of the
 # installed-but-undeclared drift that audit-packages/clean-claude-orphans already cover.
 # Read-only by default; --fix codifies a single confirmed "keep" resolution directly into
 # that source file.
@@ -28,7 +28,7 @@ NATIVE_SKILLS_DIR="{{ $sourceDir }}/dot_claude/skills"
 # baked in here at chezmoi-apply time rather than rediscovered at runtime.
 PERSONA_NAMES=("default"{{ range $claudeEnvs }} "{{ trimPrefix "~/.claude-" . }}"{{ end }})
 PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
-PERSONA_BASELINES=("{{ $sourceDir }}/.claude-settings/default.json"{{ range $claudeEnvs }} "{{ $sourceDir }}/.claude-settings/{{ trimPrefix "~/.claude-" . }}.json"{{ end }})
+PERSONA_BASELINES=("{{ $sourceDir }}/dot_claude/.claude-settings.json"{{ range $claudeEnvs }} "{{ $sourceDir }}/dot_claude-{{ trimPrefix "~/.claude-" . }}/.claude-settings.json"{{ end }})
 
 print_usage() {
     cat <<'EOF'
@@ -36,7 +36,7 @@ Usage: check-claude-overrides [--help]
        check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins|permissions|env> <key>
 
 Detects entries in any ~/.claude* persona's settings.json that silently diverge from that
-persona's chezmoi-managed baseline (.claude-settings/<persona>.json):
+persona's chezmoi-managed baseline (dot_claude*/.claude-settings.json):
   - skillOverrides.<native skill> = "off" / enabledPlugins.<declared plugin> = false that
     the baseline doesn't explain — an override with no source-of-truth record;
   - a permissions.<key> / env.<key> scalar the baseline manages whose live value differs —
@@ -46,7 +46,7 @@ Without --fix: read-only. Prints a "## drift" section (persona<TAB>kind<TAB>key<
 one line per unexplained entry; empty if none found.
 
 With --fix <persona> <kind> <key>: codifies the "keep the override" resolution by writing
-the live value into the target persona's .claude-settings/<persona>.json, after
+the live value into the target persona's .claude-settings.json, after
 re-confirming the entry is currently flagged. The value is always read from the live
 settings.json, never typed. Verifies the edited copy before touching the real file. Dropping
 an override instead remains manual (/skill, /plugin, or letting chezmoi apply revert it) — see claude-tooling.md's "Checking
@@ -56,7 +56,7 @@ With --session-start: intended for automatic invocation from a Claude Code Sessi
 hook, not interactive use. Checks only the persona matching $CLAUDE_CONFIG_DIR (never a full
 sweep), and only prints a one-line plain-text pointer when that persona's drift differs from
 what was last reported for it — silent on a clean or already-seen-and-unresolved state.
-Never modifies settings.json or any .claude-settings/<persona>.json. Always exits 0.
+Never modifies settings.json or any .claude-settings.json. Always exits 0.
 EOF
 }
 

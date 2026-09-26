@@ -1,5 +1,4 @@
-{{- /* Edit .claude-settings/work.json, not this file: it holds the keys chezmoi manages
-       here, in settings.json's own shape (see .claude-settings/README.md).
-       Don't `chezmoi add`/`re-add` this target — add would replace this merge script
-       with a full snapshot. Managed values overwrite runtime changes on the next apply. */ -}}
-{{ includeTemplate "claude-settings-modifier" (merge (dict "claudeSettings" (include ".claude-settings/work.json")) .) }}
+{{- /* Edit .claude-settings.json in this directory, not this file (it holds the keys
+       chezmoi manages here, in settings.json's own shape). Never `chezmoi add` this
+       target. Details: the header of .chezmoitemplates/claude-settings-modifier. */ -}}
+{{ includeTemplate "claude-settings-modifier" . }}

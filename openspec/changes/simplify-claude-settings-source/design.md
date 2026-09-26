@@ -1,23 +1,36 @@
 # Design
 
-## D1. Source files live in `home/.claude-settings/`
+## D1. Each source file sits next to its caller: `home/dot_claude*/.claude-settings.json`
 
-One `<persona>.json` per persona. The names match `check-claude-overrides`' persona names
-(`default` plus each `claude_envs` suffix), so the path follows from the name. chezmoi
-ignores dot-prefixed source paths, so these files are neither deployed nor parsed as
-templates: a `{{` in a hook command is safe. `include` reads them raw. Keeping the four files
-side by side makes `diff personal.json work.json` easy.
+The managed JSON for a persona lives in the same source directory as its
+`modify_settings.json.tmpl`, which is where `chezmoi edit` and `chezmoi source-path` land. A
+leading dot makes chezmoi skip the file: it is neither deployed nor parsed as a template, so
+a `{{` in a hook command is safe (chezmoi.io/reference/special-files: source entries
+beginning with `.` are ignored). The partial finds the file from the caller's
+`.chezmoi.sourceFile`, so all four callers are the same line, `includeTemplate
+"claude-settings-modifier" .`. Adding a persona means copying a directory; there is no name to
+edit and no special case for the default persona. The partial's header is the user guide
+(where to edit, what apply does, don'ts), since every caller points to it.
 
 **Rejected alternatives:**
-- `.chezmoitemplates/claude-settings/`, which was tried first. chezmoi parses every file
-  there as a named template, so a single `{{` in any source file would break every render.
-- A JSON file next to each `modify_settings.json.tmpl`. It would need `.chezmoiignore`
-  entries.
+- `home/.claude-settings/<persona>.json`, which was the first shipped layout (`9a36379`). All
+  four files sat side by side, but the directory was one step removed from the target, needed
+  a persona-name mapping (`default` → `dot_claude/`), and needed a README of its own. Moved
+  before push or archive, following the design review.
+- The name `managed-settings.json`. Claude Code uses that name for its
+  administrator-managed settings file.
+- `.chezmoitemplates/claude-settings/`, which was tried before that. chezmoi parses every
+  file there as a named template, so a single `{{` in any source file would break every render.
 - `.chezmoidata/`. It would load the files into global template data, and it keeps only one
   file per key.
 - A shared base plus per-persona overlays. That reintroduces merge rules at the source level.
   The earlier decision was that the five hooks are repeated on purpose, so each file is
   self-contained, and it still holds.
+
+**Rendering a caller outside `chezmoi apply`/`cat`:** `.chezmoi.sourceFile` is set when the
+caller is rendered from a file (`tests/run-template <absolute path>`), but not from stdin, so
+`chezmoi execute-template < modify_settings.json.tmpl` fails to find the sibling file. Use
+`chezmoi cat <target>` or the test harness instead.
 
 The caller passes the file text with `include`. The partial parses it with `fromJson` and
 re-serializes it with `toJson`, so invalid JSON fails `chezmoi apply` at render time instead

@@ -21,7 +21,7 @@ Available in `home/.chezmoitemplates/`:
   {{- end }}
   {{- end }}
   ```
-- `claude-settings-modifier` - Body of each persona's `modify_settings.json.tmpl`. Each persona's managed settings live in `home/.claude-settings/<persona>.json` (`default`, `personal`, `work`, `bedrock`), written in `settings.json`'s own shape — edit those files, not the templates. The partial merges the file into the live `settings.json` (objects by key, arrays as an order-preserving union, so entries written by Claude Code, plugins, or the user survive), and saves a copy of it as the string `_chezmoiManaged`, so that whatever is later removed from the file is retracted from the live one. Tested by `tests/test-claude-settings-ledger.sh`; see `openspec/specs/claude-settings-ledger/`.
+- `claude-settings-modifier` - The whole body of every persona's `modify_settings.json.tmpl` (all four are the identical line `includeTemplate "claude-settings-modifier" .`). It reads the sibling `.claude-settings.json` — that persona's managed settings in `settings.json`'s own shape; edit that file, not the templates — and merges it into the live `settings.json` (objects by key, arrays as an order-preserving union, so runtime additions survive), retracting whatever was removed from source via the string `_chezmoiManaged`. Its header is the full user guide: where to edit, what apply does, and what not to do. Tested by `tests/test-claude-settings-ledger.sh`; see `openspec/specs/claude-settings-ledger/`.
 
 **Periodic re-execution with time-bucket:**
 ```go-template

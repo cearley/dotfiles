@@ -1,18 +1,25 @@
 ## ADDED Requirements
 
 ### Requirement: Managed Settings Source Files
-Each persona's chezmoi-managed settings SHALL be declared in
-`home/.claude-settings/<persona>.json`, as JSON in the same shape as
-`settings.json`, where `<persona>` is `default` for `~/.claude` and the `claude_envs` suffix
-for a named persona. Each persona's `modify_settings.json.tmpl` SHALL only pass that file's
-contents to the `claude-settings-modifier` partial, and SHALL declare no settings itself.
-Invalid JSON in a source file SHALL fail template rendering.
+Each persona's chezmoi-managed settings SHALL be declared in a `.claude-settings.json` file
+in the same source directory as that persona's `modify_settings.json.tmpl`
+(`home/dot_claude/` for `~/.claude`, `home/dot_claude-<name>/` for a named persona), as JSON
+in the same shape as `settings.json`. Every persona's `modify_settings.json.tmpl` SHALL be
+identical and SHALL declare no settings; the `claude-settings-modifier` partial SHALL locate
+the sibling file from the caller's `.chezmoi.sourceFile`. Invalid JSON in a source file, or a
+source file that is not a JSON object, SHALL fail template rendering.
 
 #### Scenario: Source file mirrors settings.json
 - **WHEN** a maintainer wants chezmoi to manage `permissions.defaultMode = "auto"` for the
   personal persona
 - **THEN** they SHALL add `"permissions": {"defaultMode": "auto"}` to
-  `home/.claude-settings/personal.json`, and no other file
+  `home/dot_claude-personal/.claude-settings.json`, and no other file
+
+#### Scenario: New persona needs no caller edit
+- **WHEN** a maintainer adds a persona by copying `home/dot_claude-work/` to
+  `home/dot_claude-new/` and editing only the copied `.claude-settings.json`
+- **THEN** rendering `home/dot_claude-new/modify_settings.json.tmpl` SHALL apply that copied
+  file, not `home/dot_claude-work/.claude-settings.json`
 
 #### Scenario: Malformed source fails the render
 - **WHEN** a persona's source file is not valid JSON
@@ -168,7 +175,7 @@ and union semantics as every other managed array.
 ### Requirement: Baseline Extraction Compatibility
 **Reason**: `check-claude-overrides` now reads each persona's JSON source file directly, so
 nothing greps the rendered modifier for an `extra_settings='…'` line.
-**Migration**: None. The baseline is `home/.claude-settings/<persona>.json`.
+**Migration**: None. The baseline is the persona's `home/dot_claude*/.claude-settings.json`.
 
 ### Requirement: One-Time Migration of Legacy Hooks
 **Reason**: No machine needs it. MacBook Pro already migrated. Machines still on

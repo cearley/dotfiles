@@ -7,7 +7,7 @@ Quick reference guide for AI assistants working with this chezmoi dotfiles repos
 
 ### Essential Files
 - **OpenSpec specs**: `openspec/specs/` - Capability specifications and design
-- **Claude Code persona settings**: `home/.claude-settings/<persona>.json` — plain JSON in `settings.json`'s shape; see its `README.md`. Never `chezmoi add` a persona `settings.json`.
+- **Claude Code persona settings**: `home/dot_claude*/.claude-settings.json`, next to each `modify_settings.json.tmpl`. It's plain JSON in `settings.json`'s shape; the header of `home/.chezmoitemplates/claude-settings-modifier` explains how it's applied. Never `chezmoi add` a persona `settings.json`.
 - **Code style examples**: "Code Style Quick Reference" note in the `chezmoi` basic-memory project - Extended cookbook
 
 ## Common Commands

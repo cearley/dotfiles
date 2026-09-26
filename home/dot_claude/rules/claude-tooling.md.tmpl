@@ -78,7 +78,7 @@ direction — **declared-but-locally-suppressed**. `check-claude-overrides` dete
 relevant whenever auditing tooling health (`/doctor`-style checks) or when a skill/plugin isn't
 behaving despite being installed and declared — it checks every persona's live `settings.json`
 against that persona's own managed-settings baseline,
-`{{ $sourceDir }}/.claude-settings/<persona>.json`, and flags:
+`{{ $sourceDir }}/dot_claude*/.claude-settings.json`, and flags:
 
 - `skillOverrides.<skill>: "off"` for a **native** skill (listed under
   `{{ $sourceDir }}/dot_claude/skills/`) the baseline doesn't explain — someone toggled it
@@ -94,7 +94,7 @@ Each flagged entry needs the user's input on which way it should go:
 
 - **Keep the override** → `check-claude-overrides --fix <persona>
   <skillOverrides|enabledPlugins|permissions|env> <key>` reads the live value straight from
-  `settings.json`, writes it into that persona's `.claude-settings/<persona>.json`, and
+  `settings.json`, writes it into that persona's `.claude-settings.json`, and
   verifies the write on a copy before the tracked file is touched (editing the JSON by hand
   also works).
 - **Drop the override** → removing the key via the equivalent `/skill` or `/plugin` command (or
@@ -118,14 +118,27 @@ history (`projects/`), and `CLAUDE.md`. Each resolves as `${CLAUDE_CONFIG_DIR:-$
 writing the wrong persona's file silently uses its skillUsage/pluginUsage/mcpServers, settings,
 or transcripts. When an audit, health check, or cleanup could mean every persona rather than
 just the active one, ask which is wanted before running. Each persona's
-`{{ $sourceDir }}/.claude-settings/<persona>.json` (`default`, `personal`,
-`work`, `bedrock`), written in `settings.json`'s own shape, declares everything chezmoi manages
+`.claude-settings.json`, next to its `modify_settings.json.tmpl` in
+`{{ $sourceDir }}/dot_claude*/`, is written in `settings.json`'s own shape and declares everything chezmoi manages
 in that persona's `settings.json` — its `hooks` (the same five in every persona, repeated on
 purpose so each file is self-contained: a hook edit means editing all four files) plus a
 baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
 workload (these postures are derived from `/doctor` runs per-persona, and copying them
 verbatim between personas skips re-running that analysis for a different workload). The
-`modify_settings.json.tmpl` files are one-line callers; don't put settings there.
+`modify_settings.json.tmpl` files are identical one-line callers; don't put settings there.
+The source directory's leading dot makes chezmoi skip it: the file is neither deployed nor
+template-parsed. Never `chezmoi add`/`re-add` a persona `settings.json`: `add` replaces the
+merge script with a snapshot of the live file, and the write guard denies it.
+
+**What `chezmoi apply` does to it:**
+- Objects merge key by key, and arrays gain source elements while keeping their live order,
+  so runtime additions survive.
+- Managed scalars overwrite the live value, so a runtime change to one (e.g. `/config`
+  changing `permissions.defaultMode`) is reverted.
+- Removing an entry from source removes it live: array elements always, scalars only while
+  their live value is unchanged.
+
+Full rules are in the header of `{{ $sourceDir }}/.chezmoitemplates/claude-settings-modifier`.
 
 **Drift note**: chezmoi saves a copy of each persona's managed JSON as the string
 `_chezmoiManaged` inside `settings.json`, so an entry removed from the JSON file is
