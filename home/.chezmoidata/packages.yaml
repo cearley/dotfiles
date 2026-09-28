@@ -213,10 +213,12 @@ packages:
           - 'aws/agent-toolkit-for-aws'
           - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev'
           - 'https://github.com/Yeachan-Heo/oh-my-claudecode'
+          - 'https://github.com/KyongSik-Yoon/opsx-omc-bridge' # OpenSpec -> OMC handoff skills (quick/deploy)
           - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
           plugins: # Installed via `claude plugins install`
           - 'claude-md-management@claude-plugins-official'
           - 'oh-my-claudecode@omc'
+          - 'opsx-omc-bridge@opsx-omc-bridge'
           - 'ralph-loop@claude-plugins-official'
           - 'superpowers@claude-plugins-official'
           # - 'example-skills@anthropic-agent-skills'  # removed 2026-08-21 /doctor: 5 lifetime uses, last Aug 2
