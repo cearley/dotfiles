@@ -122,8 +122,13 @@ fi
 {{ if not $hasCasks -}}
 print_message "skip" "No cask packages to install for this tag set"
 {{ else -}}
-read -p "🍺 Install cask packages? (y/N): " -n 1 -r
-echo
+if [ -t 0 ]; then
+    read -p "🍺 Install cask packages? (y/N): " -n 1 -r
+    echo
+else
+    print_message "skip" "Non-interactive session (no TTY) — defaulting to skip cask packages"
+    REPLY="N"
+fi
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     print_message "skip" "Skipping cask package installation"
 else
@@ -151,8 +156,13 @@ fi
 {{ if not $hasMas -}}
 print_message "skip" "No Mac App Store packages to install for this tag set"
 {{ else -}}
-read -p "🍺 Install Mac App Store packages? (y/N): " -n 1 -r
-echo
+if [ -t 0 ]; then
+    read -p "🍺 Install Mac App Store packages? (y/N): " -n 1 -r
+    echo
+else
+    print_message "skip" "Non-interactive session (no TTY) — defaulting to skip Mac App Store packages"
+    REPLY="N"
+fi
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     print_message "skip" "Skipping Mac App Store package installation"
 else
