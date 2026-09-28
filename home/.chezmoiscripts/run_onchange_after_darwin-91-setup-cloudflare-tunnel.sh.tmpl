@@ -8,16 +8,16 @@ set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
-if ! require_tools cloudflared; then
-    exit 1
-fi
-
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
 {{- $tunnels := index $settings "cloudflare_tunnels" }}
 {{- if not $tunnels }}
 print_message "skip" "No cloudflare_tunnels configured for this machine"
 exit 0
 {{- end }}
+
+if ! require_tools cloudflared; then
+    exit 1
+fi
 
 CONFIG_DIR="/usr/local/etc/cloudflared"
 CONFIG_FILE="$CONFIG_DIR/config.yml"
