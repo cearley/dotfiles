@@ -148,6 +148,23 @@ wrote — so the live `~/.claude*/settings.json` can carry more `skillOverrides`
 `enabledPlugins` entries than the managed JSON declares. "Checking for Override Drift"
 above covers how to find and resolve these. Don't hand-edit `_chezmoiManaged`.
 
+## Permission Patterns Are a Separate Axis from Persona Selection
+
+Persona selection (`CLAUDE_CONFIG_DIR`, "Personas Share Skills and Rules via Symlink" above)
+answers *whose account is this* — it says nothing about *how much rope should this task get* in
+the repo in front of you. That's a second, independent axis: `apply-claude-pattern a|b|c`
+(`{{ $sourceDir }}/dot_local/bin/executable_apply-claude-pattern.tmpl`) stamps one of three
+chezmoi-templated permission postures — Pattern A (approval-first), Pattern B (curated
+allow-list), Pattern C (sandboxed full-auto, refused without container evidence) — into the
+*current project repo's* gitignored `.claude/settings.local.json`. It never reads or writes any
+persona's `settings.json` or the `_chezmoiManaged` ledger described above, and choosing a
+persona never implies or constrains which pattern, if any, is stamped into a given repo. The
+three patterns themselves live at
+`{{ $sourceDir }}/.chezmoitemplates/claude-pattern-{a,b,c}`, plus a companion Pattern C
+devcontainer definition at `{{ $sourceDir }}/.chezmoitemplates/claude-pattern-c-devcontainer/`.
+See `openspec/specs/claude-repo-permission-patterns/` for the full spec; `claude-environments`
+and `claude-settings-ledger` (referenced above) remain the identity axis, untouched by this.
+
 ## Two Deliberately Different Install Models
 
 - **`{{ $sourceDir }}/dot_claude/skills/` + `packages.yaml`** (this file's subject): global,

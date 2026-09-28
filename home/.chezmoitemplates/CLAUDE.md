@@ -22,6 +22,8 @@ Available in `home/.chezmoitemplates/`:
   {{- end }}
   ```
 - `claude-settings-modifier` - The whole body of every persona's `modify_settings.json.tmpl` (all four are the identical line `includeTemplate "claude-settings-modifier" .`). It reads the sibling `.claude-settings.json` — that persona's managed settings in `settings.json`'s own shape; edit that file, not the templates — and merges it into the live `settings.json` (objects by key, arrays as an order-preserving union, so runtime additions survive), retracting whatever was removed from source via the string `_chezmoiManaged`. Its header is the full user guide: where to edit, what apply does, and what not to do. Tested by `tests/test-claude-settings-ledger.sh`; see `openspec/specs/claude-settings-ledger/`.
+- `claude-pattern-a` / `claude-pattern-b` / `claude-pattern-c` - Three flat `permissions`-only JSON blocks — approval-first (deny-heavy), curated allow-list, and sandboxed full-auto (`bypassPermissions`) respectively — stamped into the *current project repo's* `.claude/settings.local.json` by `apply-claude-pattern` (`home/dot_local/bin/executable_apply-claude-pattern.tmpl`), a second axis independent of persona selection and the settings ledger above. See `openspec/specs/claude-repo-permission-patterns/`.
+- `claude-pattern-c-devcontainer` - Companion `devcontainer.json` + `Dockerfile` for Pattern C: non-root user, working-tree-only mount, no host credential paths. Defines the container only; copying it into a repo's `.devcontainer/` and launching it is a manual, separate step. See `openspec/specs/claude-repo-permission-patterns/`.
 
 **Periodic re-execution with time-bucket:**
 ```go-template

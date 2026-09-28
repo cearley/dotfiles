@@ -1,0 +1,33 @@
+{{- /* claude-pattern-c-devcontainer/devcontainer.json — companion container definition for
+     Pattern C (home/.chezmoitemplates/claude-pattern-c). Pattern C's `bypassPermissions`
+     posture is only safe inside an OS/container boundary — this template defines that
+     boundary. It does NOT launch it: copy the rendered devcontainer.json + Dockerfile into
+     the target repo's .devcontainer/ and start it with your own devcontainer tooling (VS
+     Code, the `devcontainer` CLI, etc.). Launching/orchestrating the container at runtime is
+     explicitly out of scope for this change (see design.md's Non-Goals) — a likely follow-up
+     extends the `project-session-manager` skill instead.
+
+     `remoteUser` is a non-root account; `workspaceMount`/`mounts` bind ONLY the target
+     repository's working tree — never $HOME, ~/.ssh, ~/.aws, or any other credential-bearing
+     host path. Do not add host mounts here without re-checking that constraint.
+
+     Not part of the persona settings ledger (claude-settings-ledger/claude-settings-modifier)
+     and not consumed by `apply-claude-pattern` — that tool only stamps the `permissions`
+     JSON block; this container definition is a separate, manually-copied opt-in.
+
+     Test: render and inspect for the absence of any host-credential path, e.g.
+     `chezmoi execute-template < home/.chezmoitemplates/claude-pattern-c-devcontainer/devcontainer.json | jq .`
+     Spec: openspec/specs/claude-repo-permission-patterns/
+*/ -}}
+{
+  "name": "claude-pattern-c-sandbox",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "claude",
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "mounts": [],
+  "remoteEnv": {},
+  "postCreateCommand": "true"
+}

@@ -1,0 +1,170 @@
+{{- /* apply-claude-pattern — stamps a chosen repo-local permission posture (Pattern A/B/C,
+     see home/.chezmoitemplates/claude-pattern-{a,b,c}) into the CURRENT working directory's
+     gitignored .claude/settings.local.json. This is a second, independent axis from persona
+     selection (claude-environments/claude-settings-ledger/claude-settings-modifier) — it
+     never reads or writes anything under a persona settings.json or $CLAUDE_CONFIG_DIR, only
+     ./.claude/settings.local.json relative to wherever it is invoked.
+
+     The three patterns' JSON is baked in at chezmoi-apply time (below) rather than looked up
+     at runtime, so this script has no dependency on chezmoi or the source tree being present
+     on the machine where it runs. Edit home/.chezmoitemplates/claude-pattern-{a,b,c} to change
+     a pattern's content, not this file.
+
+     Merge is an additive union (Decision 3, design.md): existing permissions.allow/ask/deny
+     entries are kept, the chosen pattern's entries are appended if not already present, and
+     only permissions.defaultMode is overwritten. Nothing is retracted on a later run with a
+     different pattern — use --reset for a clean switch. Every other top-level key in
+     settings.local.json (hooks, enabledPlugins, etc.) is left untouched.
+
+     Rendered by chezmoi from
+     {{ .chezmoi.sourceDir }}/dot_local/bin/executable_apply-claude-pattern.tmpl — edit the
+     source template, then `chezmoi apply`.
+
+     Usage: apply-claude-pattern <a|b|c> [--reset] [--i-know-this-is-a-container]
+     Spec: openspec/specs/claude-repo-permission-patterns/
+*/ -}}
+#!/bin/bash
+set -euo pipefail
+
+PATTERN_A='{{ includeTemplate "claude-pattern-a" . | fromJson | toJson }}'
+PATTERN_B='{{ includeTemplate "claude-pattern-b" . | fromJson | toJson }}'
+PATTERN_C='{{ includeTemplate "claude-pattern-c" . | fromJson | toJson }}'
+
+print_usage() {
+    cat <<'EOF'
+Usage: apply-claude-pattern <a|b|c> [--reset] [--i-know-this-is-a-container]
+
+Stamps a permission posture into the CURRENT repo's .claude/settings.local.json:
+  a  Approval-first    (defaultMode prompts; explicit deny list of destructive ops)
+  b  Curated allow-list (defaultMode prompts; a small, reviewed allow list)
+  c  Sandboxed full-auto (defaultMode: bypassPermissions — refused outside a container)
+
+Options:
+  --reset                        Clear permissions.allow/ask/deny before applying the
+                                  selected pattern, instead of unioning with what's there.
+  --i-know-this-is-a-container   Required to apply pattern c when no automatic container
+                                  evidence (/.dockerenv, REMOTE_CONTAINERS, CODESPACES) is
+                                  found. Deliberate override, not a general escape hatch.
+EOF
+}
+
+require_cmd() {
+    if ! command -v "$1" >/dev/null 2>&1; then
+        echo "error: $1 is required but not found on PATH" >&2
+        exit 1
+    fi
+}
+
+# --- argument parsing --------------------------------------------------
+pattern=""
+reset=false
+container_override=false
+
+if [[ $# -eq 0 ]]; then
+    print_usage
+    exit 1
+fi
+
+for arg in "$@"; do
+    case "$arg" in
+    -h | --help)
+        print_usage
+        exit 0
+        ;;
+    --reset)
+        reset=true
+        ;;
+    --i-know-this-is-a-container)
+        container_override=true
+        ;;
+    a | b | c)
+        if [[ -n "$pattern" ]]; then
+            echo "error: only one pattern argument allowed (got '$pattern' and '$arg')" >&2
+            exit 1
+        fi
+        pattern="$arg"
+        ;;
+    *)
+        echo "error: unrecognized argument '$arg'" >&2
+        print_usage
+        exit 1
+        ;;
+    esac
+done
+
+if [[ -z "$pattern" ]]; then
+    echo "error: a pattern argument is required: a, b, or c" >&2
+    print_usage
+    exit 1
+fi
+
+require_cmd jq
+
+# --- Pattern C container-isolation check (Decision 4, design.md) -------
+# Best-effort heuristic, not a security boundary: checked in order, first match wins.
+has_container_evidence() {
+    [[ -e /.dockerenv ]] && return 0
+    [[ -n "${REMOTE_CONTAINERS:-}" ]] && return 0
+    [[ -n "${CODESPACES:-}" ]] && return 0
+    return 1
+}
+
+if [[ "$pattern" == "c" ]]; then
+    if ! has_container_evidence && [[ "$container_override" != true ]]; then
+        cat >&2 <<'EOF'
+error: pattern c (bypassPermissions) refused — no evidence this process is running inside an
+isolated container (checked: /.dockerenv, $REMOTE_CONTAINERS, $CODESPACES).
+
+bypassPermissions on a bare host runs every action with no prompt at all — unsafe outside a
+container boundary. Use the companion devcontainer template
+(home/.chezmoitemplates/claude-pattern-c-devcontainer/) to run inside one, or pass
+--i-know-this-is-a-container if you are deliberately overriding this check.
+EOF
+        exit 1
+    fi
+fi
+
+case "$pattern" in
+a) selected="$PATTERN_A" ;;
+b) selected="$PATTERN_B" ;;
+c) selected="$PATTERN_C" ;;
+esac
+
+# --- stamp into ./.claude/settings.local.json ---------------------------
+# Deliberately relative to $PWD, never $HOME/.claude* or $CLAUDE_CONFIG_DIR: this tool is
+# repo-scoped and must never touch a persona's settings.
+settings_dir=".claude"
+settings_file="${settings_dir}/settings.local.json"
+mkdir -p "$settings_dir"
+
+existing='{}'
+if [[ -f "$settings_file" ]]; then
+    existing=$(cat "$settings_file")
+    [[ -z "$existing" ]] && existing='{}'
+fi
+
+tmp_file=$(mktemp)
+trap 'rm -f "$tmp_file"' EXIT
+
+jq --argjson selected "$selected" --argjson reset "$reset" '
+  (if $reset then (.permissions.allow = [] | .permissions.ask = [] | .permissions.deny = []) else . end) as $base
+  | ($base.permissions.allow // []) as $existingAllow
+  | ($base.permissions.ask // [])   as $existingAsk
+  | ($base.permissions.deny // [])  as $existingDeny
+  | ($selected.permissions.allow // []) as $newAllow
+  | ($selected.permissions.ask // [])   as $newAsk
+  | ($selected.permissions.deny // [])  as $newDeny
+  | ($existingAllow + ($newAllow - $existingAllow)) as $mergedAllow
+  | ($existingAsk   + ($newAsk   - $existingAsk))   as $mergedAsk
+  | ($existingDeny  + ($newDeny  - $existingDeny))  as $mergedDeny
+  | $base
+  | .permissions.defaultMode = $selected.permissions.defaultMode
+  | (if ($mergedAllow | length) > 0 then .permissions.allow = $mergedAllow else . end)
+  | (if ($mergedAsk   | length) > 0 then .permissions.ask   = $mergedAsk   else . end)
+  | (if ($mergedDeny  | length) > 0 then .permissions.deny  = $mergedDeny  else . end)
+' <<<"$existing" >"$tmp_file"
+
+mv "$tmp_file" "$settings_file"
+trap - EXIT
+
+echo "applied pattern $pattern to $settings_file"

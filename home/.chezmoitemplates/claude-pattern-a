@@ -1,0 +1,47 @@
+{{- /* claude-pattern-a — Pattern A: approval-first permission posture.
+
+     Renders a `permissions`-only JSON block: `defaultMode: "default"` (prompts for anything
+     not explicitly allowed) plus an explicit `deny` list covering destructive Bash patterns,
+     sudo, force-push/hard-reset, and credential-file reads (denies always win over allows).
+
+     Consumed only by the `apply-claude-pattern` stamping tool
+     (home/dot_local/bin/executable_apply-claude-pattern.tmpl), which writes this block into
+     the CURRENT project repo's gitignored .claude/settings.local.json — never a persona
+     settings.json (~/.claude, ~/.claude-work, etc.), and never part of the
+     claude-settings-ledger/claude-settings-modifier persona-settings mechanism. Not included
+     via `includeTemplate`
+     by any modify_ script.
+
+     Use for: production/sensitive repos, or any work where every unlisted action should be
+     reviewed before it runs.
+
+     Test: `chezmoi execute-template < home/.chezmoitemplates/claude-pattern-a | jq .`
+     Spec: openspec/specs/claude-repo-permission-patterns/
+*/ -}}
+{
+  "permissions": {
+    "defaultMode": "default",
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(sudo:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git push --force-with-lease:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -f:*)",
+      "Bash(git clean -fd:*)",
+      "Bash(chmod -R 777:*)",
+      "Bash(curl * | sh)",
+      "Bash(curl * | bash)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.config/gh/**)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/*credentials*)",
+      "Read(**/*secret*)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)"
+    ]
+  }
+}

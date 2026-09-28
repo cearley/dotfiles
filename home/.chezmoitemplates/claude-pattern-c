@@ -1,0 +1,27 @@
+{{- /* claude-pattern-c — Pattern C: sandboxed full-auto permission posture.
+
+     Renders a `permissions`-only JSON block containing a single scalar:
+     `defaultMode: "bypassPermissions"` — every action runs without a prompt. This is ONLY
+     safe inside an OS/container boundary (see the companion
+     home/.chezmoitemplates/claude-pattern-c-devcontainer/ template); it is unsafe on a bare
+     host, which is why the `apply-claude-pattern` stamping tool refuses to write this block
+     without evidence of container isolation (see that tool's Decision 4).
+
+     Consumed only by the `apply-claude-pattern` stamping tool
+     (home/dot_local/bin/executable_apply-claude-pattern.tmpl), which writes this block into
+     the CURRENT project repo's gitignored .claude/settings.local.json — never a persona
+     settings.json (~/.claude, ~/.claude-work, etc.), and never part of the
+     claude-settings-ledger/claude-settings-modifier persona-settings mechanism. Not included
+     via `includeTemplate`
+     by any modify_ script.
+
+     Use for: long-running unattended batch tasks, run only inside the companion devcontainer.
+
+     Test: `chezmoi execute-template < home/.chezmoitemplates/claude-pattern-c | jq .`
+     Spec: openspec/specs/claude-repo-permission-patterns/
+*/ -}}
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  }
+}

@@ -1,0 +1,56 @@
+{{- /* claude-pattern-b — Pattern B: curated allow-list permission posture.
+
+     Renders a `permissions`-only JSON block: `defaultMode: "default"` (still prompts for
+     anything not listed below) plus an `allow` list of specific, individually-reasoned
+     safe operations — read-only inspection, version control history/status (never push/
+     reset/clean), and common test/lint/build runners. This is a deliberately small, curated
+     starting point, not a copy of any repo's own hand-accumulated allow-list — see
+     proposal.md's Why for the ~200-entry accretion this pattern exists to replace.
+
+     Consumed only by the `apply-claude-pattern` stamping tool
+     (home/dot_local/bin/executable_apply-claude-pattern.tmpl), which writes this block into
+     the CURRENT project repo's gitignored .claude/settings.local.json — never a persona
+     settings.json (~/.claude, ~/.claude-work, etc.), and never part of the
+     claude-settings-ledger/claude-settings-modifier persona-settings mechanism. Not included
+     via `includeTemplate`
+     by any modify_ script.
+
+     Use for: personal/exploratory repos, where routine read-only and test/lint/build
+     commands shouldn't each need a separate prompt, but anything else still should.
+
+     Test: `chezmoi execute-template < home/.chezmoitemplates/claude-pattern-b | jq .`
+     Spec: openspec/specs/claude-repo-permission-patterns/
+*/ -}}
+{
+  "permissions": {
+    "defaultMode": "default",
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(fd:*)",
+      "Bash(pwd)",
+      "Bash(echo:*)",
+      "Bash(command -v:*)",
+      "Bash(which:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote -v)",
+      "Bash(npm test:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(pytest:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo build:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(go test:*)",
+      "Bash(go build:*)",
+      "Bash(go vet:*)"
+    ]
+  }
+}
