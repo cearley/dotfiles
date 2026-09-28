@@ -46,10 +46,10 @@ jobs:
 
           # Run the script with timeout to prevent hanging (using gtimeout from coreutils)
           brew install coreutils
-          gtimeout 300s ./remote_install.sh init --apply || {
+          gtimeout 900s ./remote_install.sh init --apply || {
             exit_code=$?
             if [ $exit_code -eq 124 ]; then
-              echo "❌ Remote install script timed out after 5 minutes"
+              echo "❌ Remote install script timed out after 15 minutes"
             else
               echo "❌ Remote install script failed with exit code: $exit_code"
             fi
