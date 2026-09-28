@@ -1,0 +1,9 @@
+// oh-my-claudecode user config, read by every persona (project .claude/omc.jsonc wins if present).
+{
+  "keywordDetector": {
+    // Autopilot runs only via explicit /oh-my-claudecode:autopilot. Its keyword trigger has no
+    // stop-word handling, so "cancel autopilot" starts it, leaving a stop hook that blocks.
+    // `cancel` can never be disabled here.
+    "disabled": ["autopilot"]
+  }
+}
