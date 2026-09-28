@@ -19,7 +19,7 @@ print_message "info" "Installing packages using Homebrew..."
 {{ $icloudSignedIn := ne $icloudAccountId "" -}}
 warn_icloud_not_signed_in || true
 
-{{- $tapGroups := includeTemplate "package-layer-items" (merge (dict "key" "taps") .) | fromJson -}}
+{{ $tapGroups := includeTemplate "package-layer-items" (merge (dict "key" "taps") .) | fromJson -}}
 {{- $brewGroups := includeTemplate "package-layer-items" (merge (dict "key" "brews") .) | fromJson -}}
 {{- $caskGroups := includeTemplate "package-layer-items" (merge (dict "key" "casks") .) | fromJson -}}
 {{- $masGroups := includeTemplate "package-layer-items" (merge (dict "key" "mas") .) | fromJson -}}
