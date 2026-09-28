@@ -21,7 +21,16 @@
      Spec: openspec/specs/claude-repo-permission-patterns/
 */ -}}
 {
+  "_comment": "Pattern C: do NOT paste this into ~/.claude/settings.json on a bare host OS. This config is only safe inside a container, devcontainer, or dedicated VM where the OS user, network egress filter, and filesystem mount are doing the containment. On a host OS this would let the agent run arbitrary shell with full filesystem write.",
   "permissions": {
-    "defaultMode": "bypassPermissions"
+    "defaultMode": "bypassPermissions",
+    "allow": ["Bash(*)", "Read(**)", "Write(**)"],
+    "deny": []
   }
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+    "OTEL_METRICS_EXPORTER": "otlp"
+  },
+  "apiKeyHelper": "/usr/local/bin/claudebot-fetch-token.sh",
+  "cleanupPeriodDays": 7
 }

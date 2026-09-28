@@ -22,26 +22,23 @@
   "permissions": {
     "defaultMode": "default",
     "deny": [
-      "Bash(rm -rf:*)",
-      "Bash(sudo:*)",
-      "Bash(git push --force:*)",
-      "Bash(git push -f:*)",
-      "Bash(git push --force-with-lease:*)",
-      "Bash(git reset --hard:*)",
-      "Bash(git clean -f:*)",
-      "Bash(git clean -fd:*)",
-      "Bash(chmod -R 777:*)",
-      "Bash(curl * | sh)",
-      "Bash(curl * | bash)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~)",
+      "Bash(rm -rf $HOME*)",
+      "Bash(sudo *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./secrets/**)",
+      "Read(~/.aws/credentials)",
       "Read(~/.ssh/**)",
-      "Read(~/.aws/**)",
-      "Read(~/.config/gh/**)",
-      "Read(**/.env)",
-      "Read(**/.env.*)",
-      "Read(**/*credentials*)",
-      "Read(**/*secret*)",
-      "Read(**/*.pem)",
-      "Read(**/*.key)"
+      "Write(./.git/**)",
+      "WebFetch"
+    ],
+    "ask": [
+      "Bash(*)",
+      "Write(**)"
     ]
   }
 }
