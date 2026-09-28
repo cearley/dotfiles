@@ -1,0 +1,29 @@
+#!/bin/bash
+
+curl -X POST https://openrouter.ai/api/v1/systemone \
+  -H "authorization: Bearer {{ keepassxcAttribute "OpenRouter" "TypeSafe Key" | shellQuote }}" \
+  -H "content-type: application/json" \
+  -d '{
+    "model": "~typesafe/jev-latest",
+    "state": {},
+    "questions": {
+      "tier": {
+        "type": "choice",
+        "instructions": "Which is the cheapest tier that can complete this coding task well?",
+        "criteria": {
+          "fast": "Mechanical and local work.",
+          "balanced": "Ordinary engineering work.",
+          "deep": "Hard or high-stakes work."
+        }
+      },
+      "effort": {
+        "type": "score",
+        "instructions": "How much step-by-step reasoning does this task need?",
+        "criteria": ["almost none", "some", "a lot", "as much as possible"]
+      },
+      "risky": {
+        "type": "noul",
+        "instructions": "Would this task change production, move real money, or alter unrecoverable data?"
+      }
+    }
+  }'
