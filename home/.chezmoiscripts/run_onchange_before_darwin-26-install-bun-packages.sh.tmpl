@@ -12,8 +12,10 @@ if ! require_tools bun; then
 fi
 
 print_message "info" "Installing global packages using bun..."
-# Update outdated dependencies first
-bun update -g
+# Update outdated dependencies first (bun exits 1 with "No package.json, so
+# nothing to update" when there are no global packages yet, e.g. a fresh
+# machine — not a real failure)
+bun update -g || true
 {{- $groups := includeTemplate "package-layer-items" (merge (dict "key" "bun") .) | fromJson }}
 {{- range $groups }}
 # Install {{ .category }} bun packages
