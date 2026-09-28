@@ -11,6 +11,19 @@
      See openspec/specs/sops-age-encryption/ for the full design (key
      custody, .sops.yaml scoping, encrypted-file naming convention).
 
+     Ordering constraint: chezmoi renders every .tmpl target during Read(),
+     before it runs any script — so a run_onchange_ script's numeric position
+     (e.g. the age-key installer at darwin-43) does NOT guarantee it has run
+     before a template calling this partial is rendered in the same apply.
+     A consumer whose plaintext depends on an age key that a script installs
+     must not let a missing key hard-fail this partial (aborting Read() for
+     the entire apply); instead, guard the consuming target with a
+     .chezmoiignore.tmpl conditional keyed on the key file's presence
+     (`{{ if not (stat $ageKeyPath) }}`), following the Cloudflare Tunnel
+     cert.pem/credentials-JSON guard in home/.chezmoiignore.tmpl. See
+     openspec/changes/harden-chezmoi-bootstrap-and-permissions/design.md
+     Decision 2.
+
      Parameters (pass as dict merged with root context):
      - file (required): Path to the SOPS-encrypted source file, relative to
        .chezmoi.sourceDir (e.g. "private_dot_cloudflared/cert.pem.sops").

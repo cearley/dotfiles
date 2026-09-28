@@ -11,11 +11,23 @@
      repository's working tree — never $HOME, ~/.ssh, ~/.aws, or any other credential-bearing
      host path. Do not add host mounts here without re-checking that constraint.
 
+     `.claude/` gets its own named Docker volume, layered on top of the working-tree bind mount
+     (`mounts` entries apply after `workspaceMount`, so this shadows the bind-mounted `.claude/`
+     subtree). This closes a host-leak: without it, `.claude/settings.local.json` written inside
+     the container by `apply-claude-pattern c` is the same inode as the one on the host checkout,
+     so Pattern C's `bypassPermissions` posture would silently persist for host (non-container)
+     Claude Code sessions after the container exits. With the volume, anything written under
+     `.claude/` inside the container lives only in that volume and never reaches the host
+     checkout — see design.md Decision 3. `apply-claude-pattern c` independently verifies this
+     isolation at write time (checks `/proc/self/mountinfo`) before writing, and refuses if a
+     hand-rolled container config bind-mounts `.claude/` instead of using a distinct volume.
+
      Not part of the persona settings ledger (claude-settings-ledger/claude-settings-modifier)
      and not consumed by `apply-claude-pattern` — that tool only stamps the `permissions`
      JSON block; this container definition is a separate, manually-copied opt-in.
 
-     Test: render and inspect for the absence of any host-credential path, e.g.
+     Test: render and inspect for the absence of any host-credential path, and confirm `mounts`
+     includes a `.claude`-scoped volume entry distinct from `workspaceMount`, e.g.
      `chezmoi execute-template < home/.chezmoitemplates/claude-pattern-c-devcontainer/devcontainer.json | jq .`
      Spec: openspec/specs/claude-repo-permission-patterns/
 */ -}}
@@ -27,7 +39,9 @@
   "remoteUser": "claude",
   "workspaceFolder": "/workspace",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
-  "mounts": [],
+  "mounts": [
+    "source=claude-pattern-c-dotclaude,target=${containerWorkspaceFolder}/.claude,type=volume"
+  ],
   "remoteEnv": {},
   "postCreateCommand": "true"
 }

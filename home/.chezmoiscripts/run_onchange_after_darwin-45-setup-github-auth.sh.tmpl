@@ -16,8 +16,8 @@ fi
 GITHUB_TOKEN_IN_ENV="${GITHUB_TOKEN:-}"
 
 # Get credentials from KeePassXC
-GITHUB_USERNAME={{ .gh_username | quote }}
-GH_PAT={{ keepassxcAttribute "GitHub" "Access Token" | quote }}
+GITHUB_USERNAME={{ .gh_username | shellQuote }}
+GH_PAT={{ keepassxcAttribute "GitHub" "Access Token" | shellQuote }}
 
 print_message "info" "Setting up GitHub authentication..."
 

@@ -162,6 +162,12 @@ persona never implies or constrains which pattern, if any, is stamped into a giv
 three patterns themselves live at
 `{{ $sourceDir }}/.chezmoitemplates/claude-pattern-{a,b,c}`, plus a companion Pattern C
 devcontainer definition at `{{ $sourceDir }}/.chezmoitemplates/claude-pattern-c-devcontainer/`.
+That devcontainer backs `.claude/` with its own named Docker volume, layered on top of the
+working-tree bind mount, so a `bypassPermissions` write inside the container never lands on the
+host checkout; `apply-claude-pattern c` independently verifies this isolation via
+`/proc/self/mountinfo` before writing and refuses (distinct from its bare-host refusal) if
+`.claude/` is only an ordinary subdirectory of the bind-mounted tree — e.g. a hand-rolled
+container config that skips the devcontainer template's volume mount.
 See `openspec/specs/claude-repo-permission-patterns/` for the full spec; `claude-environments`
 and `claude-settings-ledger` (referenced above) remain the identity axis, untouched by this.
 

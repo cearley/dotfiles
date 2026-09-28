@@ -109,6 +109,38 @@ has_container_evidence() {
     return 1
 }
 
+# --- Pattern C .claude/ mount-isolation check (Decision 3, design.md) --
+# Independent of has_container_evidence above: confirms ./.claude is backed by its own mount,
+# distinct from the working tree's, so a write inside a container's .claude/ cannot leak onto
+# the host checkout via a whole-tree bind mount (see claude-pattern-c-devcontainer's header).
+# Best-effort heuristic, not a security boundary. Linux-only (/proc/self/mountinfo); refuses on
+# any other platform since isolation cannot be verified there.
+mount_point_for() {
+    # Prints the mount point governing the given existing path: the mountinfo entry (5th field)
+    # whose mount point is the longest prefix of the path's realpath.
+    local target
+    target=$(cd "$1" && pwd -P)
+    awk -v target="$target" '
+        {
+            mp = $5
+            matches = (mp == target) || (index(target, mp"/") == 1) || (mp == "/")
+            if (matches && length(mp) > length(best)) { best = mp }
+        }
+        END { print best }
+    ' /proc/self/mountinfo
+}
+
+has_claude_dir_isolation() {
+    [[ -r /proc/self/mountinfo ]] || return 1
+    mkdir -p "$settings_dir"
+    local cwd_mp claude_mp
+    cwd_mp=$(mount_point_for .)
+    claude_mp=$(mount_point_for "$settings_dir")
+    [[ -n "$claude_mp" ]] && [[ "$claude_mp" != "$cwd_mp" ]]
+}
+
+settings_dir=".claude"
+
 if [[ "$pattern" == "c" ]]; then
     if ! has_container_evidence && [[ "$container_override" != true ]]; then
         cat >&2 <<'EOF'
@@ -122,6 +154,24 @@ container boundary. Use the companion devcontainer template
 EOF
         exit 1
     fi
+
+    if ! has_claude_dir_isolation; then
+        cat >&2 <<'EOF'
+error: pattern c (bypassPermissions) refused — ./.claude is not isolated from the host checkout.
+
+Container evidence was found (or --i-know-this-is-a-container was passed), but ./.claude does
+not resolve to its own mount point distinct from the working tree's (checked via
+/proc/self/mountinfo, or that file is unreadable so isolation cannot be verified at all). If the
+working tree is bind-mounted as a whole and .claude/ is just an ordinary subdirectory of it, a
+write here would leave the bypassPermissions posture in place on the HOST checkout after the
+container exits.
+
+Fix: use the companion devcontainer template
+(home/.chezmoitemplates/claude-pattern-c-devcontainer/), whose `mounts` entry backs .claude/
+with its own Docker volume, layered on top of the working-tree bind mount.
+EOF
+        exit 1
+    fi
 fi
 
 case "$pattern" in
@@ -132,8 +182,8 @@ esac
 
 # --- stamp into ./.claude/settings.local.json ---------------------------
 # Deliberately relative to $PWD, never $HOME/.claude* or $CLAUDE_CONFIG_DIR: this tool is
-# repo-scoped and must never touch a persona's settings.
-settings_dir=".claude"
+# repo-scoped and must never touch a persona's settings. ($settings_dir is set earlier, near the
+# pattern-c isolation check, since that check also needs it.)
 settings_file="${settings_dir}/settings.local.json"
 mkdir -p "$settings_dir"
 

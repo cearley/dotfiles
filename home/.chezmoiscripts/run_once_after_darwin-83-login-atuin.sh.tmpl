@@ -41,10 +41,10 @@ print_message "info" "Logging in to atuin sync..."
 if [ "$(atuin key)" != "$key" ]; then
     print_message "info" "Re-keying atuin store..."
     atuin store purge >/dev/null 2>&1 || true
-    atuin store rekey {{ $key | quote }} >/dev/null 2>&1 || true
+    atuin store rekey {{ $key | shellQuote }} >/dev/null 2>&1 || true
 fi
 
-login_output=$(atuin login -u {{ $username | quote }} -p {{ $password | quote }} -k {{ $key | quote }} 2>&1)
+login_output=$(atuin login -u {{ $username | shellQuote }} -p {{ $password | shellQuote }} -k {{ $key | shellQuote }} 2>&1)
 login_status=$?
 
 if [ $login_status -eq 0 ]; then

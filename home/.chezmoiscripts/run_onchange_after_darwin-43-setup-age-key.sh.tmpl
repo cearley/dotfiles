@@ -29,4 +29,5 @@ AGE_KEY_EOF
 chmod 600 "$KEY_FILE"
 
 print_message "success" "age private key installed at $KEY_FILE"
+print_message "tip" "Any SOPS-encrypted target skipped on this run (e.g. Cloudflare Tunnel cert.pem) will apply on the next chezmoi apply"
 {{ end -}}

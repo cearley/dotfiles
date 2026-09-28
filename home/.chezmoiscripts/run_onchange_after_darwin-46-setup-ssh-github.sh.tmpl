@@ -31,10 +31,10 @@ if ! require_tools gh ssh-keygen ssh-add; then
 fi
 
 # Template-baked constants
-MACHINE_NAME={{ $machineName | quote }}
-SSH_ENTRY_NAME={{ $sshEntryName | quote }}
+MACHINE_NAME={{ $machineName | shellQuote }}
+SSH_ENTRY_NAME={{ $sshEntryName | shellQuote }}
 {{- if $sshEntryName }}
-SSH_PASSPHRASE={{ $sshPassphrase | quote }}
+SSH_PASSPHRASE={{ $sshPassphrase | shellQuote }}
 {{- else }}
 SSH_PASSPHRASE=""
 {{- end }}

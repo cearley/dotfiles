@@ -13,10 +13,10 @@ if ! require_tools git; then
 fi
 
 # Get credentials from KeePassXC
-AZURE_ORG={{ .azure_devops_org | quote }}
-AZURE_USERNAME={{ .azure_devops_username | quote }}
-AZURE_PAT={{ keepassxcAttribute "Azure DevOps (Willdan)" "Access Token" | quote }}
-AZURE_ACR_REGISTRIES={{ .azure_acr_registries | quote }}
+AZURE_ORG={{ .azure_devops_org | shellQuote }}
+AZURE_USERNAME={{ .azure_devops_username | shellQuote }}
+AZURE_PAT={{ keepassxcAttribute "Azure DevOps (Willdan)" "Access Token" | shellQuote }}
+AZURE_ACR_REGISTRIES={{ .azure_acr_registries | shellQuote }}
 
 print_message "info" "Setting up Azure DevOps authentication (work account)..."
 

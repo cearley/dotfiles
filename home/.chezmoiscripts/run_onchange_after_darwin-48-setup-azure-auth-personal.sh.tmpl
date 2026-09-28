@@ -14,9 +14,9 @@ if ! require_tools git; then
 fi
 
 # Get credentials from KeePassXC
-AZURE_ORG_PERSONAL={{ .azure_devops_org_personal | quote }}
-AZURE_USERNAME_PERSONAL={{ .azure_devops_username_personal | quote }}
-AZURE_PAT_PERSONAL={{ keepassxcAttribute "Azure DevOps (CES)" "Access Token" | quote }}
+AZURE_ORG_PERSONAL={{ .azure_devops_org_personal | shellQuote }}
+AZURE_USERNAME_PERSONAL={{ .azure_devops_username_personal | shellQuote }}
+AZURE_PAT_PERSONAL={{ keepassxcAttribute "Azure DevOps (CES)" "Access Token" | shellQuote }}
 
 print_message "info" "Setting up Azure DevOps authentication (personal account)..."
 
