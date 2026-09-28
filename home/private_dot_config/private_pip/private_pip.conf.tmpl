@@ -1,12 +1,30 @@
 {{- $gh_pip := and (ne .gh_packages_owner "") (ne .gh_pip_index "") -}}
 {{- $azure_pip := and (has "work" .tags) (ne .azure_devops_org "") (ne .azure_pip_index "") -}}
 {{- if and .has_keepassxc_db (or $gh_pip $azure_pip) -}}
-[global]
-extra-index-url =
+# This file intentionally has NO [global]/extra-index-url entry.
+#
+# A machine-wide extra-index-url applies to every `pip install`, not just
+# ones meant to hit a private index -- if a public PyPI package shares a
+# name with one of the private packages below, pip's extra-index-url
+# resolution can silently select the public one (dependency confusion).
+# A plain `pip install <name>` on this machine must never consult a
+# private index implicitly.
+#
+# To install from a private index, opt in explicitly per invocation:
+#
+#   pip install --index-url <url> <package>
+#     -- or, for a single call --
+#   PIP_INDEX_URL=<url> pip install <package>
+#
+# Known private indexes for this machine:
 {{- if $gh_pip }}
-    https://{{ .gh_username }}:{{ keepassxcAttribute "GitHub" "Access Token" }}@{{ .gh_pip_index }}
+#
+#   GitHub Packages:
+#   https://{{ .gh_username }}:{{ keepassxcAttribute "GitHub" "Access Token" }}@{{ .gh_pip_index }}
 {{- end }}
 {{- if $azure_pip }}
-    https://{{ .azure_devops_username }}:{{ keepassxcAttribute "Azure DevOps (Willdan)" "Access Token" }}@{{ .azure_pip_index }}
+#
+#   Azure Artifacts (work):
+#   https://{{ .azure_devops_username }}:{{ keepassxcAttribute "Azure DevOps (Willdan)" "Access Token" }}@{{ .azure_pip_index }}
 {{- end }}
 {{ end -}}

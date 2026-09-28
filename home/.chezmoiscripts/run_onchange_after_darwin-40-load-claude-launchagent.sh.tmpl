@@ -21,14 +21,22 @@ set -euo pipefail
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
 
 {{- $claudeDefault := index $settings "claude_default" }}
+PLIST="$HOME/Library/LaunchAgents/{{ .reverse_dns }}.claude-config-dir.plist"
+LABEL="{{ .reverse_dns }}.claude-config-dir"
+
 {{- if not $claudeDefault }}
 
-print_message "skip" "No claude_default configured for this machine — skipping LaunchAgent setup"
+if [ -f "$PLIST" ]; then
+    print_message "info" "claude_default removed — tearing down stale LaunchAgent ($LABEL)..."
+    launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+    rm -f "$PLIST"
+    print_message "success" "Removed stale LaunchAgent and plist ($PLIST)"
+else
+    print_message "skip" "No claude_default configured for this machine — skipping LaunchAgent setup"
+fi
 exit 0
 {{- end }}
 
-PLIST="$HOME/Library/LaunchAgents/{{ .reverse_dns }}.claude-config-dir.plist"
-LABEL="{{ .reverse_dns }}.claude-config-dir"
 CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
 
 print_message "info" "Bootstrapping Claude config LaunchAgent ($LABEL)..."

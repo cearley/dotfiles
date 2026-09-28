@@ -76,7 +76,12 @@ fi
 
 # Build a temporary chezmoi config from the current config, overriding the
 # keepassxc section so the mock is used instead of the real CLI.
-TEST_CONFIG=$(mktemp /tmp/chezmoi-test-XXXXXX.json)
+# BSD mktemp (macOS) only randomizes a trailing run of X's -- a literal
+# suffix after them (e.g. ".json") is not recognized as a template, so it
+# returns the same unrandomized name every time and concurrent invocations
+# collide. The config format is set explicitly via --config-format below,
+# so no file extension is needed here.
+TEST_CONFIG=$(mktemp "${TMPDIR:-/tmp}/chezmoi-test-XXXXXX")
 trap 'rm -f "$TEST_CONFIG"' EXIT
 
 chezmoi dump-config --format json | jq \

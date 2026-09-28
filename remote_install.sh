@@ -53,6 +53,15 @@ case "$(uname -s)" in
     ;;
 esac
 
+# If REPO points at an existing local chezmoi source checkout (e.g. CI's
+# own checkout of this repo), use it directly instead of letting chezmoi
+# clone a fresh, disconnected copy. chezmoi only clones when it finds no
+# Git repository at the source path, so an already-checked-out $REPO is
+# used as-is.
+if [ -n "${REPO:-}" ]; then
+    set -- --source "$REPO" "$@"
+fi
+
 # Replace current shell process with chezmoi, passing through all arguments
 # This is more efficient than spawning a subprocess and ensures proper signal handling
 exec "$chezmoi" "$@"

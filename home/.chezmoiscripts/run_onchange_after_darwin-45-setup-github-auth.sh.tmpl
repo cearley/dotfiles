@@ -110,11 +110,14 @@ setup_maven_github() {
 
 setup_pip_github() {
     {{- if and (ne .gh_packages_owner "") (ne .gh_pip_index "") }}
-    print_message "info" "Configuring pip for GitHub Packages"
+    print_message "info" "Checking pip GitHub Packages index instructions"
 
-    # Note: pip.conf is created/updated by template file
+    # Note: pip.conf is created/updated by template file. It documents the
+    # private-index URL for explicit per-invocation use only (--index-url /
+    # PIP_INDEX_URL) -- it does not configure pip globally, so a plain
+    # `pip install <name>` never consults it (dependency-confusion guard).
     if [ -f "$HOME/.config/pip/pip.conf" ]; then
-        print_message "success" "pip configured for GitHub Packages"
+        print_message "success" "pip GitHub Packages index instructions available at ~/.config/pip/pip.conf (per-invocation use only, not global)"
     else
         print_message "warning" "pip configuration file not found (will be created by chezmoi)"
     fi

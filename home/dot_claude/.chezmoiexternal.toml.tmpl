@@ -1,6 +1,6 @@
 {{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
 {{- $modFile := dict "type" "file" "refreshPeriod" "168h" -}}
-{{- $modBase := "https://raw.githubusercontent.com/davila7/claude-code-templates/main/cli-tool/components/mods/productivity/jev-model-router" -}}
+{{- $modBase := "https://raw.githubusercontent.com/davila7/claude-code-templates/c3a74d3ef9ed8076eeb1e3370cc0fc0cc398bdfa/cli-tool/components/mods/productivity/jev-model-router" -}}
 
 # jev-model-router: chezmoi vendors these files and the non-secret
 # pluginConfigs["jev-model-router@skills-dir"].options in each persona's
@@ -14,6 +14,14 @@
 # The pluginConfigs key MUST be the full loaded id ("<name>@skills-dir"),
 # not the bare mod name — Claude Code silently ignores options declared
 # under the bare name (see design.md's 2026-09-26 correction).
+#
+# $modBase is pinned to a commit SHA, not "main" — this is executable content
+# (hooks run on every tool call), so an upstream compromise or breaking
+# change must not land via a plain `chezmoi apply`. See
+# openspec/specs/external-dependency-pinning/ for the requirement and the
+# update procedure (resolve the new HEAD SHA with `git ls-remote
+# https://github.com/davila7/claude-code-templates.git main`, then replace
+# the SHA segment in $modBase above).
 
 ["skills/jev-model-router/.claude-plugin/plugin.json"]
     {{- toToml $modFile | nindent 4 }}

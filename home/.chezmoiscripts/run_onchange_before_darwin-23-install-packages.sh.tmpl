@@ -11,6 +11,8 @@ if ! require_tools brew; then
     exit 1
 fi
 
+any_failed=0
+
 print_message "info" "Installing packages using Homebrew..."
 
 {{ $icloudAccountId := includeTemplate "icloud-account-id" . | trim -}}
@@ -112,6 +114,7 @@ brew {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ en
 BUNDLE_EOF
 
 if [ "$brew_exit" -ne 0 ]; then
+    any_failed=1
     print_message "warning" "brew bundle completed with errors — some packages may not be installed."
     print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
 fi
@@ -168,6 +171,7 @@ mas {{ . }}
 MAS_EOF
 
     if [ "$mas_exit" -ne 0 ]; then
+        any_failed=1
         print_message "warning" "brew bundle (mas) completed with errors — some packages may not be installed."
         print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
     fi
@@ -177,4 +181,8 @@ fi
 {{ if not $icloudSignedIn -}}
 print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
 {{ end -}}
+
+if [ "$any_failed" -eq 1 ]; then
+    exit 1
+fi
 {{ end -}}

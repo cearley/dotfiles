@@ -15,23 +15,38 @@ jobs:
           # Test the remote install script as a user would on a new macOS machine
           # This simulates running: sh -c "$(curl -fsSL https://raw.githubusercontent.com/cearley/dotfiles/remote_install.sh)"
           
-          # Create minimal chezmoi data file to prevent prompting
+          # Create minimal chezmoi data file to prevent prompting.
+          # Must cover every promptStringOnce key in home/.chezmoi.toml.tmpl
+          # (see `grep -n promptStringOnce home/.chezmoi.toml.tmpl`) -- a
+          # missing key makes chezmoi try to open a TTY and hang/fail here.
           mkdir -p "$HOME/.config/chezmoi"
           cat > "$HOME/.config/chezmoi/chezmoi.toml" << 'EOF'
           [data]
               fullname = "CI Test"
-              gh_commit_email = "ci@example.com"
               gh_username = "cearley"
+              reverse_dns = "io.github.cearley"
+              gh_commit_email = "ci@example.com"
+              gh_commit_email_primary_work = "ci-work@example.com"
+              microsoft_email = ""
+              gh_packages_owner = ""
+              gh_npm_registry = ""
+              gh_nuget_source = ""
+              gh_maven_repository = ""
+              gh_pip_index = ""
+              aws_secrets_manager_profile = "default"
+              aws_secrets_manager_region = "us-east-1"
               keepassxc_db = "~/.local/share/chezmoi/keepassxc.kdbx"
+              azure_devops_org = ""
+              azure_devops_org_personal = ""
               tags = [
                   "macos",
                   "work"
               ]
           EOF
-          
+
           # Run the script with timeout to prevent hanging (using gtimeout from coreutils)
           brew install coreutils
-          gtimeout 300s ./remote_install.sh init || {
+          gtimeout 300s ./remote_install.sh init --apply || {
             exit_code=$?
             if [ $exit_code -eq 124 ]; then
               echo "❌ Remote install script timed out after 5 minutes"
@@ -52,11 +67,25 @@ jobs:
             exit 1
           fi
           echo "✅ chezmoi is installed: $(chezmoi --version)"
-          
-          # Verify that chezmoi source directory exists
-          if [ ! -d "$HOME/.local/share/chezmoi" ]; then
-            echo "❌ chezmoi source directory was not created"
+
+          # Verify that chezmoi used this checkout as its source directory
+          # (not a freshly-cloned/disconnected copy at the default location).
+          # --source must be passed explicitly here too: chezmoi does not
+          # persist it, it's a per-invocation flag, same as remote_install.sh.
+          actual_source="$(chezmoi --source "$REPO" source-path)"
+          expected_source="$REPO/home"
+          if [ "$actual_source" != "$expected_source" ]; then
+            echo "❌ chezmoi source directory is '$actual_source', expected this checkout at '$expected_source'"
             exit 1
           fi
-          echo "✅ chezmoi source directory exists"
+          echo "✅ chezmoi source directory is this checkout ($actual_source)"
+
+          # Verify apply actually rendered and wrote this checkout's home/ tree
+          if [ ! -f "$HOME/.gitconfig" ]; then
+            echo "❌ ~/.gitconfig was not applied from this checkout's home/ tree"
+            exit 1
+          fi
+          echo "✅ this checkout's home/ tree was applied to the destination"
+        env:
+          REPO: ${{github.workspace}}
 

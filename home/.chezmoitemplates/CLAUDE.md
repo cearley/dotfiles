@@ -38,3 +38,7 @@ Used to force `chezmoi apply` to rerun a script on a schedule even when source f
 ```
 
 See `openspec/specs/machine-config/` for complete machine configuration system documentation.
+
+## External Dependencies (`.chezmoiexternal.toml.tmpl`)
+
+Not in this directory, but governed by the same "edit the source, not the deployed copy" discipline: `home/.chezmoiexternal.toml.tmpl` (oh-my-zsh plugins/theme, `zsh-llm-suggestions`/`freshbooks-mcp-server`/`zsh-functions`) and `home/dot_claude/.chezmoiexternal.toml.tmpl` (`jev-model-router` mod files). Every entry there is executable or sourced content (shell plugins, hook scripts, an MCP server), so each is pinned to a commit SHA in its URL, never a mutable branch (`master`/`main`) — a plain `chezmoi apply` must not be able to pull in an unreviewed upstream change. `git-repo`-type externals have no native ref-pinning field in chezmoi v2.72.2 (and a periodic `git pull` on `refreshPeriod` would fast-forward past a manual checkout pin anyway), so those are vendored as pinned `archive` tarballs instead. To bump a pin: resolve the new HEAD SHA with `git ls-remote <repo-url> <branch>`, then replace the SHA segment in the affected URL(s). See `openspec/specs/external-dependency-pinning/` for the full requirement.

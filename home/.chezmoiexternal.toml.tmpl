@@ -1,51 +1,69 @@
 {{- if eq .chezmoi.os "darwin" }}
 {{- $zshPlugin := dict "type" "archive" "exact" true "stripComponents" 1 "refreshPeriod" "168h" -}}
 
+{{/*
+Executable externals are pinned by design: every archive URL below names a
+commit SHA, never a mutable branch (master/main), so an upstream compromise
+or breaking change cannot land via a plain `chezmoi apply` — bumping a pin is
+a deliberate, reviewed edit to this file. See
+openspec/specs/external-dependency-pinning/ for the full requirement and the
+update procedure (resolve the new HEAD SHA with `git ls-remote <url>
+<branch>`, then replace the SHA segment in the tarball URL below).
+chezmoi's `git-repo` external type has no ref/commit-pinning attribute (only
+`clone.args`/`pull.args`, and a periodic `git pull` on refreshPeriod would
+fast-forward past any checkout pin anyway), so the three repos that would
+otherwise be `git-repo` externals (zsh-llm-suggestions, freshbooks-mcp-server,
+zsh-functions) are vendored as pinned `archive` tarballs instead, same as
+everything else here.
+*/}}
 [".oh-my-zsh"]
     {{- toToml $zshPlugin | nindent 4 }}
-    url = "https://github.com/ohmyzsh/ohmyzsh/archive/master.tar.gz"
+    url = "https://github.com/ohmyzsh/ohmyzsh/archive/83a0ec79ee3b1f64c6ae2e80dcb1fb27a55e5952.tar.gz"
 
 [".oh-my-zsh/custom/plugins/fast-syntax-highlighting"]
     {{- toToml $zshPlugin | nindent 4 }}
-    url = "https://github.com/zdharma-continuum/fast-syntax-highlighting/archive/master.tar.gz"
+    url = "https://github.com/zdharma-continuum/fast-syntax-highlighting/archive/4672ad5dd9ad68a7effc1476d65afb7c584ce2b3.tar.gz"
 
 [".oh-my-zsh/custom/plugins/zsh-autocomplete"]
     {{- toToml $zshPlugin | nindent 4 }}
-    url = "https://github.com/marlonrichert/zsh-autocomplete/archive/master.tar.gz"
+    url = "https://github.com/marlonrichert/zsh-autocomplete/archive/77706d4cf24866bf62b865d97e9ef7d8bc38bd6e.tar.gz"
 
 [".oh-my-zsh/custom/plugins/zsh-autosuggestions"]
     {{- toToml $zshPlugin | nindent 4 }}
-    url = "https://github.com/zsh-users/zsh-autosuggestions/archive/master.tar.gz"
+    url = "https://github.com/zsh-users/zsh-autosuggestions/archive/85919cd1ffa7d2d5412f6d3fe437ebdbeeec4fc5.tar.gz"
 
 [".oh-my-zsh/custom/plugins/zsh-claude-env"]
     {{- toToml $zshPlugin | nindent 4 }}
-    url = "https://github.com/cearley/zsh-claude-env/archive/main.tar.gz"
+    url = "https://github.com/cearley/zsh-claude-env/archive/668833fe076f21534bbf9ceed3e53da11339c590.tar.gz"
 
 [".oh-my-zsh/custom/plugins/zsh-defer"]
     {{- toToml $zshPlugin | nindent 4 }}
-    url = "https://github.com/romkatv/zsh-defer/archive/master.tar.gz"
+    url = "https://github.com/romkatv/zsh-defer/archive/53a26e287fbbe2dcebb3aa1801546c6de32416fa.tar.gz"
 
 [".oh-my-zsh/custom/themes/powerlevel10k"]
     {{- toToml $zshPlugin | nindent 4 }}
-    url = "https://github.com/romkatv/powerlevel10k/archive/master.tar.gz"
+    url = "https://github.com/romkatv/powerlevel10k/archive/d05a1b00f9a61f9578bf9dc19b8451942dde8734.tar.gz"
 
 {{ if and (has "ai" .tags) (has "dev" .tags) -}}
 [".local/share/zsh-llm-suggestions"]
-    type = "git-repo"
-    url = "https://github.com/cearley/zsh-llm-suggestions.git"
+    type = "archive"
     exact = true
+    stripComponents = 1
     refreshPeriod = "24h"
+    url = "https://github.com/cearley/zsh-llm-suggestions/archive/73fee019a63843beebad7e31cd3be47148ddece9.tar.gz"
 
 [".local/share/freshbooks-mcp-server"]
-    type = "git-repo"
-    url = "https://github.com/bitovi/freshbooks-mcp-server.git"
+    type = "archive"
     exact = true
+    stripComponents = 1
     refreshPeriod = "720h"
+    url = "https://github.com/bitovi/freshbooks-mcp-server/archive/a111a76fef66b2899f4a051b9f604c6dc7c45a98.tar.gz"
 {{- end }}
 
 [".local/share/zsh-functions"]
-    type = "git-repo"
-    url = "https://github.com/cearley/zsh-functions.git"
+    type = "archive"
     exact = true
+    stripComponents = 1
     refreshPeriod = "24h"
+    url = "https://github.com/cearley/zsh-functions/archive/3fe6281cde63ee899f6dd9d6a3e192ade9678e9e.tar.gz"
 {{- end }}

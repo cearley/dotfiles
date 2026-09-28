@@ -13,6 +13,22 @@ set -euo pipefail
 source "{{ $sourceDir }}/scripts/shared-utils.sh"
 
 PACKAGES_YAML="{{ $sourceDir }}/.chezmoidata/packages.yaml"
+
+# Machine-specific Brewfile (script 28's darwin-28-brew-bundle-install source),
+# resolved the same way that script does, so packages declared only there
+# aren't reported as Homebrew orphans.
+{{ $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $brewfile := index $settings "brewfile" -}}
+{{- if $brewfile -}}
+  {{- $brewfilePath := printf "%s/brewfiles/%s" $sourceDir $brewfile -}}
+  {{- if stat $brewfilePath -}}
+BREWFILE="{{ $brewfilePath }}"
+  {{- else -}}
+BREWFILE=""
+  {{- end -}}
+{{- else -}}
+BREWFILE=""
+{{- end }}
 STRICT=false
 TOTAL_ORPHANS=0
 MANAGERS_WITH_ORPHANS=0
@@ -111,6 +127,19 @@ declared_for() {
 declared_for_agent() {
     local agent="$1" key="$2"
     yq ".packages.darwin.ai.agents.${agent}.${key}[]?" "$PACKAGES_YAML" 2>/dev/null | sort -u
+}
+
+# ---------------------------------------------------------------------------
+# Collect entries of a given Brewfile DSL keyword (brew/cask/tap) from the
+# machine-specific Brewfile, if one is configured and exists. The Brewfile
+# format is a constrained DSL (brew bundle dump output), so a grep pass for
+# the leading quoted name is sufficient — no Ruby parser needed.
+# ---------------------------------------------------------------------------
+brewfile_declared() {
+    local keyword="$1"
+    [[ -n "$BREWFILE" && -f "$BREWFILE" ]] || return 0
+    grep -oE "^[[:space:]]*${keyword}[[:space:]]+\"[^\"]+\"" "$BREWFILE" 2>/dev/null \
+        | sed -E "s/^[[:space:]]*${keyword}[[:space:]]+\"([^\"]+)\"/\1/"
 }
 
 # ---------------------------------------------------------------------------
@@ -233,7 +262,7 @@ audit_brews() {
         brew list --installed-on-request 2>/dev/null | sort > "$installed"
     fi
 
-    declared_for "brews" > "$declared"
+    { declared_for "brews"; brewfile_declared "brew"; } | sort -u > "$declared"
     report_orphans "Homebrew Formulae" "$installed" "$declared" "brew uninstall" "one_line"
     rm -f "$installed" "$declared"
 }
@@ -244,7 +273,7 @@ audit_casks() {
     declared=$(mktemp)
 
     brew list --cask -1 2>/dev/null | sort > "$installed"
-    declared_for "casks" > "$declared"
+    { declared_for "casks"; brewfile_declared "cask"; } | sort -u > "$declared"
     report_orphans "Homebrew Casks" "$installed" "$declared" "brew uninstall --cask" "one_line"
     rm -f "$installed" "$declared"
 }
@@ -256,10 +285,11 @@ audit_taps() {
 
     brew tap 2>/dev/null | sort > "$installed"
 
-    # Union of top-level darwin taps plus per-tag taps
+    # Union of top-level darwin taps, per-tag taps, and machine-Brewfile taps
     {
         yq '.packages.darwin.taps[]?' "$PACKAGES_YAML" 2>/dev/null || true
         declared_for "taps"
+        brewfile_declared "tap"
     } | sort -u > "$declared"
 
     report_orphans "Homebrew Taps" "$installed" "$declared" "brew untap" "per_line"

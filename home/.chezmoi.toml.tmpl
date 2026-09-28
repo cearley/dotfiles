@@ -106,7 +106,10 @@ database = {{ $keepassxc_db | quote }}
 mode = "open"
 
 [hooks.read-source-state.pre]
-command = ".local/share/chezmoi/hooks/pre/bootstrap"
+{{/* .chezmoiroot ("home") shifts .chezmoi.sourceDir into the home/ subtree, but hooks/ is a
+     repo-root-level asset (sibling of home/), so the hook command is anchored to the repo
+     root -- the parent of .chezmoi.sourceDir -- not .chezmoi.sourceDir itself. */}}
+command = {{ printf "%s/hooks/pre/bootstrap" (dir .chezmoi.sourceDir) | quote }}
 
 {{ if lookPath "code" -}}
 [edit]

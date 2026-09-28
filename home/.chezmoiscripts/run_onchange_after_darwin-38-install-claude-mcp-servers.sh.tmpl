@@ -29,6 +29,8 @@ print_message "skip" "No MCP servers declared in ai.agents.claude_code.mcp_serve
 exit 0
 {{- end }}
 
+any_failed=0
+
 _register_mcp_for_env() {
     local env_dir="$1"
     print_message "info" "Registering MCP servers for $(basename "$env_dir")..."
@@ -61,6 +63,11 @@ _register_mcp_for_env() {
         if [[ $_mcp_exit -eq 0 ]]; then
             print_message "success" "Registered MCP server: {{ $name }}"
         elif echo "$_mcp_output" | grep -q "already exists"; then
+            # Capture the desired registration before removing the existing entry, so a
+            # failed retry can be restored instead of leaving the server unregistered.
+            _prior_scope="{{ $scope }}"
+            _prior_env_flags="$_env_flags"
+            _prior_cmd="{{ $cmd }}"
             run_claude_in_env "$env_dir" mcp remove "{{ $name }}" --scope {{ $scope }} 2>/dev/null || true
             # shellcheck disable=SC2086
             _mcp_exit=0
@@ -68,12 +75,22 @@ _register_mcp_for_env() {
             if [[ $_mcp_exit -eq 0 ]]; then
                 print_message "success" "Updated MCP server: {{ $name }}"
             else
+                # Retry failed after removal — attempt to restore the registration so the
+                # server isn't left completely unregistered (worse than its prior state).
+                # shellcheck disable=SC2086
+                _restore_exit=0
+                _restore_output=$(run_claude_in_env "$env_dir" mcp add --scope "$_prior_scope" "{{ $name }}"${_prior_env_flags} -- $_prior_cmd 2>&1) || _restore_exit=$?
                 echo "$_mcp_output"
+                if [[ $_restore_exit -ne 0 ]]; then
+                    echo "$_restore_output"
+                fi
                 print_message "warning" "Could not update MCP server '{{ $name }}' in $(basename "$env_dir") — skipping"
+                any_failed=1
             fi
         else
             echo "$_mcp_output"
             print_message "warning" "Could not register MCP server '{{ $name }}' in $(basename "$env_dir") — skipping"
+            any_failed=1
         fi
     fi
 {{- end }}
@@ -82,5 +99,9 @@ _register_mcp_for_env() {
 }
 
 for_each_claude_env _register_mcp_for_env{{ range $claudeEnvs }} "{{ . }}"{{ end }}
+
+if [[ "$any_failed" -eq 1 ]]; then
+    exit 1
+fi
 
 {{ end -}}
