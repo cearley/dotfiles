@@ -38,10 +38,13 @@ jobs:
               keepassxc_db = "~/.local/share/chezmoi/keepassxc.kdbx"
               azure_devops_org = ""
               azure_devops_org_personal = ""
-              tags = [
-                  "macos",
-                  "work"
-              ]
+              # Empty: "core" packages always install regardless of tags, so this
+              # gives minimal, headless-safe CI coverage. Any optional tag (work,
+              # dev, ai, personal, datascience, mobile) may pull in a run_once_/
+              # run_onchange_ script that opens a GUI installer and waits
+              # indefinitely for a human (e.g. darwin-80-setup-microsoft-defender,
+              # gated on "work") -- those can never complete on a headless runner.
+              tags = []
           EOF
 
           # Run the script with timeout to prevent hanging (using gtimeout from coreutils)
