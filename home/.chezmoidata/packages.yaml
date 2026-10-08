@@ -105,7 +105,6 @@ packages:
       - 'age'                          # Simple, modern file-encryption tool used to decrypt SOPS-encrypted repo secrets
       - 'aws-cdk'                      # AWS Cloud Development Kit for defining cloud infrastructure in code
       - 'aws-sam-cli'
-      - 'azure-cli'
       - 'bats-core'
       - 'cfn-lint'
       - 'checkmake'
@@ -133,6 +132,7 @@ packages:
       - 'sops'                         # Encrypts/decrypts structured and binary secrets using age/PGP/KMS backends
       - 'sqlite'
       casks:
+      - 'azure-cli'                    # Formerly a homebrew-core formula; now ships as a cask
       - 'db-browser-for-sqlite'
       - 'docker-desktop'
       - 'dotnet-sdk10-0-200'
