@@ -1,0 +1,43 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+# Bootstraps ccenv (https://github.com/cearley/zsh-claude-env) profile state:
+# registers every existing ~/.claude-* directory as a profile, then sets the
+# machine's ccenv global default to mirror claude_default. This is a one-time
+# data bootstrap, not the thing that keeps CLAUDE_CONFIG_DIR exported every
+# shell — that's ccenv's own `init -`/precmd hook, wired up in dot_zshrc.tmpl
+# and dot_bashrc.tmpl. The static claude_default export in those files is
+# deliberately left in place as a fallback (ccenv never overwrites
+# CLAUDE_CONFIG_DIR when no tier resolves, so the two can't conflict).
+#
+# run_onchange trigger - re-runs when claude_default changes:
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $claudeDefault := default "" (index $settings "claude_default") }}
+# claude_default={{ $claudeDefault }}
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+CCENV_BIN="{{ .chezmoi.homeDir }}/.oh-my-zsh/custom/plugins/zsh-claude-env/bin/ccenv"
+
+if [[ ! -x "$CCENV_BIN" ]]; then
+    print_message "skip" "ccenv not found at $CCENV_BIN — skipping profile bootstrap (run \`chezmoi apply\` again once the zsh-claude-env external has been fetched)"
+    exit 0
+fi
+
+print_message "info" "Registering existing ~/.claude-* directories as ccenv profiles..."
+"$CCENV_BIN" add --discover
+
+{{- if $claudeDefault }}
+{{- $profileName := trimPrefix "claude-" $claudeDefault }}
+
+print_message "info" "Setting ccenv global default profile to '{{ $profileName }}'..."
+"$CCENV_BIN" global "{{ $profileName }}"
+{{- else }}
+
+print_message "skip" "No claude_default configured for this machine — leaving ccenv global profile unset"
+{{- end }}
+
+print_message "success" "ccenv profile bootstrap complete"
+
+{{ end -}}

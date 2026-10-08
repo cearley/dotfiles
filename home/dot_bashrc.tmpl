@@ -14,6 +14,11 @@ export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || pr
 {{- if $claudeDefault }}
 export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
 {{- end }}
+
+# ccenv - CLAUDE_CONFIG_DIR profile manager (https://github.com/cearley/zsh-claude-env)
+export PATH="{{ .chezmoi.homeDir }}/.oh-my-zsh/custom/plugins/zsh-claude-env/bin:$PATH"
+command -v ccenv >/dev/null 2>&1 && eval "$(ccenv init -)"
+
 {{- if has "ai" .tags }}
 export CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1
 {{- end }}

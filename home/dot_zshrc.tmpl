@@ -41,6 +41,10 @@ source "$ZSH"/oh-my-zsh.sh
 
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/bin"
 
+# ccenv - CLAUDE_CONFIG_DIR profile manager (https://github.com/cearley/zsh-claude-env)
+export PATH="{{ .chezmoi.homeDir }}/.oh-my-zsh/custom/plugins/zsh-claude-env/bin:$PATH"
+command -v ccenv >/dev/null 2>&1 && eval "$(ccenv init -)"
+
 {{ if stat (joinPath .chezmoi.homeDir ".zsh_secrets") -}}
 # Source your secrets file.
 source "$HOME"/.zsh_secrets
