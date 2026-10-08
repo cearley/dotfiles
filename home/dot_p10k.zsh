@@ -121,10 +121,44 @@
     # example               # example user-defined segment (see prompt_example function below)
   )
 
-  # zsh-claude-env plugin settings for the claude_env segment above — see
-  # https://github.com/cearley/zsh-claude-env, hand-edited (not chezmoi-templated).
-  typeset -gA CLAUDE_ENV_COLORS=(work 33 personal 76 bedrock 208)
-  CLAUDE_ENV_SHOW_DEFAULT=false
+  # Powerlevel10k recipe for the claude_env segment above — the zsh-claude-env
+  # plugin (https://github.com/cearley/zsh-claude-env) defines no p10k code of
+  # its own as of its hook-based refactor; this recipe, copied from its README,
+  # is what makes the segment exist. Hand-edited (not chezmoi-templated).
+  typeset -gA CLAUDE_ENV_COLORS=(work 33 personal 76 bedrock 208)  # name -> p10k color; unlisted names render grey (244)
+  CLAUDE_ENV_SHOW_DEFAULT=false  # hide the segment while on the baseline env captured at plugin-load time
+
+  prompt_claude_env() {
+    local color REPLY
+    _claude_env_name
+    [ -n "$REPLY" ] || return
+    local label="$REPLY"
+
+    if [ "$CLAUDE_ENV_SHOW_DEFAULT" != true ] \
+      && [ -n "$_claude_env_baseline_label" ] \
+      && [ "$label" = "$_claude_env_baseline_label" ]; then
+      return
+    fi
+
+    color="${CLAUDE_ENV_COLORS[$label]:-244}"
+    p10k segment -f $color -i '󰛄' -t "${label//\%/%%}"
+  }
+
+  instant_prompt_claude_env() {
+    prompt_claude_env
+  }
+
+  # Extension hooks: makes `claude-env <name>` trigger an immediate p10k
+  # redraw, and reuses gitstatus data for the terminal title instead of
+  # forking git again.
+  claude_env_after_switch() {
+    command -v p10k >/dev/null 2>&1 && p10k reload
+  }
+
+  claude_env_git_context_hook() {
+    [ -n "$VCS_STATUS_WORKDIR" ] || return 1
+    REPLY="${VCS_STATUS_WORKDIR:t}${VCS_STATUS_LOCAL_BRANCH:+ · $VCS_STATUS_LOCAL_BRANCH}"
+  }
 
   # Defines character set used by powerlevel10k. It's best to let `p10k configure` set it for you.
   typeset -g POWERLEVEL9K_MODE=nerdfont-v3
