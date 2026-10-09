@@ -38,3 +38,6 @@ openspec/.cache/
 
 # oh-my-claudecode runtime state
 .omc/
+
+# Dir Env
+.claude-profile
