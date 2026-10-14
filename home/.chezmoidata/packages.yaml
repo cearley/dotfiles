@@ -219,7 +219,6 @@ packages:
           - 'claude-md-management@claude-plugins-official'
           - 'oh-my-claudecode@omc'
           - 'opsx-omc-bridge@opsx-omc-bridge'
-          - 'ralph-loop@claude-plugins-official'
           - 'superpowers@claude-plugins-official'
           # - 'example-skills@anthropic-agent-skills'  # removed 2026-08-21 /doctor: 5 lifetime uses, last Aug 2
           # - 'fulcrum-skills@viewpoint-tools' # Project/local-only plugin
