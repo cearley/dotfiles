@@ -1,0 +1,38 @@
+{{- /* uninstall-claude-plugin-everywhere — force-uninstalls one Claude Code plugin from every
+     persona on this machine (user scope, then project scope, then local scope) and clears its
+     cache dir. A blunt personal utility, not a replacement for clean-claude-orphans: it does no
+     packages.yaml cross-check and no "still-enabled-elsewhere" check before removing a
+     project/local-scope plugin, so prefer that skill when the removal needs to be reasoned
+     about rather than just executed. Project/local-scope uninstalls only take effect when run
+     from the owning project's working directory (same caveat clean-claude-orphans documents),
+     so this script's attempt at those scopes can silently no-op outside that directory — the
+     cache-dir removal below still runs regardless.
+
+     Rendered by chezmoi from
+     {{ .chezmoi.sourceDir }}/dot_local/bin/executable_uninstall-claude-plugin-everywhere.tmpl —
+     edit the source template, then `chezmoi apply`. The persona list is baked in at render
+     time from this machine's claude_envs config, never hardcoded, never rediscovered at
+     runtime.
+
+     Usage: uninstall-claude-plugin-everywhere <plugin@marketplace>
+*/ -}}
+#!/bin/bash
+set -euo pipefail
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+
+# The unnamed default is always first; named personas come from this machine's claude_envs.
+PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
+
+plugin="${1:?usage: uninstall-claude-plugin-everywhere <plugin@marketplace>}"
+name="${plugin%@*}"
+marketplace="${plugin#*@}"
+
+for persona in "${PERSONA_DIRS[@]}"; do
+    [ -d "$persona" ] || continue
+    echo "== $persona =="
+    CLAUDE_CONFIG_DIR="$persona" command claude plugin uninstall "$plugin" -y 2>/dev/null || true
+    CLAUDE_CONFIG_DIR="$persona" command claude plugin uninstall "$plugin" -y -s project 2>/dev/null || true
+    CLAUDE_CONFIG_DIR="$persona" command claude plugin uninstall "$plugin" -y -s local 2>/dev/null || true
+    rm -rf "$persona/plugins/cache/$marketplace/$name"
+done
