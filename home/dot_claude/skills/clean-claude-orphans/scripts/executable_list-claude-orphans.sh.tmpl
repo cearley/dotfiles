@@ -1,14 +1,10 @@
 #!/bin/bash
-# list-claude-orphans.sh — Structured view of audit-packages' Claude Code findings, plus
-# the environment, marketplace, and plugin-scope context clean-claude-orphans needs to
-# classify each orphan safely and spot decluttering candidates without re-deriving any of
-# this by hand. Read-only: never installs, removes, or modifies any Claude Code state.
+# list-claude-orphans.sh — Structured view of Claude Code orphan findings (sourced directly
+# from scripts/audit-claude-code.sh, the same library audit-packages itself uses), plus the
+# environment, marketplace, and plugin-scope context clean-claude-orphans needs to classify
+# each orphan safely and spot decluttering candidates without re-deriving any of this by
+# hand. Read-only: never installs, removes, or modifies any Claude Code state.
 set -euo pipefail
-
-# .chezmoi.sourceDir resolves to the *chezmoiroot-relative* source dir (this repo's
-# home/, per .chezmoiroot), not the repo root — dot_claude/skills/ lives one level up,
-# so the repo root is what this script needs.
-CHEZMOI_SOURCE="{{ dir .chezmoi.sourceDir }}"
 
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
 {{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
@@ -19,8 +15,8 @@ CHEZMOI_SOURCE="{{ dir .chezmoi.sourceDir }}"
 # as Claude Code environments.
 PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
 
-if ! command -v audit-packages >/dev/null 2>&1; then
-    echo "error: audit-packages not found on PATH" >&2
+if ! command -v yq >/dev/null 2>&1; then
+    echo "error: yq not found on PATH" >&2
     exit 1
 fi
 
@@ -28,6 +24,14 @@ if ! command -v claude >/dev/null 2>&1; then
     echo "error: claude not found on PATH" >&2
     exit 1
 fi
+
+# home/scripts/audit-claude-code.sh is plain bash (never rendered by chezmoi — see its own
+# header). .chezmoi.sourceDir is the chezmoiroot-relative source dir (this repo's home/,
+# per .chezmoiroot) — both packages.yaml and dot_claude/skills live directly under it, so
+# no repo-root-relative detour is needed to reach either.
+PACKAGES_YAML="{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml"
+CHEZMOI_MANAGED_SKILLS_DIR="{{ .chezmoi.sourceDir }}/dot_claude/skills"
+source "{{ .chezmoi.sourceDir }}/scripts/audit-claude-code.sh"
 
 # ---------------------------------------------------------------------------
 # Claude Code environments present on this machine (openspec/specs/claude-environments).
@@ -57,49 +61,25 @@ fi
 # ---------------------------------------------------------------------------
 # This repo's own marketplace catalog. Plugins installed from chezmoi-personal are
 # already declared here, outside packages.yaml — never suggest DECLAREing them. Bundled
-# skills are listed too (col 2), so a skill orphan that duplicates a bundle can be spotted
-# without re-reading marketplace.json by hand. Captured into $marketplace_tsv so the
-# ## orphans section below can tag matching skill orphans inline instead of leaving that
-# cross-check to the model.
-#
-# Read from the deployed target, not chezmoi source: the source file
-# (home/dot_local/share/claude-plugins/dot_claude-plugin/marketplace.json.tmpl) has
-# unrendered {{ "{{ .fullname }}" }}-style template syntax jq can't parse, so only the
-# chezmoi-apply'd copy under ~/.local/share/claude-plugins is valid JSON.
+# skills are listed too, so a skill orphan that duplicates a bundle can be spotted without
+# re-reading marketplace.json by hand. The ## orphans section below tags matching skill
+# orphans inline itself (claude_orphan_skills_jsonl calls claude_chezmoi_personal_plugins_jsonl
+# internally), so there's no local plumbing variable to build here.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## chezmoi-personal-plugins"
-marketplace_json="$HOME/.local/share/claude-plugins/.claude-plugin/marketplace.json"
-# Kept as TSV (name\tcomma,joined,skills — empty when none), not JSON: this is internal
-# plumbing fed to ## orphans' awk matching below, never printed directly.
-marketplace_tsv=""
-if [[ -f "$marketplace_json" ]]; then
-    marketplace_tsv="$(jq -r '.plugins[] | [.name, ((.skills // []) | map(sub("^\\./"; "")) | join(","))] | @tsv' "$marketplace_json")"
-    jq -c '.plugins[] | {name, skills: ((.skills // []) | map(sub("^\\./"; "")))}' "$marketplace_json"
-else
-    echo "error: marketplace.json not found at ${marketplace_json}" >&2
-fi
+claude_chezmoi_personal_plugins_jsonl
 
 # ---------------------------------------------------------------------------
 # Skills managed by this repo's own chezmoi source (deployed via `chezmoi apply`),
 # never installed through `npx skills add` — not orphans of that mechanism, and
-# packages.yaml's `skills:` list was never meant to track them. Captured into
-# $chezmoi_managed_skills so the ## orphans section below can tag matches inline.
+# packages.yaml's `skills:` list was never meant to track them. The ## orphans section
+# below tags matches inline itself (claude_orphan_skills_jsonl excludes these names
+# internally), so there's no local plumbing variable to build here.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## chezmoi-managed-skills"
-skills_src="${CHEZMOI_SOURCE}/home/dot_claude/skills"
-chezmoi_managed_skills=""
-if [[ -d "$skills_src" ]]; then
-    for dir in "$skills_src"/*/; do
-        [[ -e "$dir" ]] || continue
-        name="$(basename "$dir")"
-        jq -cn --arg name "$name" '{name: $name}'
-        chezmoi_managed_skills+="$name"$'\n'
-    done
-else
-    echo "error: skills source dir not found at ${skills_src}" >&2
-fi
+claude_chezmoi_managed_skill_names | jq -Rnc '[inputs] | .[] | {name: .}'
 
 # ---------------------------------------------------------------------------
 # Every currently installed plugin's scope, owning project (for project/local scope),
@@ -124,60 +104,33 @@ fi
 # ---------------------------------------------------------------------------
 echo ""
 echo "## installed-plugins"
-if plugins_json="$(claude plugins list --json 2>/dev/null)" && [[ -n "$plugins_json" ]]; then
-    # JSON Lines (one named-field object per plugin), not TSV — a positional column has no
-    # meaning without the SKILL.md open next to it; a named field is self-explanatory on
-    # its own, even pasted out of context.
-    echo "$plugins_json" | jq -c '.[] | {
-        id,
-        scope,
-        projectPath: (.projectPath // null),
-        chezmoi_personal: (.id | endswith("@chezmoi-personal")),
-        enabled
-    }'
-else
-    echo "error: \`claude plugins list --json\` failed or returned nothing" >&2
-fi
+claude_installed_plugins_jsonl
 
 # ---------------------------------------------------------------------------
-# Orphans from the four Claude Code sections of `audit-packages`. `awk` still does the
-# stateful part — tracking which `=== ... ===` section a line belongs to as
-# `audit-packages`' freeform text streams by, and tagging skill orphans against
-# $chezmoi_managed_skills/$marketplace_tsv — since that's awkward to express as a single
-# jq filter over plain text. It only emits plain `category\titem[\ttag]` TSV though;
-# `jq -R` downstream turns that into JSON safely, since `awk printf` doesn't escape
-# quotes/backslashes that could appear in a path or name. Forcing LANG=C/LC_ALL=C makes
-# print_message emit its ASCII "[INFO]"-style prefixes instead of emoji, so
-# section/noise lines are trivial to filter regardless of the invoking shell's locale.
-# The per-line uninstall hint ("   claude plugins uninstall ...") is indented with
-# leading whitespace; real orphan names never are, so that's also filtered out.
+# Orphans across the four Claude Code categories, sourced directly from
+# scripts/audit-claude-code.sh's functions rather than parsing `audit-packages`' freeform
+# text output. This skill exists to find what's installed but *not chezmoi-managed* — not
+# declared in packages.yaml, not listed in ## chezmoi-personal-plugins, not found in
+# ## chezmoi-managed-skills — which is a different question from whether something is
+# currently enabled. Each category's `claude_orphan_*_jsonl` function already applies this
+# filtering internally (chezmoi-managed skill names and chezmoi-personal-suffixed plugin
+# ids are excluded at the source, not merely tagged — see that function's own comments), so
+# there's no awk/jq reshaping left to do here.
+#
+# Order matches today's category ordering (mcp_server, plugin, marketplace, skill).
+# mcp_server and skill are guarded by their precondition function so a missing
+# precondition (no settings.json / no skills dir) skips silently instead of crashing under
+# `set -e`; plugin and marketplace have no precondition function because they had no skip
+# path before this change either — they always ran unconditionally.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## orphans"
-LC_ALL=C LANG=C audit-packages 2>&1 | managed_skills_env="$chezmoi_managed_skills" bundled_plugins_env="$marketplace_tsv" awk '
-    BEGIN {
-        # ENVIRON, not -v: -v assignments cannot contain raw embedded newlines.
-        n = split(ENVIRON["managed_skills_env"], m, "\n")
-        for (i = 1; i <= n; i++) if (m[i] != "") is_managed[m[i]] = 1
-        b = split(ENVIRON["bundled_plugins_env"], plugins, "\n")
-        for (i = 1; i <= b; i++) {
-            split(plugins[i], cols, "\t")
-            if (cols[2] == "" || cols[2] == "-") continue
-            s = split(cols[2], skills, ",")
-            for (j = 1; j <= s; j++) bundled_by[skills[j]] = cols[1]
-        }
-    }
-    /=== Claude Code MCP Servers ===/         { section = "mcp_server"; next }
-    /=== Claude Code Plugins ===/             { section = "plugin"; next }
-    /=== Claude Code Plugin Marketplaces ===/ { section = "marketplace"; next }
-    /=== Claude Code Skills ===/              { section = "skill"; next }
-    /^===/                                    { section = ""; next }
-    !section                                  { next }
-    /No orphans/                              { next }
-    /^\[/                                     { next }
-    /^[[:space:]]/                            { next }
-    /^$/                                      { next }
-    section == "skill" && ($0 in is_managed)  { print section "\t" $0 "\tchezmoi-managed"; next }
-    section == "skill" && ($0 in bundled_by)  { print section "\t" $0 "\tbundled-by:" bundled_by[$0]; next }
-    { print section "\t" $0 }
-' | jq -R -c 'split("\t") as $p | {category: $p[0], item: $p[1], skill_tag: $p[2]}'
+# `&&`-chaining a precondition check doesn't skip silently the way it looks like it should:
+# `set -e` doesn't abort on a failed left-hand side, but the chain's own exit status still
+# becomes the *script's* exit status when it's the last command run — a missing skills dir
+# would make this entire read-only script report failure even though its output was
+# complete and correct. Plain `if` blocks avoid that.
+if claude_mcp_settings_present; then claude_orphan_mcp_servers_jsonl; fi
+claude_orphan_plugins_jsonl
+claude_orphan_marketplaces_jsonl
+if claude_skills_dir_present; then claude_orphan_skills_jsonl; fi

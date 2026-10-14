@@ -14,6 +14,9 @@ source "{{ $sourceDir }}/scripts/shared-utils.sh"
 
 PACKAGES_YAML="{{ $sourceDir }}/.chezmoidata/packages.yaml"
 
+CHEZMOI_MANAGED_SKILLS_DIR="{{ $sourceDir }}/dot_claude/skills"
+source "{{ $sourceDir }}/scripts/audit-claude-code.sh"
+
 # Machine-specific Brewfile (script 28's darwin-28-brew-bundle-install source),
 # resolved the same way that script does, so packages declared only there
 # aren't reported as Homebrew orphans.
@@ -119,14 +122,6 @@ declared_for() {
 
     sort -u "$tmp"
     rm -f "$tmp"
-}
-
-# ---------------------------------------------------------------------------
-# Collect the declared set for a given key under a specific coding agent
-# ---------------------------------------------------------------------------
-declared_for_agent() {
-    local agent="$1" key="$2"
-    yq ".packages.darwin.ai.agents.${agent}.${key}[]?" "$PACKAGES_YAML" 2>/dev/null | sort -u
 }
 
 # ---------------------------------------------------------------------------
@@ -244,6 +239,30 @@ report_orphans() {
         TOTAL_ORPHANS=$((TOTAL_ORPHANS + orphan_count))
         MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
         [[ -n "$uninstall_prefix" ]] && print_uninstall_hint "$uninstall_prefix" "$uninstall_mode" "$orphans"
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Like report_orphans, but for callers that already printed their own header
+# and did their own skip-check (the four Claude Code sections, which get
+# their orphan items pre-diffed as JSONL from the shared audit-claude-code.sh
+# library). Only does the part that's identical across all four: report
+# success, or print the list and update the running orphan counters/hint.
+# ---------------------------------------------------------------------------
+report_orphan_list_body() {
+    local items="$1"
+    local uninstall_prefix="${2:-}"
+    local uninstall_mode="${3:-one_line}"
+
+    if [[ -z "$items" ]]; then
+        print_message "success" "No orphans"
+    else
+        echo "$items"
+        local item_count
+        item_count=$(echo "$items" | wc -l | tr -d '[:space:]')
+        TOTAL_ORPHANS=$((TOTAL_ORPHANS + item_count))
+        MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
+        print_uninstall_hint "$uninstall_prefix" "$uninstall_mode" "$items"
     fi
 }
 
@@ -467,211 +486,42 @@ audit_sdkman() {
 # Section 4: Claude Code
 # ---------------------------------------------------------------------------
 audit_claude_plugins() {
-    local installed_file declared_file
-    installed_file=$(mktemp)
-    declared_file=$(mktemp)
-
-    # Installed: .id field from JSON (e.g. "atlassian@claude-plugins-official")
-    if claude plugins list --json 2>/dev/null | jq -r '.[].id' 2>/dev/null | sort > "$installed_file"; then
-        : # JSON succeeded
-    else
-        # Fallback: parse text output (lines containing "@")
-        claude plugins list 2>/dev/null \
-            | grep -oE '[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+' \
-            | sort > "$installed_file"
-    fi
-
-    declared_for_agent "claude_code" "plugins" | sort > "$declared_file"
-    report_orphans "Claude Code Plugins" "$installed_file" "$declared_file" "claude plugins uninstall" "per_line"
-    rm -f "$installed_file" "$declared_file"
+    print_message "info" "=== Claude Code Plugins ==="
+    local orphans
+    orphans=$(claude_orphan_plugins_jsonl | jq -r '.item')
+    report_orphan_list_body "$orphans" "claude plugins uninstall" "per_line"
 }
 
 audit_claude_marketplaces() {
-    local installed_file declared_file
-    installed_file=$(mktemp)
-    declared_file=$(mktemp)
-
-    # Installed: for github sources → repo field; for directory sources → path field
-    # (a chezmoi-managed local marketplace, e.g. chezmoi-personal); for anything else → url field.
-    # Compare against declared entries (repo strings, URLs, or local paths, stripping #ref).
-    if claude plugins marketplace list --json 2>/dev/null | \
-        jq -r '.[] | if .source == "github" then .repo elif .source == "directory" then .path else .url end' 2>/dev/null | \
-        sort > "$installed_file"; then
-        : # JSON succeeded
-    else
-        # Fallback: just list names from text output
-        claude plugins marketplace list 2>/dev/null \
-            | grep -E '^\s+❯' \
-            | awk '{print $2}' \
-            | sort > "$installed_file"
-    fi
-
-    # Declared: strip #ref from URL entries (e.g. "https://...#dev" → "https://...");
-    # expand a literal "$HOME" in a declared local path (e.g. chezmoi-personal's
-    # "$HOME/.local/share/claude-plugins") to match the absolute path `claude` reports —
-    # packages.yaml is static data, so this can't be a chezmoi/Go-template expansion, only
-    # a real shell one, done here at actual invocation time.
-    declared_for_agent "claude_code" "plugin_marketplaces" \
-        | sed 's/#[^#]*$//' \
-        | sed "s|\$HOME|$HOME|" \
-        | sort > "$declared_file"
-
-    report_orphans "Claude Code Plugin Marketplaces" "$installed_file" "$declared_file" "claude plugins marketplace remove" "per_line"
-    rm -f "$installed_file" "$declared_file"
-}
-
-# Derive a skill-name prefix from a collection-wildcard spec:
-#   extract the org component (before /) and strip known company suffixes,
-#   then strip trailing hyphens/underscores.
-#   e.g. "specstoryai/agent-skills -all" → "specstory"
-_wildcard_prefix() {
-    local spec="$1"
-    local org
-    org=$(echo "$spec" | cut -d'/' -f1)
-    echo "$org" \
-        | sed -E 's/(ai|hq|io|dev|co|labs|inc|app|apps|tech|ware|js|ly)$//' \
-        | sed -E 's/[-_]+$//'
+    print_message "info" "=== Claude Code Plugin Marketplaces ==="
+    local orphans
+    orphans=$(claude_orphan_marketplaces_jsonl | jq -r '.item')
+    report_orphan_list_body "$orphans" "claude plugins marketplace remove" "per_line"
 }
 
 audit_claude_skills() {
     print_message "info" "=== Claude Code Skills ==="
-
-    local skills_dir="${HOME}/.claude/skills"
-    if [[ ! -d "$skills_dir" ]]; then
-        print_message "skip" "No user-scope skills directory found at ${skills_dir}"
+    if ! claude_skills_dir_present; then
+        print_message "skip" "No user-scope skills directory found at ${HOME}/.claude/skills"
         return
     fi
-
-    local declared_specs
-    declared_specs=$(declared_for_agent "claude_code" "skills")
-
-    # --- Pass 1: derive known skill names from deterministic specs ---
-    # Deterministic rules:
-    #   <owner>/skills/<name>    → skill name is the last path segment
-    #   <spec> --skill <name>    → skill name from the flag value
-    # Any spec that matches neither rule is a collection wildcard.
-    local known_skills=""   # newline-delimited list
-    local wildcards=""      # newline-delimited list
-
-    while IFS= read -r spec; do
-        [[ -z "$spec" ]] && continue
-        local matched=false
-
-        # Path-style: */skills/<name>
-        if [[ "$spec" =~ ^[^[:space:]]*/skills/([^[:space:]/]+) ]]; then
-            known_skills="${known_skills}${BASH_REMATCH[1]}"$'\n'
-            matched=true
-        fi
-
-        # --skill <name...> flag: the `skills` CLI's -s/--skill option is
-        # variadic, taking one or more space-separated names before the next
-        # -flag or end of spec. May appear multiple times in one spec.
-        local -a spec_toks
-        read -ra spec_toks <<< "$spec"
-        local ti=0
-        while [[ $ti -lt ${#spec_toks[@]} ]]; do
-            if [[ "${spec_toks[$ti]}" == "--skill" ]]; then
-                matched=true
-                ti=$((ti + 1))
-                while [[ $ti -lt ${#spec_toks[@]} && "${spec_toks[$ti]}" != -* ]]; do
-                    known_skills="${known_skills}${spec_toks[$ti]}"$'\n'
-                    ti=$((ti + 1))
-                done
-            else
-                ti=$((ti + 1))
-            fi
-        done
-
-        if [[ "$matched" == false ]]; then
-            wildcards="${wildcards}${spec}"$'\n'
-        fi
-    done <<< "$declared_specs"
-
-    # --- Pass 2: classify each installed skill ---
-    # A skill is attributed to a wildcard only if its name starts with the prefix
-    # derived from that wildcard's org (e.g. "specstoryai" → "specstory").
-    # Skills that don't match any deterministic spec and don't start with any
-    # wildcard prefix are orphans.
-    local orphans=""        # newline-delimited list
-    local wildcard_covered=false
-
-    for skill_dir in "$skills_dir"/*/; do
-        [[ -e "$skill_dir" ]] || continue
-        local skill_name
-        skill_name=$(basename "$skill_dir")
-
-        if echo "$known_skills" | grep -qxF "$skill_name"; then
-            : # directly matched by a deterministic spec
-        else
-            local attributed=false
-            while IFS= read -r wc_spec; do
-                [[ -z "$wc_spec" ]] && continue
-                local prefix
-                prefix=$(_wildcard_prefix "$wc_spec")
-                if [[ -n "$prefix" && "$skill_name" == "${prefix}"* ]]; then
-                    attributed=true
-                    break
-                fi
-            done <<< "$wildcards"
-
-            if [[ "$attributed" == true ]]; then
-                wildcard_covered=true
-            else
-                orphans="${orphans}${skill_name}"$'\n'
-            fi
-        fi
-    done
-
-    # --- Output ---
-    if [[ "$wildcard_covered" == true ]]; then
-        local wc_note
-        wc_note=$(printf '%s' "$wildcards" | tr '\n' ',' | sed 's/,*$//' | sed 's/,/, /g')
-        print_message "info" "Skills not individually verified (covered by collection spec): ${wc_note}"
-    fi
-
-    if [[ -z "$orphans" ]]; then
-        print_message "success" "No orphans"
-    else
-        local clean_orphans
-        clean_orphans=$(echo "$orphans" | grep -v '^$')
-        echo "$clean_orphans"
-        local orphan_count
-        orphan_count=$(echo "$clean_orphans" | grep -c '[^[:space:]]')
-        TOTAL_ORPHANS=$((TOTAL_ORPHANS + orphan_count))
-        MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
-        print_uninstall_hint "claude skills remove" "per_line" "$clean_orphans"
-    fi
+    local note
+    note=$(claude_skills_wildcard_coverage_note)
+    [[ -n "$note" ]] && print_message "info" "$note"
+    local orphans
+    orphans=$(claude_orphan_skills_jsonl | jq -r '.item')
+    report_orphan_list_body "$orphans" "claude skills remove" "per_line"
 }
 
 audit_claude_mcp_servers() {
-    local installed_file declared_file
-    installed_file=$(mktemp)
-    declared_file=$(mktemp)
-
-    # Installed: user-scope MCP servers are stored in mcpServers key of each
-    # Claude environment's settings.json.  Glob all ~/.claude*/settings.json to
-    # cover personal, work, and default environments without needing chezmoi data.
-    local found_any=false
-    for settings_file in "${HOME}"/.claude*/settings.json; do
-        [[ -f "$settings_file" ]] || continue
-        found_any=true
-        jq -r '.mcpServers // {} | keys[]' "$settings_file" 2>/dev/null >> "$installed_file" || true
-    done
-
-    if [[ "$found_any" == "false" ]]; then
+    if ! claude_mcp_settings_present; then
         print_message "skip" "No Claude environment settings.json files found — skipping MCP audit"
-        rm -f "$installed_file" "$declared_file"
         return
     fi
-
-    sort -u "$installed_file" -o "$installed_file"
-
-    # Declared: the `name` field of each mcp_servers entry (a structured map, not a plain string)
-    yq ".packages.darwin.ai.agents.claude_code.mcp_servers[]?.name" "$PACKAGES_YAML" 2>/dev/null \
-        | sort -u > "$declared_file"
-
-    report_orphans "Claude Code MCP Servers" "$installed_file" "$declared_file" "claude mcp remove" "per_line"
-    rm -f "$installed_file" "$declared_file"
+    print_message "info" "=== Claude Code MCP Servers ==="
+    local orphans
+    orphans=$(claude_orphan_mcp_servers_jsonl | jq -r '.item')
+    report_orphan_list_body "$orphans" "claude mcp remove" "per_line"
 }
 
 audit_claude() {
