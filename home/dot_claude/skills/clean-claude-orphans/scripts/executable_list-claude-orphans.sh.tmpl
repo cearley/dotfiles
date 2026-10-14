@@ -8,6 +8,7 @@ set -euo pipefail
 
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
 {{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+{{- $localMarketplaceName := includeTemplate "local-marketplace-name" . }}
 # Declared personas only (this machine's claude_envs config), same source other
 # PERSONA_DIRS-building scripts use (e.g. check-claude-overrides) — not a `.claude-*` glob,
 # which also matches non-persona dirs that share the prefix for unrelated reasons
@@ -53,7 +54,7 @@ if [[ "$current_seen" -eq 0 ]]; then
 fi
 
 # ---------------------------------------------------------------------------
-# This repo's own marketplace catalog. Plugins installed from chezmoi-personal are
+# This repo's own marketplace catalog. Plugins installed from {{ $localMarketplaceName }} are
 # already declared here, outside packages.yaml — never suggest DECLAREing them. Bundled
 # skills are listed too, so a skill orphan that duplicates a bundle can be spotted without
 # re-reading marketplace.json by hand. The ## orphans section below tags matching skill
@@ -61,7 +62,7 @@ fi
 # internally), so there's no local plumbing variable to build here.
 # ---------------------------------------------------------------------------
 echo ""
-echo "## chezmoi-personal-plugins"
+echo "## {{ $localMarketplaceName }}-plugins"
 claude_chezmoi_personal_plugins_jsonl
 
 # ---------------------------------------------------------------------------
@@ -77,8 +78,8 @@ claude_chezmoi_managed_skill_names | jq -Rnc '[inputs] | .[] | {name: .}'
 
 # ---------------------------------------------------------------------------
 # Every currently installed plugin's scope, owning project (for project/local scope),
-# enabled state, and whether it's sourced from this repo's own chezmoi-personal
-# marketplace (`.id` ends `@chezmoi-personal` — never a DECLARE candidate, see SKILL.md
+# enabled state, and whether it's sourced from this repo's own {{ $localMarketplaceName }}
+# marketplace (`.id` ends `@{{ $localMarketplaceName }}` — never a DECLARE candidate, see SKILL.md
 # Step 3). This is what uninstalling actually needs: user-scope plugins uninstall
 # directly; project/local-scope plugins require clearing the `enabledPlugins` entry from
 # the owning project's settings file first (`.claude/settings.json` for project scope,
@@ -104,10 +105,10 @@ claude_installed_plugins_jsonl
 # Orphans across the four Claude Code categories, sourced directly from
 # scripts/audit-claude-code.sh's functions rather than parsing `audit-packages`' freeform
 # text output. This skill exists to find what's installed but *not chezmoi-managed* — not
-# declared in packages.yaml, not listed in ## chezmoi-personal-plugins, not found in
+# declared in packages.yaml, not listed in ## {{ $localMarketplaceName }}-plugins, not found in
 # ## chezmoi-managed-skills — which is a different question from whether something is
 # currently enabled. Each category's `claude_orphan_*_jsonl` function already applies this
-# filtering internally (chezmoi-managed skill names and chezmoi-personal-suffixed plugin
+# filtering internally (chezmoi-managed skill names and {{ $localMarketplaceName }}-suffixed plugin
 # ids are excluded at the source, not merely tagged — see that function's own comments), so
 # there's no awk/jq reshaping left to do here.
 #

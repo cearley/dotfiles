@@ -14,6 +14,7 @@ paths:
 
 {{- $sourceDir := .chezmoi.sourceDir }}
 {{- $repoRoot := trimSuffix "/home" $sourceDir }}
+{{- $localMarketplaceName := includeTemplate "local-marketplace-name" . }}
 # Claude Code Tooling in the chezmoi Dotfiles Repo
 
 This machine's Claude Code skills, MCP servers, plugins, and global preferences are managed by
@@ -175,7 +176,7 @@ and `claude-settings-ledger` (referenced above) remain the identity axis, untouc
 
 - **`{{ $sourceDir }}/dot_claude/skills/` + `packages.yaml`** (this file's subject): global,
   always-on, identical across every persona and project on this machine.
-- **The `chezmoi-personal` marketplace** (`{{ $sourceDir }}/dot_local/share/claude-plugins/`,
+- **The `{{ $localMarketplaceName }}` marketplace** (`{{ $sourceDir }}/dot_local/share/claude-plugins/`,
   deployed by `chezmoi apply` to `~/.local/share/claude-plugins`): chezmoi-managed like any
   other `home/` content — its path is declared as a plain entry in `packages.yaml`'s
   `plugin_marketplaces` list and registered by the same generic

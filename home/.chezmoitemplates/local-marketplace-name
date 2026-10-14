@@ -1,0 +1,16 @@
+{{- /* Returns this repo's own local Claude Code plugin marketplace's registered name
+     (currently "chezmoi-personal") — single source of truth for that literal string, so
+     every template that names it, matches a plugin id's "@<name>" suffix against it, or
+     builds a "## <name>-plugins"-style section header stays in sync if it's ever renamed.
+     See openspec/specs/claude-plugin-marketplace/spec.md for what this marketplace is;
+     this partial exists only to avoid repeating its literal name everywhere.
+
+     Renaming note: this only updates template source. The marketplace is also registered
+     under this exact name on every machine via `claude plugins marketplace add`, and every
+     installed plugin's id carries it as a literal "@<name>" suffix — renaming here does not
+     re-register already-provisioned machines or retag already-installed plugins; both would
+     need their own migration.
+
+     Usage: {{ includeTemplate "local-marketplace-name" . }}
+*/ -}}
+{{- "chezmoi-personal" -}}

@@ -1,4 +1,5 @@
 {{- if has "ai" .tags -}}
+{{- $localMarketplaceName := includeTemplate "local-marketplace-name" . }}
 ---
 name: clean-claude-orphans
 description: >
@@ -47,7 +48,7 @@ next to it:
   personas (`claude_envs` config), not a `~/.claude*` glob — avoids misreporting
   non-persona dirs that share the prefix (`.claude-code-session`, `.claude-monitor`,
   `.claude-worktrees`) as environments.
-- `## chezmoi-personal-plugins` — one object per `{name, skills}` from this repo's own
+- `## {{ $localMarketplaceName }}-plugins` — one object per `{name, skills}` from this repo's own
   marketplace catalog (`{{ dir .chezmoi.sourceDir -}}/.claude-plugin/marketplace.json`);
   `skills` is `[]` when the plugin bundles none. Used to pre-tag skill orphans in
   `## orphans` — see Step 3.
@@ -56,25 +57,25 @@ next to it:
   than `npx skills add`. Also used to pre-tag skill orphans in `## orphans`.
 - `## installed-plugins` — one object per `{id, scope, projectPath, chezmoi_personal,
   enabled}`: `projectPath` is `null` outside project/local scope; `chezmoi_personal` is
-  whether `id` ends `@chezmoi-personal` (never a DECLARE candidate — see Step 3). Needed
+  whether `id` ends `@{{ $localMarketplaceName }}` (never a DECLARE candidate — see Step 3). Needed
   before uninstalling anything, see Step 4. Sourced from `claude plugins list --json` (the
   same live CLI `audit-packages` itself reads), not the on-disk `installed_plugins.json`
   file, which can silently omit directory-marketplace-sourced plugins.
 - `## orphans` — one object per `{category, item, skill_tag}` (`category` is
   `mcp_server`, `plugin`, `marketplace`, or `skill`; `skill_tag` is `bundled-by:<plugin>`
-  for a skill duplicating a chezmoi-personal bundle, otherwise `null`). This section's job
+  for a skill duplicating a {{ $localMarketplaceName }} bundle, otherwise `null`). This section's job
   is to find what's **not chezmoi-managed** — not declared in packages.yaml, not listed in
-  `## chezmoi-personal-plugins`, not found in `## chezmoi-managed-skills` — which is a
+  `## {{ $localMarketplaceName }}-plugins`, not found in `## chezmoi-managed-skills` — which is a
   different question from whether something is currently enabled. So two things never
   appear here at all, regardless of enabled state: a skill already listed in
-  `## chezmoi-managed-skills`, and a plugin whose `id` ends `@chezmoi-personal` (declared
+  `## chezmoi-managed-skills`, and a plugin whose `id` ends `@{{ $localMarketplaceName }}` (declared
   by this repo's own marketplace manifest, a mechanism `packages.yaml` knows nothing
   about). `audit-packages` itself has no concept of either source, so without this
   filtering it would report both unconditionally, on every single run, independent of
   whether they're actually in use — being chezmoi-managed already answers the only
   question this section exists to answer. A `bundled-by:<plugin>` skill *duplicate* is
   different and stays in the list: the standalone copy itself genuinely isn't
-  chezmoi-managed, even though a chezmoi-personal plugin covers the same functionality.
+  chezmoi-managed, even though a {{ $localMarketplaceName }} plugin covers the same functionality.
 
 Read-only — changes nothing.
 
@@ -112,12 +113,12 @@ Work marketplaces last — removing one can orphan the plugins installed from it
 | Check | Verdict |
 |---|---|
 | Still declared in a project's own `.mcp.json` you use | **DECLARE** in packages.yaml |
-| Duplicates a server a chezmoi-personal marketplace plugin already registers (`## chezmoi-personal-plugins` from Step 1 — e.g. `browser-tools`, `aws-local-dev`, `openspec-dashboard`) | **REMOVE** the manual entry; re-adding later is a one-line `enabledPlugins` toggle for that plugin, not a reinstall |
+| Duplicates a server a {{ $localMarketplaceName }} marketplace plugin already registers (`## {{ $localMarketplaceName }}-plugins` from Step 1 — e.g. `browser-tools`, `aws-local-dev`, `openspec-dashboard`) | **REMOVE** the manual entry; re-adding later is a one-line `enabledPlugins` toggle for that plugin, not a reinstall |
 | Genuinely unused | **REMOVE**: `claude mcp remove <name>` |
 
 ### Plugins
 
-A `chezmoi_personal` plugin (`id` ends `@chezmoi-personal`) never appears in
+A `chezmoi_personal` plugin (`id` ends `@{{ $localMarketplaceName }}`) never appears in
 `## orphans` — it's filtered out at the source (see Step 1), same reasoning as
 chezmoi-managed skills. If one happens to be currently disabled, that's a separate
 hygiene question from orphan detection — flag it in Step 3.5 if you notice it, don't
@@ -126,7 +127,7 @@ treat it as a REMOVE candidate here. Everything that *does* appear here needs on
 | Check | Verdict |
 |---|---|
 | `enabled` is `true` for its row in `## installed-plugins` from Step 1 | **KEEP** (or **DECLARE** if it should be standard) |
-| A chezmoi-personal marketplace plugin already covers the same functionality under a different name/marketplace (`## chezmoi-personal-plugins` from Step 1) | **REMOVE**, recommend switching to the chezmoi-personal one — re-adding is a one-line enable, not a fresh install |
+| A {{ $localMarketplaceName }} marketplace plugin already covers the same functionality under a different name/marketplace (`## {{ $localMarketplaceName }}-plugins` from Step 1) | **REMOVE**, recommend switching to the {{ $localMarketplaceName }} one — re-adding is a one-line enable, not a fresh install |
 | Genuinely unused | **REMOVE**: `claude plugins uninstall <id>` (see Step 4 for scope handling) |
 
 ### Plugin marketplaces
@@ -136,7 +137,7 @@ treat it as a REMOVE candidate here. Everything that *does* appear here needs on
 | Name is a raw GitHub URL that duplicates an already-declared marketplace registered under a clean short name (e.g. an orphaned `https://github.com/org/foo.git` alongside a declared `foo`) | **REMOVE** — a shadow registration of the same source added by accident (e.g. `claude plugins marketplace add <url>` typed directly instead of enabling the existing one); check no installed plugin's `.id` ends `@<the-url>` before confirming |
 | No remaining plugins | **REMOVE**: `claude plugins marketplace remove <name>` |
 
-`chezmoi-personal` is declared in `packages.yaml`'s `plugin_marketplaces` like any other marketplace (registered at `~/.local/share/claude-plugins`, deployed there by `chezmoi apply` — see `openspec/specs/claude-plugin-marketplace/spec.md`), so it won't appear in `## orphans` at all — no special-case handling needed here.
+`{{ $localMarketplaceName }}` is declared in `packages.yaml`'s `plugin_marketplaces` like any other marketplace (registered at `~/.local/share/claude-plugins`, deployed there by `chezmoi apply` — see `openspec/specs/claude-plugin-marketplace/spec.md`), so it won't appear in `## orphans` at all — no special-case handling needed here.
 
 ### Skills
 
@@ -155,10 +156,10 @@ needs one of:
 ## Step 3.5: Unclutter — duplicates beyond the orphan list
 
 The checks above also apply outside the orphan list: a plugin, skill, or MCP server can
-duplicate something a chezmoi-personal plugin already provides while still being correctly
+duplicate something a {{ $localMarketplaceName }} plugin already provides while still being correctly
 declared in packages.yaml (so `audit-packages` never flags it). Skim what's actually
 installed — `claude plugins list --json`, `ls ~/.claude/skills/`, `claude mcp list` — against
-Step 1's `## chezmoi-personal-plugins` catalog, not just the `## orphans` section.
+Step 1's `## {{ $localMarketplaceName }}-plugins` catalog, not just the `## orphans` section.
 
 The same `## installed-plugins` rows from Step 1 can also show the same plugin `id`
 installed at **both** `user` scope and `project`/`local` scope (e.g. for `/Users/craig`
@@ -206,11 +207,11 @@ explanation — most often a plugin still enabled by a project that wasn't check
 
 - Uninstalling a project/local-scope plugin with a bare `claude plugins uninstall <id>` and
   no `--scope` flag, or from outside its owning `projectPath` — both fail. See Step 4.
-- Removing the `chezmoi-personal` marketplace.
+- Removing the `{{ $localMarketplaceName }}` marketplace.
 - Treating a skill orphan as machine-local — removing it removes it from every
   `CLAUDE_CONFIG_DIR` environment at once.
 - Checking only the current `$CLAUDE_CONFIG_DIR` and calling the machine clean while
   sibling environments still carry orphans.
 - Only scanning the `## orphans` list and missing Step 3.5 duplicates that are correctly
-  declared but still redundant with a chezmoi-personal plugin.
+  declared but still redundant with a {{ $localMarketplaceName }} plugin.
 {{ end -}}

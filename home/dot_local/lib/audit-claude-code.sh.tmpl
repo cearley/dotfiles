@@ -32,6 +32,7 @@ INSTALLED="$CLAUDE_HOME/plugins/installed_plugins.json"
 
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
 {{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+{{- $localMarketplaceName := includeTemplate "local-marketplace-name" . }}
 # Declared personas only (this machine's claude_envs config) — same source
 # list-claude-orphans.sh's own PERSONA_DIRS uses for its ## environments section — not a
 # `.claude*` glob. A glob was the original audit-packages.tmpl's choice specifically to
@@ -52,9 +53,9 @@ for _claude_persona_dir in "${_CLAUDE_PERSONA_DIRS[@]}"; do
     CLAUDE_ALL_SETTINGS+=("$_claude_persona_dir/settings.json")
 done
 
-# Single source of truth for the chezmoi-personal marketplace suffix test, referenced
-# identically by claude_orphan_plugins_jsonl and claude_installed_plugins_jsonl.
-CHEZMOI_PERSONAL_SUFFIX="@chezmoi-personal"
+# Single source of truth for the {{ $localMarketplaceName }} marketplace suffix test,
+# referenced identically by claude_orphan_plugins_jsonl and claude_installed_plugins_jsonl.
+CHEZMOI_PERSONAL_SUFFIX="@{{ $localMarketplaceName }}"
 
 # ---------------------------------------------------------------------------
 # Shared tail for the three orphan functions whose installed/declared sides are plain
@@ -96,7 +97,7 @@ claude_chezmoi_managed_skill_names() {
 
 # ---------------------------------------------------------------------------
 # Emit one compact JSON line per plugin declared in this repo's own
-# chezmoi-personal marketplace: {"name":"<plugin-name>","skills":[...]}.
+# {{ $localMarketplaceName }} marketplace: {"name":"<plugin-name>","skills":[...]}.
 # Fixed path under $HOME, independent of sourceDir (the deployed copy, not the
 # chezmoi source, which still has unrendered template syntax jq can't parse).
 # ---------------------------------------------------------------------------
@@ -114,7 +115,7 @@ claude_chezmoi_personal_plugins_jsonl() {
 # ---------------------------------------------------------------------------
 # Diff installed Claude Code plugin ids against declared ids. Declared side is
 # the union of declared_for_agent "claude_code" "plugins" and every installed
-# id ending in the literal @chezmoi-personal suffix (a direct id-suffix test —
+# id ending in the literal @{{ $localMarketplaceName }} suffix (a direct id-suffix test —
 # NOT a lookup against claude_chezmoi_personal_plugins_jsonl's marketplace
 # names; those are two different checks).
 # ---------------------------------------------------------------------------
@@ -395,7 +396,7 @@ claude_orphan_mcp_servers_jsonl() {
 
 # ---------------------------------------------------------------------------
 # One JSONL line per currently installed plugin: id, scope, projectPath,
-# chezmoi_personal (same @chezmoi-personal suffix test as
+# chezmoi_personal (same @{{ $localMarketplaceName }} suffix test as
 # claude_orphan_plugins_jsonl, via $CHEZMOI_PERSONAL_SUFFIX), enabled.
 # ---------------------------------------------------------------------------
 claude_installed_plugins_jsonl() {
