@@ -10,20 +10,49 @@ set -euo pipefail
 # so the repo root is what this script needs.
 CHEZMOI_SOURCE="{{ dir .chezmoi.sourceDir }}"
 
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+# Declared personas only (this machine's claude_envs config), same source other
+# PERSONA_DIRS-building scripts use (e.g. check-claude-overrides) — not a `.claude-*` glob,
+# which also matches non-persona dirs that share the prefix for unrelated reasons
+# (.claude-code-session, .claude-monitor, .claude-worktrees, ...) and would misreport them
+# as Claude Code environments.
+PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
+
 if ! command -v audit-packages >/dev/null 2>&1; then
     echo "error: audit-packages not found on PATH" >&2
     exit 1
 fi
 
+if ! command -v claude >/dev/null 2>&1; then
+    echo "error: claude not found on PATH" >&2
+    exit 1
+fi
+
 # ---------------------------------------------------------------------------
-# Claude Code environments present on this machine (openspec/specs/claude-environments)
+# Claude Code environments present on this machine (openspec/specs/claude-environments).
+# One object per dir with `current` marked inline, rather than a separate "current" vs
+# "found" line for the same dir — avoids listing the active persona twice under two
+# different labels.
 # ---------------------------------------------------------------------------
 echo "## environments"
-printf 'current\t%s\n' "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-for dir in "$HOME"/.claude "$HOME"/.claude-*; do
+current_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+current_seen=0
+for dir in "${PERSONA_DIRS[@]}"; do
     [[ -d "$dir" ]] || continue
-    printf 'found\t%s\n' "$dir"
+    if [[ "$dir" == "$current_dir" ]]; then
+        is_current=true
+        current_seen=1
+    else
+        is_current=false
+    fi
+    jq -cn --arg path "$dir" --argjson current "$is_current" '{path: $path, current: $current}'
 done
+if [[ "$current_seen" -eq 0 ]]; then
+    # $CLAUDE_CONFIG_DIR points somewhere outside the declared persona list — still
+    # report it as the current environment rather than silently dropping it.
+    jq -cn --arg path "$current_dir" '{path: $path, current: true}'
+fi
 
 # ---------------------------------------------------------------------------
 # This repo's own marketplace catalog. Plugins installed from chezmoi-personal are
@@ -41,11 +70,12 @@ done
 echo ""
 echo "## chezmoi-personal-plugins"
 marketplace_json="$HOME/.local/share/claude-plugins/.claude-plugin/marketplace.json"
+# Kept as TSV (name\tcomma,joined,skills — empty when none), not JSON: this is internal
+# plumbing fed to ## orphans' awk matching below, never printed directly.
 marketplace_tsv=""
 if [[ -f "$marketplace_json" ]]; then
-    marketplace_tsv="$(jq -r '.plugins[] | [.name, ((.skills // []) | map(sub("^\\./"; "")) | join(","))] | @tsv' "$marketplace_json" \
-        | awk -F'\t' '{ printf "%s\t%s\n", $1, ($2 == "" ? "-" : $2) }')"
-    printf '%s\n' "$marketplace_tsv"
+    marketplace_tsv="$(jq -r '.plugins[] | [.name, ((.skills // []) | map(sub("^\\./"; "")) | join(","))] | @tsv' "$marketplace_json")"
+    jq -c '.plugins[] | {name, skills: ((.skills // []) | map(sub("^\\./"; "")))}' "$marketplace_json"
 else
     echo "error: marketplace.json not found at ${marketplace_json}" >&2
 fi
@@ -64,7 +94,7 @@ if [[ -d "$skills_src" ]]; then
     for dir in "$skills_src"/*/; do
         [[ -e "$dir" ]] || continue
         name="$(basename "$dir")"
-        echo "$name"
+        jq -cn --arg name "$name" '{name: $name}'
         chezmoi_managed_skills+="$name"$'\n'
     done
 else
@@ -73,54 +103,50 @@ fi
 
 # ---------------------------------------------------------------------------
 # Every currently installed plugin's scope, owning project (for project/local scope),
-# and whether it's sourced from this repo's own chezmoi-personal marketplace (`.id`
-# ends `@chezmoi-personal` — never a DECLARE candidate, see SKILL.md Step 3). This is
-# what uninstalling actually needs: user-scope plugins uninstall directly;
-# project/local-scope plugins require clearing the `enabledPlugins` entry from the
-# owning project's settings file first, then `claude plugins uninstall <id> --scope
-# <project|local>` run with cwd inside that project. Without this, all three facts
-# have to be rediscovered by trial and error.
+# enabled state, and whether it's sourced from this repo's own chezmoi-personal
+# marketplace (`.id` ends `@chezmoi-personal` — never a DECLARE candidate, see SKILL.md
+# Step 3). This is what uninstalling actually needs: user-scope plugins uninstall
+# directly; project/local-scope plugins require clearing the `enabledPlugins` entry from
+# the owning project's settings file first (`.claude/settings.json` for project scope,
+# `.claude/settings.local.json` for local scope — determined by `scope` alone, no extra
+# lookup needed), then `claude plugins uninstall <id> --scope <project|local>` run with
+# cwd inside that project. Without this, all three facts have to be rediscovered by
+# trial and error.
+#
+# Sourced from `claude plugins list --json` — the same live CLI `audit-packages` itself
+# reads to build ## orphans below — rather than the on-disk installed_plugins.json file,
+# which silently omits plugins installed from a directory-style marketplace (a standalone
+# skill installed as its own "plugin"): those still show up in ## orphans, but used to be
+# missing here, leaving their scope to be rediscovered by hand. The `enabled` column also
+# replaces a separate settings.json/settings.local.json cross-check this script used to
+# do itself: `claude plugins list --json` already reports whether a project/local-scope
+# install is currently active, so there's nothing left to re-derive.
 # ---------------------------------------------------------------------------
 echo ""
 echo "## installed-plugins"
-installed_json="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json"
-if [[ -f "$installed_json" ]]; then
-    jq -r '.plugins | to_entries[] | .key as $id | .value[]
-        | [$id, .scope, (.projectPath // "-"), (if ($id | endswith("@chezmoi-personal")) then "yes" else "no" end)]
-        | @tsv' "$installed_json"
+if plugins_json="$(claude plugins list --json 2>/dev/null)" && [[ -n "$plugins_json" ]]; then
+    # JSON Lines (one named-field object per plugin), not TSV — a positional column has no
+    # meaning without the SKILL.md open next to it; a named field is self-explanatory on
+    # its own, even pasted out of context.
+    echo "$plugins_json" | jq -c '.[] | {
+        id,
+        scope,
+        projectPath: (.projectPath // null),
+        chezmoi_personal: (.id | endswith("@chezmoi-personal")),
+        enabled
+    }'
 else
-    echo "error: installed_plugins.json not found at ${installed_json}" >&2
+    echo "error: \`claude plugins list --json\` failed or returned nothing" >&2
 fi
 
 # ---------------------------------------------------------------------------
-# For every project/local-scope plugin, check whether the owning project's
-# settings.json or settings.local.json still lists it in enabledPlugins.
-# ## installed-plugins above already has each plugin's scope and projectPath, so this
-# is a direct file check rather than something left for the model to remember to go
-# do by hand before uninstalling.
-# ---------------------------------------------------------------------------
-echo ""
-echo "## still-enabled-elsewhere"
-if [[ -f "$installed_json" ]]; then
-    while IFS=$'\t' read -r id project_path; do
-        [[ -z "$id" ]] && continue
-        for settings_name in settings.json settings.local.json; do
-            settings_file="${project_path}/.claude/${settings_name}"
-            [[ -f "$settings_file" ]] || continue
-            if jq -e --arg id "$id" '.enabledPlugins[$id] == true' "$settings_file" >/dev/null 2>&1; then
-                printf '%s\t%s\t%s\n' "$id" "$project_path" "$settings_name"
-            fi
-        done
-    done < <(jq -r '.plugins | to_entries[] | .key as $id | .value[]
-        | select((.scope == "project" or .scope == "local") and .projectPath != null)
-        | [$id, .projectPath] | @tsv' "$installed_json")
-fi
-
-# ---------------------------------------------------------------------------
-# Orphans from the four Claude Code sections of `audit-packages`, as clean
-# <category>\t<item> lines, with a 3rd column on skill orphans tagging whether they're
-# chezmoi-managed or duplicate a chezmoi-personal-bundled skill — both mean KEEP, never
-# REMOVE/DECLARE through this skill (SKILL.md Step 3). Forcing LANG=C/LC_ALL=C makes
+# Orphans from the four Claude Code sections of `audit-packages`. `awk` still does the
+# stateful part — tracking which `=== ... ===` section a line belongs to as
+# `audit-packages`' freeform text streams by, and tagging skill orphans against
+# $chezmoi_managed_skills/$marketplace_tsv — since that's awkward to express as a single
+# jq filter over plain text. It only emits plain `category\titem[\ttag]` TSV though;
+# `jq -R` downstream turns that into JSON safely, since `awk printf` doesn't escape
+# quotes/backslashes that could appear in a path or name. Forcing LANG=C/LC_ALL=C makes
 # print_message emit its ASCII "[INFO]"-style prefixes instead of emoji, so
 # section/noise lines are trivial to filter regardless of the invoking shell's locale.
 # The per-line uninstall hint ("   claude plugins uninstall ...") is indented with
@@ -153,6 +179,5 @@ LC_ALL=C LANG=C audit-packages 2>&1 | managed_skills_env="$chezmoi_managed_skill
     /^$/                                      { next }
     section == "skill" && ($0 in is_managed)  { print section "\t" $0 "\tchezmoi-managed"; next }
     section == "skill" && ($0 in bundled_by)  { print section "\t" $0 "\tbundled-by:" bundled_by[$0]; next }
-    section == "skill"                        { print section "\t" $0 "\t-"; next }
     { print section "\t" $0 }
-'
+' | jq -R -c 'split("\t") as $p | {category: $p[0], item: $p[1], skill_tag: $p[2]}'
