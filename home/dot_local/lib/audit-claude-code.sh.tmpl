@@ -20,6 +20,38 @@
 PACKAGES_YAML="{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml"
 CHEZMOI_MANAGED_SKILLS_DIR="{{ .chezmoi.sourceDir }}/dot_claude/skills"
 
+# Current persona's config dir, respecting $CLAUDE_CONFIG_DIR rather than hardcoding
+# ~/.claude, so these functions report correctly under a non-default persona.
+CLAUDE_HOME="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+SETTINGS="$CLAUDE_HOME/settings.json"
+# Not read by any function below. claude_orphan_plugins_jsonl/claude_installed_plugins_jsonl
+# intentionally source `claude plugins list --json` instead of this file — it silently omits
+# plugins installed from a directory-style marketplace (see those functions' own comments).
+# Defined for a future check that needs it; don't wire it into existing plugin logic.
+INSTALLED="$CLAUDE_HOME/plugins/installed_plugins.json"
+
+{{- $settings := includeTemplate "machine-settings" . | fromJson }}
+{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+# Declared personas only (this machine's claude_envs config) — same source
+# list-claude-orphans.sh's own PERSONA_DIRS uses for its ## environments section — not a
+# `.claude*` glob. A glob was the original audit-packages.tmpl's choice specifically to
+# avoid a chezmoi-data dependency ("without needing chezmoi data", per its own old
+# comment); this library already pays that cost for PACKAGES_YAML/CHEZMOI_MANAGED_SKILLS_DIR
+# above, so there's no reason left to prefer a glob that could also misreport a non-persona
+# dir sharing the prefix (.claude-code-session, .claude-monitor, .claude-worktrees, ...) as
+# an environment, the same false-positive this repo already fixed once elsewhere.
+_CLAUDE_PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
+
+# Every settings.json this machine might have: one per declared persona, plus $SETTINGS
+# explicitly in case $CLAUDE_CONFIG_DIR points somewhere outside that declared list — the
+# same "current persona not in the declared set" case list-claude-orphans.sh's own
+# environments section guards against separately. A duplicate between $SETTINGS and a
+# persona-dir entry (the common case) is harmless — both call sites already tolerate it.
+CLAUDE_ALL_SETTINGS=("$SETTINGS")
+for _claude_persona_dir in "${_CLAUDE_PERSONA_DIRS[@]}"; do
+    CLAUDE_ALL_SETTINGS+=("$_claude_persona_dir/settings.json")
+done
+
 # Single source of truth for the chezmoi-personal marketplace suffix test, referenced
 # identically by claude_orphan_plugins_jsonl and claude_installed_plugins_jsonl.
 CHEZMOI_PERSONAL_SUFFIX="@chezmoi-personal"
@@ -146,7 +178,7 @@ claude_orphan_marketplaces_jsonl() {
 # Returns 0 if the user-scope skills directory exists, 1 otherwise. No output.
 # ---------------------------------------------------------------------------
 claude_skills_dir_present() {
-    [[ -d "${HOME}/.claude/skills" ]]
+    [[ -d "$CLAUDE_HOME/skills" ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -236,7 +268,7 @@ _claude_split_skill_specs() {
 # duplicates via a jq lookup against claude_chezmoi_personal_plugins_jsonl.
 # ---------------------------------------------------------------------------
 claude_orphan_skills_jsonl() {
-    local skills_dir="${HOME}/.claude/skills"
+    local skills_dir="$CLAUDE_HOME/skills"
 
     local __known_skills __wildcards
     _claude_split_skill_specs
@@ -290,7 +322,7 @@ claude_orphan_skills_jsonl() {
 # stream — no field is added to that stream for this.
 # ---------------------------------------------------------------------------
 claude_skills_wildcard_coverage_note() {
-    local skills_dir="${HOME}/.claude/skills"
+    local skills_dir="$CLAUDE_HOME/skills"
 
     local __known_skills __wildcards
     _claude_split_skill_specs
@@ -322,11 +354,11 @@ claude_skills_wildcard_coverage_note() {
 }
 
 # ---------------------------------------------------------------------------
-# Returns 0 if any ~/.claude*/settings.json file exists, 1 otherwise. No output.
+# Returns 0 if any file in $CLAUDE_ALL_SETTINGS exists, 1 otherwise. No output.
 # ---------------------------------------------------------------------------
 claude_mcp_settings_present() {
     local settings_file
-    for settings_file in "${HOME}"/.claude*/settings.json; do
+    for settings_file in "${CLAUDE_ALL_SETTINGS[@]}"; do
         [[ -f "$settings_file" ]] && return 0
     done
     return 1
@@ -346,7 +378,7 @@ claude_orphan_mcp_servers_jsonl() {
     declared_file=$(mktemp)
 
     local settings_file
-    for settings_file in "${HOME}"/.claude*/settings.json; do
+    for settings_file in "${CLAUDE_ALL_SETTINGS[@]}"; do
         [[ -f "$settings_file" ]] || continue
         jq -r '.mcpServers // {} | keys[]' "$settings_file" 2>/dev/null >> "$installed_file" || true
     done
