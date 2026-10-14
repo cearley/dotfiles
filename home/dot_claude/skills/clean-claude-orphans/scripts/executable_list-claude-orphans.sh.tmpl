@@ -6,15 +6,7 @@
 # this by hand. Read-only: never installs, removes, or modifies any Claude Code state.
 set -euo pipefail
 
-{{- $settings := includeTemplate "machine-settings" . | fromJson }}
-{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
 {{- $localMarketplaceName := includeTemplate "local-marketplace-name" . }}
-# Declared personas only (this machine's claude_envs config), same source other
-# PERSONA_DIRS-building scripts use (e.g. check-claude-overrides) — not a `.claude-*` glob,
-# which also matches non-persona dirs that share the prefix for unrelated reasons
-# (.claude-code-session, .claude-monitor, .claude-worktrees, ...) and would misreport them
-# as Claude Code environments.
-PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
 
 if ! command -v yq >/dev/null 2>&1; then
     echo "error: yq not found on PATH" >&2
@@ -37,7 +29,7 @@ source "$HOME/.local/lib/audit-claude-code.sh"
 echo "## environments"
 current_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 current_seen=0
-for dir in "${PERSONA_DIRS[@]}"; do
+for dir in "${CLAUDE_PERSONA_DIRS[@]}"; do
     [[ -d "$dir" ]] || continue
     if [[ "$dir" == "$current_dir" ]]; then
         is_current=true

@@ -24,24 +24,21 @@ CHEZMOI_MANAGED_SKILLS_DIR="{{ .chezmoi.sourceDir }}/dot_claude/skills"
 # ~/.claude, so these functions report correctly under a non-default persona.
 CLAUDE_HOME="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 SETTINGS="$CLAUDE_HOME/settings.json"
-# Not read by any function below. claude_orphan_plugins_jsonl/claude_installed_plugins_jsonl
-# intentionally source `claude plugins list --json` instead of this file — it silently omits
-# plugins installed from a directory-style marketplace (see those functions' own comments).
-# Defined for a future check that needs it; don't wire it into existing plugin logic.
-INSTALLED="$CLAUDE_HOME/plugins/installed_plugins.json"
 
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
 {{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
 {{- $localMarketplaceName := includeTemplate "local-marketplace-name" . }}
-# Declared personas only (this machine's claude_envs config) — same source
-# list-claude-orphans.sh's own PERSONA_DIRS uses for its ## environments section — not a
-# `.claude*` glob. A glob was the original audit-packages.tmpl's choice specifically to
-# avoid a chezmoi-data dependency ("without needing chezmoi data", per its own old
-# comment); this library already pays that cost for PACKAGES_YAML/CHEZMOI_MANAGED_SKILLS_DIR
-# above, so there's no reason left to prefer a glob that could also misreport a non-persona
-# dir sharing the prefix (.claude-code-session, .claude-monitor, .claude-worktrees, ...) as
-# an environment, the same false-positive this repo already fixed once elsewhere.
-_CLAUDE_PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
+# Declared personas only (this machine's claude_envs config) — not a `.claude*` glob. A
+# glob was the original audit-packages.tmpl's choice specifically to avoid a chezmoi-data
+# dependency ("without needing chezmoi data", per its own old comment); this library
+# already pays that cost for PACKAGES_YAML/CHEZMOI_MANAGED_SKILLS_DIR above, so there's no
+# reason left to prefer a glob that could also misreport a non-persona dir sharing the
+# prefix (.claude-code-session, .claude-monitor, .claude-worktrees, ...) as an environment,
+# the same false-positive this repo already fixed once elsewhere.
+#
+# Public (no leading underscore): list-claude-orphans.sh's own ## environments section
+# consumes this array directly instead of re-deriving it from claude_envs itself.
+CLAUDE_PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
 
 # Every settings.json this machine might have: one per declared persona, plus $SETTINGS
 # explicitly in case $CLAUDE_CONFIG_DIR points somewhere outside that declared list — the
@@ -49,7 +46,7 @@ _CLAUDE_PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ t
 # environments section guards against separately. A duplicate between $SETTINGS and a
 # persona-dir entry (the common case) is harmless — both call sites already tolerate it.
 CLAUDE_ALL_SETTINGS=("$SETTINGS")
-for _claude_persona_dir in "${_CLAUDE_PERSONA_DIRS[@]}"; do
+for _claude_persona_dir in "${CLAUDE_PERSONA_DIRS[@]}"; do
     CLAUDE_ALL_SETTINGS+=("$_claude_persona_dir/settings.json")
 done
 
@@ -113,31 +110,64 @@ claude_chezmoi_personal_plugins_jsonl() {
 }
 
 # ---------------------------------------------------------------------------
+# Shared installed-side detection for the two Claude CLI subcommands
+# (`plugins list`, `plugins marketplace list`) that each have a modern --json
+# form and an older human-readable form: try $json_fn first (its own exit
+# status, under this file's inherited `set -o pipefail`, already reflects a
+# failure anywhere in its internal pipeline — missing --json support on an
+# older CLI, or a jq parse error), falling back to $text_fn's text-parsing
+# pipeline only if that fails. Shared by claude_orphan_plugins_jsonl and
+# claude_orphan_marketplaces_jsonl so a change to this control flow doesn't
+# need to be kept in sync by hand between the two.
+# ---------------------------------------------------------------------------
+_claude_installed_via_json_or_text() {
+    local out_file="$1" json_fn="$2" text_fn="$3"
+    if "$json_fn" > "$out_file" 2>/dev/null; then
+        :
+    else
+        "$text_fn" > "$out_file" 2>/dev/null || true
+    fi
+}
+
+# Installed: .id field from JSON. sort -u, not sort: the same id can
+# legitimately appear once per scope it's installed/enabled in.
+_claude_plugins_installed_json() {
+    claude plugins list --json 2>/dev/null | jq -r '.[].id' 2>/dev/null | sort -u
+}
+
+# Fallback: parse text output for id@marketplace-shaped tokens.
+_claude_plugins_installed_text() {
+    claude plugins list 2>/dev/null | grep -oE '[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+' | sort -u
+}
+
+_claude_marketplaces_installed_json() {
+    claude plugins marketplace list --json 2>/dev/null \
+        | jq -r '.[] | if .source == "github" then .repo elif .source == "directory" then .path else .url end' 2>/dev/null \
+        | sort
+}
+
+_claude_marketplaces_installed_text() {
+    claude plugins marketplace list 2>/dev/null | grep -E '^\s+❯' | awk '{print $2}' | sort
+}
+
+# ---------------------------------------------------------------------------
 # Diff installed Claude Code plugin ids against declared ids. Declared side is
 # the union of declared_for_agent "claude_code" "plugins" and every installed
-# id ending in the literal @{{ $localMarketplaceName }} suffix (a direct id-suffix test —
-# NOT a lookup against claude_chezmoi_personal_plugins_jsonl's marketplace
-# names; those are two different checks).
+# id ending in the literal @{{ $localMarketplaceName }} suffix (a direct id-suffix test, via the
+# same jq endswith() check claude_installed_plugins_jsonl uses — NOT a lookup
+# against claude_chezmoi_personal_plugins_jsonl's marketplace names; those are
+# two different checks).
 # ---------------------------------------------------------------------------
 claude_orphan_plugins_jsonl() {
     local installed_file declared_file
     installed_file=$(mktemp)
     declared_file=$(mktemp)
 
-    # Installed: .id field from JSON. sort -u, not sort: the same id can
-    # legitimately appear once per scope it's installed/enabled in.
-    if claude plugins list --json 2>/dev/null | jq -r '.[].id' 2>/dev/null | sort -u > "$installed_file"; then
-        :
-    else
-        # Fallback: parse text output for id@marketplace-shaped tokens.
-        claude plugins list 2>/dev/null \
-            | grep -oE '[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+' \
-            | sort -u > "$installed_file" || true
-    fi
+    _claude_installed_via_json_or_text "$installed_file" _claude_plugins_installed_json _claude_plugins_installed_text
 
     {
         declared_for_agent "claude_code" "plugins"
-        grep -E "${CHEZMOI_PERSONAL_SUFFIX}\$" "$installed_file" 2>/dev/null || true
+        jq -Rr --arg suffix "$CHEZMOI_PERSONAL_SUFFIX" 'select(endswith($suffix))' "$installed_file" 2>/dev/null || true
     } | sort -u > "$declared_file"
 
     _claude_emit_orphans_jsonl "plugin" "$installed_file" "$declared_file"
@@ -154,16 +184,7 @@ claude_orphan_marketplaces_jsonl() {
     installed_file=$(mktemp)
     declared_file=$(mktemp)
 
-    if claude plugins marketplace list --json 2>/dev/null | \
-        jq -r '.[] | if .source == "github" then .repo elif .source == "directory" then .path else .url end' 2>/dev/null | \
-        sort > "$installed_file"; then
-        :
-    else
-        claude plugins marketplace list 2>/dev/null \
-            | grep -E '^\s+❯' \
-            | awk '{print $2}' \
-            | sort > "$installed_file" || true
-    fi
+    _claude_installed_via_json_or_text "$installed_file" _claude_marketplaces_installed_json _claude_marketplaces_installed_text
 
     declared_for_agent "claude_code" "plugin_marketplaces" \
         | sed 's/#[^#]*$//' \
@@ -199,9 +220,8 @@ _claude_wildcard_prefix() {
 
 # ---------------------------------------------------------------------------
 # True if skill_name's name starts with the org-derived prefix of any wildcard spec in
-# the newline-delimited $wildcards. Shared by claude_orphan_skills_jsonl (to skip an
-# attributed skill) and claude_skills_wildcard_coverage_note (to decide whether to emit a
-# note at all) — both need the identical attribution check.
+# the newline-delimited $wildcards. Called by _claude_classify_skill, which both
+# claude_orphan_skills_jsonl and claude_skills_wildcard_coverage_note share.
 # ---------------------------------------------------------------------------
 _claude_skill_attributed_to_wildcard() {
     local skill_name="$1" wildcards="$2"
@@ -262,6 +282,38 @@ _claude_split_skill_specs() {
 }
 
 # ---------------------------------------------------------------------------
+# Classify a single skill directory name against the known/managed/wildcard
+# sources, in precedence order: "known" (matched by a deterministic spec),
+# "managed" (a chezmoi-managed native skill), "wildcard" (covered by a
+# collection spec), or "orphan" (none of the above). Shared by
+# claude_orphan_skills_jsonl and claude_skills_wildcard_coverage_note so both
+# walk the same classification instead of each re-deriving it — in particular
+# so a chezmoi-managed skill whose name happens to also match a wildcard
+# prefix is never counted as "wildcard-covered" by either caller, since it's
+# never actually an orphan the wildcard needed to cover.
+# ---------------------------------------------------------------------------
+_claude_classify_skill() {
+    local skill_name="$1" known_skills="$2" managed_skills="$3" wildcards="$4"
+
+    if echo "$known_skills" | grep -qxF "$skill_name"; then
+        echo "known"
+        return
+    fi
+
+    if [[ -n "$managed_skills" ]] && echo "$managed_skills" | grep -qxF "$skill_name"; then
+        echo "managed"
+        return
+    fi
+
+    if _claude_skill_attributed_to_wildcard "$skill_name" "$wildcards"; then
+        echo "wildcard"
+        return
+    fi
+
+    echo "orphan"
+}
+
+# ---------------------------------------------------------------------------
 # Orphan Claude Code skills: assumes the caller already checked
 # claude_skills_dir_present. Ports audit_claude_skills' deterministic-mapping
 # and wildcard-prefix-coverage logic exactly, additionally excluding names
@@ -287,19 +339,9 @@ claude_orphan_skills_jsonl() {
         local skill_name
         skill_name=$(basename "$skill_dir")
 
-        # Directly matched by a deterministic spec.
-        if echo "$known_skills" | grep -qxF "$skill_name"; then
-            continue
-        fi
-
-        # Chezmoi-managed native skill — not an orphan of the external mechanism.
-        if [[ -n "$managed_skills" ]] && echo "$managed_skills" | grep -qxF "$skill_name"; then
-            continue
-        fi
-
-        if _claude_skill_attributed_to_wildcard "$skill_name" "$wildcards"; then
-            continue
-        fi
+        local classification
+        classification=$(_claude_classify_skill "$skill_name" "$known_skills" "$managed_skills" "$wildcards")
+        [[ "$classification" == "orphan" ]] || continue
 
         local bundled_by
         bundled_by=$(claude_chezmoi_personal_plugins_jsonl 2>/dev/null \
@@ -330,6 +372,9 @@ claude_skills_wildcard_coverage_note() {
     local known_skills="$__known_skills"
     local wildcards="$__wildcards"
 
+    local managed_skills
+    managed_skills=$(claude_chezmoi_managed_skill_names)
+
     local wildcard_covered=false
 
     local skill_dir
@@ -338,13 +383,9 @@ claude_skills_wildcard_coverage_note() {
         local skill_name
         skill_name=$(basename "$skill_dir")
 
-        if echo "$known_skills" | grep -qxF "$skill_name"; then
-            continue
-        fi
-
-        if _claude_skill_attributed_to_wildcard "$skill_name" "$wildcards"; then
-            wildcard_covered=true
-        fi
+        local classification
+        classification=$(_claude_classify_skill "$skill_name" "$known_skills" "$managed_skills" "$wildcards")
+        [[ "$classification" == "wildcard" ]] && wildcard_covered=true
     done
 
     if [[ "$wildcard_covered" == true ]]; then

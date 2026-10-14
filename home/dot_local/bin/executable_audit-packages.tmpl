@@ -12,8 +12,8 @@ set -euo pipefail
 
 source "{{ $sourceDir }}/scripts/shared-utils.sh"
 source "$HOME/.local/lib/audit-claude-code.sh"
-
-PACKAGES_YAML="{{ $sourceDir }}/.chezmoidata/packages.yaml"
+# PACKAGES_YAML comes from the sourced library above — it computes the identical path from
+# .chezmoi.sourceDir, so this caller doesn't redeclare it.
 
 # Machine-specific Brewfile (script 28's darwin-28-brew-bundle-install source),
 # resolved the same way that script does, so packages declared only there
@@ -107,9 +107,12 @@ has_tag() {
 }
 
 # ---------------------------------------------------------------------------
-# Collect the declared set for a given key across all active tags
+# Collect the declared set for a given key across all active tags. Named
+# distinctly from the sourced library's declared_for_agent (an agent-keyed
+# lookup, not a tag-keyed one) — the two aren't interchangeable despite the
+# similar name, and this file sources that library directly.
 # ---------------------------------------------------------------------------
-declared_for() {
+declared_for_tag() {
     local key="$1"
     local tmp
     tmp=$(mktemp)
@@ -211,7 +214,9 @@ print_uninstall_hint() {
 }
 
 # ---------------------------------------------------------------------------
-# Core report helper — compare sorted installed vs declared; print orphans
+# Core report helper — compare sorted installed vs declared, then delegate
+# the success/list/counter/hint tail to report_orphan_list_body (shared with
+# callers that arrive with their orphans already diffed, see below).
 # ---------------------------------------------------------------------------
 report_orphans() {
     local label="$1"
@@ -222,30 +227,23 @@ report_orphans() {
 
     print_message "info" "=== ${label} ==="
 
-    local sorted_declared orphans orphan_count
+    local sorted_declared orphans
     sorted_declared=$(mktemp)
     sort "$declared_file" > "$sorted_declared"
 
     orphans=$(comm -23 "$installed_file" "$sorted_declared" || true)
     rm -f "$sorted_declared"
 
-    if [[ -z "$orphans" ]]; then
-        print_message "success" "No orphans"
-    else
-        echo "$orphans"
-        orphan_count=$(echo "$orphans" | wc -l | tr -d '[:space:]')
-        TOTAL_ORPHANS=$((TOTAL_ORPHANS + orphan_count))
-        MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
-        [[ -n "$uninstall_prefix" ]] && print_uninstall_hint "$uninstall_prefix" "$uninstall_mode" "$orphans"
-    fi
+    report_orphan_list_body "$orphans" "$uninstall_prefix" "$uninstall_mode"
 }
 
 # ---------------------------------------------------------------------------
-# Like report_orphans, but for callers that already printed their own header
-# and did their own skip-check (the four Claude Code sections, which get
-# their orphan items pre-diffed as JSONL from the shared audit-claude-code.sh
-# library). Only does the part that's identical across all four: report
-# success, or print the list and update the running orphan counters/hint.
+# Shared reporting tail: report success, or print the list and update the
+# running orphan counters/hint. Used both by report_orphans above (after its
+# own comm -23 diff) and directly by callers that already printed their own
+# header and did their own skip-check (the four Claude Code sections, which
+# get their orphan items pre-diffed as JSONL from the shared
+# audit-claude-code.sh library).
 # ---------------------------------------------------------------------------
 report_orphan_list_body() {
     local items="$1"
@@ -260,7 +258,12 @@ report_orphan_list_body() {
         item_count=$(echo "$items" | wc -l | tr -d '[:space:]')
         TOTAL_ORPHANS=$((TOTAL_ORPHANS + item_count))
         MANAGERS_WITH_ORPHANS=$((MANAGERS_WITH_ORPHANS + 1))
-        print_uninstall_hint "$uninstall_prefix" "$uninstall_mode" "$items"
+        # `if`, not `[[ -n ]] && ...`: the latter's exit status is the `[[ ]]` test's own
+        # result when short-circuited, so an empty uninstall_prefix here would make this
+        # function return 1 — fatal under this script's `set -e` for every caller.
+        if [[ -n "$uninstall_prefix" ]]; then
+            print_uninstall_hint "$uninstall_prefix" "$uninstall_mode" "$items"
+        fi
     fi
 }
 
@@ -279,7 +282,7 @@ audit_brews() {
         brew list --installed-on-request 2>/dev/null | sort > "$installed"
     fi
 
-    { declared_for "brews"; brewfile_declared "brew"; } | sort -u > "$declared"
+    { declared_for_tag "brews"; brewfile_declared "brew"; } | sort -u > "$declared"
     report_orphans "Homebrew Formulae" "$installed" "$declared" "brew uninstall" "one_line"
     rm -f "$installed" "$declared"
 }
@@ -290,7 +293,7 @@ audit_casks() {
     declared=$(mktemp)
 
     brew list --cask -1 2>/dev/null | sort > "$installed"
-    { declared_for "casks"; brewfile_declared "cask"; } | sort -u > "$declared"
+    { declared_for_tag "casks"; brewfile_declared "cask"; } | sort -u > "$declared"
     report_orphans "Homebrew Casks" "$installed" "$declared" "brew uninstall --cask" "one_line"
     rm -f "$installed" "$declared"
 }
@@ -305,7 +308,7 @@ audit_taps() {
     # Union of top-level darwin taps, per-tag taps, and machine-Brewfile taps
     {
         yq '.packages.darwin.taps[]?' "$PACKAGES_YAML" 2>/dev/null || true
-        declared_for "taps"
+        declared_for_tag "taps"
         brewfile_declared "tap"
     } | sort -u > "$declared"
 
@@ -340,7 +343,7 @@ audit_uv() {
     echo "$installed" > "$installed_file"
 
     # Declared: normalize each spec to tool name
-    declared_raw=$(declared_for "uv")
+    declared_raw=$(declared_for_tag "uv")
     declared_file=$(mktemp)
     while IFS= read -r spec; do
         [[ -z "$spec" ]] && continue
@@ -376,7 +379,7 @@ audit_bun() {
         | sed -E 's/@[^@]+$//' \
         | sort > "$installed_file"
 
-    declared_raw=$(declared_for "bun")
+    declared_raw=$(declared_for_tag "bun")
     declared_file=$(mktemp)
     while IFS= read -r spec; do
         [[ -z "$spec" ]] && continue
@@ -413,7 +416,7 @@ audit_cargo() {
         | sort > "$installed_file"
 
     local declared_raw
-    declared_raw=$(declared_for "cargo")
+    declared_raw=$(declared_for_tag "cargo")
     declared_file=$(mktemp)
     while IFS= read -r spec; do
         [[ -z "$spec" ]] && continue
@@ -483,17 +486,25 @@ audit_sdkman() {
 # ---------------------------------------------------------------------------
 # Section 4: Claude Code
 # ---------------------------------------------------------------------------
+# Strip a claude_orphan_*_jsonl function's {category, item, skill_tag} JSONL stream down to
+# the bare `.item` strings report_orphan_list_body needs — the one place that knows the
+# field name, instead of each audit_claude_* wrapper re-extracting it independently.
+# ---------------------------------------------------------------------------
+claude_orphan_items() {
+    jq -r '.item'
+}
+
 audit_claude_plugins() {
     print_message "info" "=== Claude Code Plugins ==="
     local orphans
-    orphans=$(claude_orphan_plugins_jsonl | jq -r '.item')
+    orphans=$(claude_orphan_plugins_jsonl | claude_orphan_items)
     report_orphan_list_body "$orphans" "claude plugins uninstall" "per_line"
 }
 
 audit_claude_marketplaces() {
     print_message "info" "=== Claude Code Plugin Marketplaces ==="
     local orphans
-    orphans=$(claude_orphan_marketplaces_jsonl | jq -r '.item')
+    orphans=$(claude_orphan_marketplaces_jsonl | claude_orphan_items)
     report_orphan_list_body "$orphans" "claude plugins marketplace remove" "per_line"
 }
 
@@ -507,7 +518,7 @@ audit_claude_skills() {
     note=$(claude_skills_wildcard_coverage_note)
     [[ -n "$note" ]] && print_message "info" "$note"
     local orphans
-    orphans=$(claude_orphan_skills_jsonl | jq -r '.item')
+    orphans=$(claude_orphan_skills_jsonl | claude_orphan_items)
     report_orphan_list_body "$orphans" "claude skills remove" "per_line"
 }
 
@@ -518,7 +529,7 @@ audit_claude_mcp_servers() {
     fi
     print_message "info" "=== Claude Code MCP Servers ==="
     local orphans
-    orphans=$(claude_orphan_mcp_servers_jsonl | jq -r '.item')
+    orphans=$(claude_orphan_mcp_servers_jsonl | claude_orphan_items)
     report_orphan_list_body "$orphans" "claude mcp remove" "per_line"
 }
 
