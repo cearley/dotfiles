@@ -11,11 +11,9 @@ set -euo pipefail
 {{- $sourceDir := .chezmoi.sourceDir }}
 
 source "{{ $sourceDir }}/scripts/shared-utils.sh"
+source "$HOME/.local/lib/audit-claude-code.sh"
 
 PACKAGES_YAML="{{ $sourceDir }}/.chezmoidata/packages.yaml"
-
-CHEZMOI_MANAGED_SKILLS_DIR="{{ $sourceDir }}/dot_claude/skills"
-source "{{ $sourceDir }}/scripts/audit-claude-code.sh"
 
 # Machine-specific Brewfile (script 28's darwin-28-brew-bundle-install source),
 # resolved the same way that script does, so packages declared only there

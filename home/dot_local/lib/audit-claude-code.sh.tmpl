@@ -2,22 +2,23 @@
 # audit-claude-code.sh — Claude Code orphan-detection logic (plugins, marketplaces, skills,
 # MCP servers) shared by audit-packages and clean-claude-orphans.
 #
-# PLAIN BASH, ZERO CHEZMOI TEMPLATE SYNTAX. home/.chezmoiignore.tmpl lists `scripts/`, so
-# chezmoi never renders or deploys anything under home/scripts/ — a `.tmpl` file here would be
-# sourced with literal, uninterpreted `{{ }}` text and break immediately. Never add `{{ }}`
-# anywhere in this file.
+# Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/lib/audit-claude-code.sh.tmpl to
+# ~/.local/lib/audit-claude-code.sh — edit the source template, then `chezmoi apply` before a
+# caller will see the change (same as every other dot_local/ deployment in this repo).
 #
 # This file is `source`d directly by two chezmoi-templated callers:
 #   - home/dot_local/bin/executable_audit-packages.tmpl
 #   - home/dot_claude/skills/clean-claude-orphans/scripts/executable_list-claude-orphans.sh.tmpl
-# Each caller sets two plain shell variables from its own already-rendered template values
-# BEFORE sourcing this file:
-#   PACKAGES_YAML                — absolute path to .chezmoidata/packages.yaml
-#   CHEZMOI_MANAGED_SKILLS_DIR    — absolute path to home/dot_claude/skills (source, not deployed)
+# Both just `source "$HOME/.local/lib/audit-claude-code.sh"` with no setup beforehand — this
+# file computes its own PACKAGES_YAML/CHEZMOI_MANAGED_SKILLS_DIR at render time below, rather
+# than requiring each caller to pass them in as plain shell variables.
 #
 # Deliberately does NOT source scripts/shared-utils.sh: that library is print_message /
 # command_exists human-facing output, and this file is JSONL-only, no human-facing output at
 # all. Preconditions (is `claude` on PATH, etc.) are the caller's job, not this file's.
+
+PACKAGES_YAML="{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml"
+CHEZMOI_MANAGED_SKILLS_DIR="{{ .chezmoi.sourceDir }}/dot_claude/skills"
 
 # Single source of truth for the chezmoi-personal marketplace suffix test, referenced
 # identically by claude_orphan_plugins_jsonl and claude_installed_plugins_jsonl.

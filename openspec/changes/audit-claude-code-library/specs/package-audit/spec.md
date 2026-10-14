@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Per-Manager Audit Coverage
-The audit SHALL produce orphan reports for each of the following package managers when its CLI is available: Homebrew (taps, formulae, casks), UV tools, Bun global packages, Cargo crates, SDKMAN candidates, Claude Code plugins, Claude Code plugin marketplaces, and Claude Code skills. The Claude Code sections SHALL be computed by a shared library (`home/scripts/audit-claude-code.sh`, plain bash — not chezmoi-templated, since `home/scripts/` is never rendered), sourced by both `audit-packages` and any other script needing the same declared-vs-installed facts, rather than duplicated independently.
+The audit SHALL produce orphan reports for each of the following package managers when its CLI is available: Homebrew (taps, formulae, casks), UV tools, Bun global packages, Cargo crates, SDKMAN candidates, Claude Code plugins, Claude Code plugin marketplaces, and Claude Code skills. The Claude Code sections SHALL be computed by a shared library, deployed to `~/.local/lib/audit-claude-code.sh` from `home/dot_local/lib/audit-claude-code.sh.tmpl`, sourced by both `audit-packages` and any other script needing the same declared-vs-installed facts, rather than duplicated independently.
 
 #### Scenario: Homebrew brews section
 - **WHEN** the `brew` command is available

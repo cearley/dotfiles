@@ -1,9 +1,9 @@
 #!/bin/bash
 # list-claude-orphans.sh — Structured view of Claude Code orphan findings (sourced directly
-# from scripts/audit-claude-code.sh, the same library audit-packages itself uses), plus the
-# environment, marketplace, and plugin-scope context clean-claude-orphans needs to classify
-# each orphan safely and spot decluttering candidates without re-deriving any of this by
-# hand. Read-only: never installs, removes, or modifies any Claude Code state.
+# from ~/.local/lib/audit-claude-code.sh, the same library audit-packages itself uses), plus
+# the environment, marketplace, and plugin-scope context clean-claude-orphans needs to
+# classify each orphan safely and spot decluttering candidates without re-deriving any of
+# this by hand. Read-only: never installs, removes, or modifies any Claude Code state.
 set -euo pipefail
 
 {{- $settings := includeTemplate "machine-settings" . | fromJson }}
@@ -25,13 +25,7 @@ if ! command -v claude >/dev/null 2>&1; then
     exit 1
 fi
 
-# home/scripts/audit-claude-code.sh is plain bash (never rendered by chezmoi — see its own
-# header). .chezmoi.sourceDir is the chezmoiroot-relative source dir (this repo's home/,
-# per .chezmoiroot) — both packages.yaml and dot_claude/skills live directly under it, so
-# no repo-root-relative detour is needed to reach either.
-PACKAGES_YAML="{{ .chezmoi.sourceDir }}/.chezmoidata/packages.yaml"
-CHEZMOI_MANAGED_SKILLS_DIR="{{ .chezmoi.sourceDir }}/dot_claude/skills"
-source "{{ .chezmoi.sourceDir }}/scripts/audit-claude-code.sh"
+source "$HOME/.local/lib/audit-claude-code.sh"
 
 # ---------------------------------------------------------------------------
 # Claude Code environments present on this machine (openspec/specs/claude-environments).
