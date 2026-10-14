@@ -207,7 +207,7 @@ packages:
           - 'vercel-labs/skills --skill find-skills'
           - 'microsoft/azure-skills --skill microsoft-foundry'
           plugin_marketplaces: # Registered via `claude plugins marketplace add`
-          - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace (chezmoi-personal), deployed under home/dot_local/share/claude-plugins/
+          - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace, deployed under home/dot_local/share/claude-plugins/
           - 'anthropics/claude-plugins-official'
           - 'anthropics/skills'
           - 'aws/agent-toolkit-for-aws'
