@@ -141,8 +141,13 @@ _claude_plugins_installed_text() {
 }
 
 _claude_marketplaces_installed_json() {
+    # A git-sourced marketplace's `.url` is the raw clone URL (often with a trailing
+    # `.git`), but packages.yaml declares the same marketplace without it — strip it so
+    # the two sides can actually match. No-op for `github`/`directory` sources, whose
+    # `.repo`/`.path` never carry a `.git` suffix.
     claude plugins marketplace list --json 2>/dev/null \
         | jq -r '.[] | if .source == "github" then .repo elif .source == "directory" then .path else .url end' 2>/dev/null \
+        | sed 's/\.git$//' \
         | sort
 }
 
@@ -189,6 +194,7 @@ claude_orphan_marketplaces_jsonl() {
     declared_for_agent "claude_code" "plugin_marketplaces" \
         | sed 's/#[^#]*$//' \
         | sed "s|\$HOME|$HOME|" \
+        | sed 's/\.git$//' \
         | sort > "$declared_file"
 
     _claude_emit_orphans_jsonl "marketplace" "$installed_file" "$declared_file"
@@ -436,6 +442,49 @@ claude_orphan_mcp_servers_jsonl() {
 }
 
 # ---------------------------------------------------------------------------
+# `claude plugins list --json`'s `enabled`/`projectEnabled` fields for a
+# project/local-scope entry reflect the cwd this command itself was run from,
+# not necessarily the plugin's own projectPath — observed live: entries that
+# looked disabled when this library ran from an unrelated directory (e.g. the
+# chezmoi repo) came back enabled once the same command ran with cwd inside
+# their actual project. Re-run the listing once per distinct project/local
+# projectPath, with cwd there, and patch in that path's corrected
+# enabled/projectEnabled values. User-scope entries aren't cwd-dependent and
+# are left untouched. Mutates and echoes the caller's plugins_json variable
+# by nameref so claude_installed_plugins_jsonl can just call this once.
+# ---------------------------------------------------------------------------
+_claude_fix_project_scope_enabled() {
+    local plugins_json="$1"
+
+    local project_paths
+    project_paths=$(echo "$plugins_json" \
+        | jq -r '.[] | select(.scope == "project" or .scope == "local") | .projectPath // empty' \
+        | sort -u)
+
+    local path corrected
+    while IFS= read -r path; do
+        [[ -n "$path" && -d "$path" ]] || continue
+        corrected="$(cd "$path" && claude plugins list --json 2>/dev/null)" || continue
+        [[ -n "$corrected" ]] || continue
+
+        plugins_json=$(jq -c --argjson corrected "$corrected" --arg path "$path" '
+            ($corrected
+                | map(select(.projectPath == $path))
+                | map({key: (.id + "|" + .scope), value: {enabled, projectEnabled}})
+                | from_entries) as $fix
+            | map(
+                if .projectPath == $path and ($fix[.id + "|" + .scope] != null)
+                then . + $fix[.id + "|" + .scope]
+                else .
+                end
+              )
+        ' <<< "$plugins_json" 2>/dev/null) || continue
+    done <<< "$project_paths"
+
+    printf '%s' "$plugins_json"
+}
+
+# ---------------------------------------------------------------------------
 # One JSONL line per currently installed plugin: id, scope, projectPath,
 # chezmoi_personal (same @{{ $localMarketplaceName }} suffix test as
 # claude_orphan_plugins_jsonl, via $CHEZMOI_PERSONAL_SUFFIX), enabled.
@@ -444,6 +493,8 @@ claude_installed_plugins_jsonl() {
     local plugins_json
     plugins_json="$(claude plugins list --json 2>/dev/null)" || true
     [[ -n "$plugins_json" ]] || return 0
+
+    plugins_json="$(_claude_fix_project_scope_enabled "$plugins_json")"
 
     echo "$plugins_json" | jq -c --arg suffix "$CHEZMOI_PERSONAL_SUFFIX" '.[] | {
         id,

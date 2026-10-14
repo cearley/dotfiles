@@ -53,7 +53,12 @@ Read-only. Output is JSON Lines under five `##` sections:
   `npx skills add`; these never appear in `## orphans`.
 - `## installed-plugins` — `{id, scope, projectPath, chezmoi_personal, enabled}` for every
   installed plugin. `chezmoi_personal` (id ends `@{{ $localMarketplaceName }}`) is never a DECLARE
-  candidate. Needed before uninstalling anything — see Step 3.
+  candidate. Needed before uninstalling anything — see Step 3. The library re-derives a
+  project/local-scope entry's `enabled` by re-running the check with `cwd` inside that plugin's
+  own `projectPath` (`claude plugins list --json` otherwise misreports this when run from
+  elsewhere) — so this field should already be trustworthy, but if a verdict here still looks
+  surprising, confirm by hand the same way before removing anything: `cd <projectPath> && claude
+  plugins list --json | jq '.[] | select(.id=="<id>")'`.
 - `## orphans` — `{category, item, skill_tag}`, category one of `mcp_server` / `plugin` /
   `marketplace` / `skill`. Already excludes chezmoi-managed skills and
   `@{{ $localMarketplaceName }}` plugins. `skill_tag: bundled-by:<plugin>` marks a standalone skill
@@ -84,8 +89,7 @@ Work marketplaces last — removing one can orphan the plugins installed from it
 | Check | Verdict |
 |---|---|
 | Still has a KEPT plugin installed from it (`.id` ends `@<marketplace>`) | **KEEP** until those plugins are removed first |
-| A raw GitHub URL duplicating an already-declared marketplace under a clean short name | **REMOVE** — check no installed plugin's `.id` ends `@<the-url>` first |
-| No remaining plugins | **REMOVE**: `claude plugins marketplace remove <name>` |
+| No remaining plugins | **REMOVE**: `claude plugins marketplace remove <name>` — use the registered `name` from `claude plugins marketplace list --json`, not the raw `item` string, if `item` is a git/GitHub URL |
 
 `{{ $localMarketplaceName }}` itself is declared in `packages.yaml`, so it never appears in `## orphans`.
 
@@ -147,4 +151,7 @@ explanation — most often a plugin still enabled by a project that wasn't check
 {{- end }}
 - Only scanning `## orphans` and missing Step 2.5 duplicates that are correctly declared but
   still redundant with a {{ $localMarketplaceName }} plugin.
+- Passing a marketplace orphan's raw `item` string straight to `claude plugins marketplace
+  remove` when it's a git/GitHub URL — use the registered `name` from `claude plugins
+  marketplace list --json` instead.
 {{ end -}}
