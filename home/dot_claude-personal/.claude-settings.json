@@ -95,6 +95,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "specstory sync --providers claudecode"
+          }
+        ]
+      }
     ]
   }
 }
