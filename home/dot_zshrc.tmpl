@@ -61,24 +61,23 @@ fi
 export ARCHFLAGS="-arch $(uname -m)"
 
 {{ if has "ai" .tags -}}
-# SpecStory https://specstory.com/specstory-cli
-# These shadow the agent binaries for interactive use only, gated on a real TTY
-# on both stdin and stdout (`-o interactive` alone is true even when zsh is
-# just sourced for PATH/rc config, e.g. a tool harness's shell, with no TTY
-# attached). No recursion: specstory resolves the agent via PATH (binaries
-# only; shell functions aren't inherited). Non-interactive calls fall straight
-# through to the real binary, so `command claude ...` is only needed to bypass
-# the wrapper from inside an actual interactive session.
+# hcom https://github.com/aannoo/hcom — shadows agent binaries, TTY-gated:
+# `hcom <tool>` always prints a title-escape + "Starting <tool>..." preamble
+# before the real binary runs, corrupting scripted output (e.g. `claude -p
+# --output-format stream-json`). `-o interactive` alone is true with no TTY
+# (e.g. a sourced-for-PATH shell), hence -t 0/-t 1. No recursion: hcom runs
+# it from a plain bash script, not our zsh function. Use `command claude
+# ...` to bypass the wrapper interactively.
 claude() {
     if [[ -t 0 && -t 1 ]]; then
-        specstory run claude --no-cloud-sync "$@"
+        hcom claude "$@"
     else
         command claude "$@"
     fi
 }
 codex() {
     if [[ -t 0 && -t 1 ]]; then
-        specstory run codex --no-cloud-sync "$@"
+        hcom codex "$@"
     else
         command codex "$@"
     fi
@@ -87,22 +86,23 @@ codex() {
 # autoloaded from .zshenv (still active in non-interactive shells).
 gemini() {
     if [[ -t 0 && -t 1 ]]; then
-        specstory run gemini --no-cloud-sync "$@"
+        hcom gemini "$@"
     else
         command gemini "$@"
     fi
 }
-# `cmux omc` launches the claude binary directly, bypassing claude() above, so
-# capture relies on a `specstory watch claude` pane. Remind if none is running.
-# Separate non-interactivity problem from claude()/codex()/gemini()'s TTY gate
-# above: this check is about whether a *watcher* process exists, not about
-# whether to wrap `cmux` itself — cmux always runs for real, interactive or
-# not, so there's nothing here for a TTY gate to apply to.
+# cmux's own native agent launchers (`omc`, `claude-teams`, `codex-teams`,
+# `omo`, `omx`) bypass claude()/codex() above, so hcom's hooks (active only
+# "with hcom in front"; no passive watcher like SpecStory) never activate —
+# remind to run `hcom start`. Plain `cmux` panes are normal interactive
+# shells, so claude()/codex()/gemini() above apply as usual there.
 cmux() {
-    if [[ $1 == omc ]] && ! pgrep -qf 'specstory watch claude'; then
-        print -P '%F{yellow}No SpecStory watcher running — in another pane:%f'
-        print '  specstory watch claude --no-cloud-sync'
-    fi
+    case $1 in
+        omc|claude-teams|codex-teams|omo|omx)
+            print -P '%F{yellow}cmux '"$1"' bypasses hcom — hooks are not active there. Inside the session, prompt:%f'
+            print '  run this command: hcom start'
+            ;;
+    esac
     command cmux "$@"
 }
 # OpenSpecUI

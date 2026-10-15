@@ -192,6 +192,7 @@ packages:
       uv:
       - "basic-memory"
       - "claude-monitor"
+      - "hcom"
       - "sniffly@latest"
       - 'git+https://github.com/cearley/claude-session-index'
       - "git+https://github.com/cearley/zsh-llm-suggestions"
