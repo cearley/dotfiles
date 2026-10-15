@@ -102,7 +102,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "specstory sync --providers claudecode"
+            "command": "specstory sync --providers claude"
           }
         ]
       }
