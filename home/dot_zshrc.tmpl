@@ -72,11 +72,7 @@ _hcom_shadow() {
     local tool=$1
     shift
     if [[ -t 0 && -t 1 ]]; then
-        if [[ "$1" == "--as" ]]; then
-            hcom start --as "$2" "${@:3}"
-        else
-            hcom "$tool" "$@"
-        fi
+        hcom "$tool" "$@"
     else
         command "$tool" "$@"
     fi
