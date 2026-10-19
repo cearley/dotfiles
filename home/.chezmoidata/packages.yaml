@@ -209,13 +209,14 @@ packages:
           - 'microsoft/azure-skills --skill microsoft-foundry'
           plugin_marketplaces: # Registered via `claude plugins marketplace add`
           - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace, deployed under home/dot_local/share/claude-plugins/
-          - 'anthropics/claude-plugins-official'
-          - 'anthropics/skills'
-          - 'aws/agent-toolkit-for-aws'
-          - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev'
-          - 'https://github.com/Yeachan-Heo/oh-my-claudecode'
+          - 'anthropics/claude-plugins-official' # Official Claude plugins from Anthropics
+          - 'anthropics/skills' # Official skills from Anthropics
+          - 'aws/agent-toolkit-for-aws' # Official AWS agent toolkit
+          - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev' # Willdan ViewPoint Utilities Docs (dev branch)
           - 'https://github.com/KyongSik-Yoon/opsx-omc-bridge' # OpenSpec -> OMC handoff skills (quick/deploy)
-          - 'microsoftdocs/mcp'        # Microsoft Docs MCP marketplace
+          - 'https://github.com/Yeachan-Heo/oh-my-claudecode' # Oh My Claude code repository
+          - 'microsoftdocs/mcp' # Microsoft Docs MCP marketplace
+          - 'wondelai/skills' # Wondelai's collection of skills
           plugins: # Installed via `claude plugins install`
           - 'claude-md-management@claude-plugins-official'
           - 'oh-my-claudecode@omc'
