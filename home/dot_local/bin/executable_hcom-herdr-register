@@ -1,12 +1,48 @@
 #!/bin/bash
-# hcom-herdr-register — SessionStart hook: reports this hcom agent's handle to
-# herdr's pane sidebar metadata, so the sidebar shows which hcom instance is
-# running in each pane. No-op outside herdr (HERDR_PANE_ID unset) or outside an
-# active hcom session (HCOM_INSTANCE_NAME unset).
+# hcom-herdr-register — SessionStart hook. Two independent behaviors, both
+# gated on HERDR_PANE_ID (i.e. running under herdr at all):
+#   1. Registration: if HCOM_INSTANCE_NAME is also set, reports this hcom
+#      agent's handle to herdr's pane sidebar metadata.
+#   2. Agent map: emits a "## Herdr Agent Map" markdown table of every herdr
+#      agent's name, hcom token, and project directory (so the model has
+#      cross-pane context at session start). Stdout here is injected into the
+#      session as a system-reminder.
+# No-op entirely outside herdr (HERDR_PANE_ID unset).
 set -euo pipefail
 
-if [[ -z "${HERDR_PANE_ID:-}" || -z "${HCOM_INSTANCE_NAME:-}" ]]; then
+if [[ -z "${HERDR_PANE_ID:-}" ]]; then
     exit 0
 fi
 
-herdr pane report-metadata "$HERDR_PANE_ID" --source hcom --token "hcom=$HCOM_INSTANCE_NAME"
+if [[ -n "${HCOM_INSTANCE_NAME:-}" ]]; then
+    herdr pane report-metadata "$HERDR_PANE_ID" --source hcom --token "hcom=$HCOM_INSTANCE_NAME"
+fi
+
+# Resolve a cwd's project name: basename of its git toplevel, or of the cwd
+# itself outside a git repo.
+resolve_project() {
+    local cwd=$1 toplevel
+    toplevel=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "$cwd")
+    basename "$toplevel"
+}
+
+agents_json=$(herdr agent list 2>/dev/null) || exit 0
+
+rows=""
+while IFS= read -r agent; do
+    cwd=$(jq -r '.cwd // ""' <<<"$agent")
+    [[ -z "$cwd" ]] && continue
+    name=$(jq -r '.name // ""' <<<"$agent")
+    pane_id=$(jq -r '.pane_id // ""' <<<"$agent")
+    token=$(jq -r '.tokens.hcom // ""' <<<"$agent")
+    project=$(resolve_project "$cwd")
+    rows+="| ${name:-$pane_id} | $token | $project |"$'\n'
+done < <(jq -c '.result.agents[]?' <<<"$agents_json" 2>/dev/null)
+
+if [[ -n "$rows" ]]; then
+    echo "## Herdr Agent Map"
+    echo
+    echo "| Agent | hcom | Project |"
+    echo "|---|---|---|"
+    printf '%s' "$rows"
+fi
