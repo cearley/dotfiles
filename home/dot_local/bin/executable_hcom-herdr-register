@@ -4,9 +4,10 @@
 #   1. Registration: if HCOM_INSTANCE_NAME is also set, reports this hcom
 #      agent's handle to herdr's pane sidebar metadata.
 #   2. Agent map: emits a "## Herdr Agent Map" markdown table of every herdr
-#      agent's name, hcom token, and project directory (so the model has
+#      agent's pane_id, hcom token, and project directory (so the model has
 #      cross-pane context at session start). Stdout here is injected into the
-#      session as a system-reminder.
+#      session as a system-reminder. No agent-name column: names are
+#      ephemeral and usually unset at session start, so they're noise.
 # No-op entirely outside herdr (HERDR_PANE_ID unset).
 set -euo pipefail
 
@@ -32,17 +33,16 @@ rows=""
 while IFS= read -r agent; do
     cwd=$(jq -r '.cwd // ""' <<<"$agent")
     [[ -z "$cwd" ]] && continue
-    name=$(jq -r '.name // ""' <<<"$agent")
     pane_id=$(jq -r '.pane_id // ""' <<<"$agent")
     token=$(jq -r '.tokens.hcom // ""' <<<"$agent")
     project=$(resolve_project "$cwd")
-    rows+="| ${name:-$pane_id} | $token | $project |"$'\n'
+    rows+="| $pane_id | $token | $project |"$'\n'
 done < <(jq -c '.result.agents[]?' <<<"$agents_json" 2>/dev/null)
 
 if [[ -n "$rows" ]]; then
     echo "## Herdr Agent Map"
     echo
-    echo "| Agent | hcom | Project |"
+    echo "| Pane | hcom | Project |"
     echo "|---|---|---|"
     printf '%s' "$rows"
 fi
