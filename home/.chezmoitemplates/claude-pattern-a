@@ -33,7 +33,7 @@
       "Read(./secrets/**)",
       "Read(~/.aws/credentials)",
       "Read(~/.ssh/**)",
-      "Write(./.git/**)",
+      "Edit(./.git/**)",
       "WebFetch"
     ],
     "ask": [

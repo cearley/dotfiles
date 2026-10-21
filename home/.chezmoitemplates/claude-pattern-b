@@ -54,8 +54,8 @@
       "Bash(npm install *)",
       "Bash(pnpm add *)",
       "Bash(uv add *)",
-      "Write(.github/**)",
-      "Write(infrastructure/**)",
+      "Edit(.github/**)",
+      "Edit(infrastructure/**)",
       "mcp__github-readonly__create_comment"
     ],
     "deny": [
@@ -70,8 +70,8 @@
       "Read(./.env.*)",
       "Read(~/.aws/credentials)",
       "Read(~/.ssh/**)",
-      "Write(./.git/**)",
-      "Write(./.env*)",
+      "Edit(./.git/**)",
+      "Edit(./.env*)",
       "WebFetch"
     ]
   },
