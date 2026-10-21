@@ -79,6 +79,17 @@ _hcom_shadow() {
 }
 claude() { _hcom_shadow claude "$@" }
 codex() { _hcom_shadow codex "$@" }
+# herdr (HERDR_ENV=1) forces TERM=xterm-ghostty in every pane, which hcom's
+# vt100-based screen scraper misparses, garbling output during PTY launch.
+# Override TERM for all hcom calls under herdr; harmless for non-spawning
+# subcommands. `command hcom` avoids recursion.
+hcom() {
+    if [[ -n "$HERDR_ENV" ]]; then
+        TERM=xterm-256color command hcom "$@"
+    else
+        command hcom "$@"
+    fi
+}
 # Deliberately supersedes the zsh-functions `gemini` install-on-demand proxy
 # autoloaded from .zshenv (still active in non-interactive shells).
 gemini() { _hcom_shadow gemini "$@" }
