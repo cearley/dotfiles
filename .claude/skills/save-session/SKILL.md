@@ -2,7 +2,7 @@
 name: save-session
 description: Save today's session to basic-memory — fast, append-only (session log entry + status-note Open/Resolved edit), no size checks or triage. Invoke proactively, without asking for confirmation, whenever the session has produced decision-worthy content (an architectural decision, a resolved open item, a persistable finding) — gate this on substantial tool-call/conversation activity, not on whether any file was edited. Also run at explicit user request (/save-session) or when the user signals they're wrapping up.
 ---
-<!-- setup-memory-workflow-version:12 -->
+<!-- setup-memory-workflow-version:13 -->
 
 ## Step 0 — Decide whether to run this automatically, without asking
 
@@ -45,10 +45,19 @@ against a directory that isn't actually this project.
 
 ## Step 1 — Append to the session log
 
+Pass `project="chezmoi"` explicitly on every basic-memory call in this skill — never
+omit it, even though the tool schema marks it optional. The server does not remember a
+project chosen on an earlier call; omitting it risks silent fallback to a different
+project, and the mistake can go unnoticed because the call still succeeds. After each
+write call (edit_note, write_note), check the result's own `project` field matches
+`chezmoi` before issuing the next tool call — catch a misroute immediately, not on a
+later re-read.
+
 Search basic-memory project "chezmoi" for the most recent session note using
 search_notes with query "chezmoi session".
 
-Append today's update directly with edit_note (operation="append") including:
+Append today's update directly with edit_note (project="chezmoi",
+operation="append") including:
 - Date (use the currentDate value from context)
 - What was changed or decided today (decisions, findings, discoveries)
 - Any items resolved this session
@@ -60,7 +69,7 @@ shouldn't attempt.
 
 ## Step 2 — Update the current status note
 
-Read the current status note:
+Read the current status note (project="chezmoi" explicitly — see Step 1):
   identifier: "chezmoi/status/chezmoi-current-status"
   project: "chezmoi"
 
@@ -69,8 +78,8 @@ summarization, ad hoc trimming) — report the failure (see "On failure" below) 
 too large to read needs deliberate restructuring, not an improvised fix squeezed into a
 routine save.
 
-Otherwise, update it with edit_note (operation="find_replace" or "replace_section") to
-reflect:
+Otherwise, update it with edit_note (project="chezmoi", operation="find_replace" or
+"replace_section") to reflect:
 - Any items resolved this session — move from Open to Resolved
 - Any new open items or next steps discovered
 - Any environment facts that changed (new deployments, confirmed config, etc.)

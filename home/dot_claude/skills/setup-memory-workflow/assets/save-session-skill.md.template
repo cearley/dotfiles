@@ -45,10 +45,19 @@ against a directory that isn't actually this project.
 
 ## Step 1 — Append to the session log
 
+Pass `project="__PROJECT__"` explicitly on every basic-memory call in this skill — never
+omit it, even though the tool schema marks it optional. The server does not remember a
+project chosen on an earlier call; omitting it risks silent fallback to a different
+project, and the mistake can go unnoticed because the call still succeeds. After each
+write call (edit_note, write_note), check the result's own `project` field matches
+`__PROJECT__` before issuing the next tool call — catch a misroute immediately, not on a
+later re-read.
+
 Search basic-memory project "__PROJECT__" for the most recent session note using
 search_notes with query "__PROJECT__ session".
 
-Append today's update directly with edit_note (operation="append") including:
+Append today's update directly with edit_note (project="__PROJECT__",
+operation="append") including:
 - Date (use the currentDate value from context)
 - What was changed or decided today (decisions, findings, discoveries)
 - Any items resolved this session
@@ -60,7 +69,7 @@ shouldn't attempt.
 
 ## Step 2 — Update the current status note
 
-Read the current status note:
+Read the current status note (project="__PROJECT__" explicitly — see Step 1):
   identifier: "__PROJECT__/status/__PROJECT__-current-status"
   project: "__PROJECT__"
 
@@ -69,8 +78,8 @@ summarization, ad hoc trimming) — report the failure (see "On failure" below) 
 too large to read needs deliberate restructuring, not an improvised fix squeezed into a
 routine save.
 
-Otherwise, update it with edit_note (operation="find_replace" or "replace_section") to
-reflect:
+Otherwise, update it with edit_note (project="__PROJECT__", operation="find_replace" or
+"replace_section") to reflect:
 - Any items resolved this session — move from Open to Resolved
 - Any new open items or next steps discovered
 - Any environment facts that changed (new deployments, confirmed config, etc.)

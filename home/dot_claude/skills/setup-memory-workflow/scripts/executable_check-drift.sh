@@ -27,6 +27,15 @@
 #     `check` is intentional. Showing that diff and getting confirmation is
 #     the model's job, not this script's.
 #
+#   check-drift.sh drift-warn
+#     Silent and fast: prints exactly one line if the installed save-session
+#     skill is older than this (globally-installed) script's own
+#     SMW_VERSION, otherwise prints nothing. Invoked automatically from the
+#     rendered SessionStart hook command itself (see canonical_hook_cmd())
+#     so staleness surfaces without anyone having to remember to re-run
+#     `check`. Never errors the hook: callers should still redirect stderr
+#     and tolerate a non-zero exit.
+#
 # $PROJECT resolution (apply-time only — no runtime script ships in any
 # installed piece):
 #   1. <project-root>/.claude/basic-memory-project.txt, if present and
@@ -44,7 +53,7 @@
 
 set -euo pipefail
 
-SMW_VERSION=12
+SMW_VERSION=13
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS_DIR="$SKILL_DIR/assets"
 
@@ -71,6 +80,17 @@ PROJECT=$(resolve_project)
 
 render() {
   sed -e "s/__PROJECT__/$PROJECT/g" -e "s/__SMW_VERSION__/$SMW_VERSION/g" "$1"
+}
+
+# The canonical SessionStart hook command: the rendered reminder message,
+# followed by a silent, best-effort call back into this same (globally
+# installed) script to print a one-line staleness warning if needed. The
+# `|| true` and stderr redirect mean a missing/broken check-drift.sh on some
+# future machine can never break the primary reminder.
+canonical_hook_cmd() {
+  local canonical_msg
+  canonical_msg=$(render "$ASSETS_DIR/hook-message.txt.template")
+  echo "echo '${canonical_msg}'; \"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh\" drift-warn 2>/dev/null || true"
 }
 
 source "$SKILL_DIR/scripts/migrations.sh"
@@ -229,10 +249,9 @@ cmd_check() {
   echo
   echo "== SessionStart hook =="
   [ -f .claude/settings.local.json ] || echo '{}' > .claude/settings.local.json
-  local existing_cmd canonical_msg canonical_cmd
+  local existing_cmd canonical_cmd
   existing_cmd=$(jq -r '[.hooks.SessionStart[]?.hooks[]?.command // empty] | map(select(contains("basic-memory")))[0] // empty' .claude/settings.local.json)
-  canonical_msg=$(render "$ASSETS_DIR/hook-message.txt.template")
-  canonical_cmd="echo '${canonical_msg}'"
+  canonical_cmd=$(canonical_hook_cmd)
   if [ -z "$existing_cmd" ]; then
     jq --arg cmd "$canonical_cmd" \
       '.hooks.SessionStart += [{"matcher": "", "hooks": [{"type": "command", "command": $cmd}]}]' \
@@ -304,10 +323,9 @@ cmd_update() {
   echo
   echo "== SessionStart hook =="
   [ -f .claude/settings.local.json ] || echo '{}' > .claude/settings.local.json
-  local existing_cmd canonical_msg canonical_cmd
+  local existing_cmd canonical_cmd
   existing_cmd=$(jq -r '[.hooks.SessionStart[]?.hooks[]?.command // empty] | map(select(contains("basic-memory")))[0] // empty' .claude/settings.local.json)
-  canonical_msg=$(render "$ASSETS_DIR/hook-message.txt.template")
-  canonical_cmd="echo '${canonical_msg}'"
+  canonical_cmd=$(canonical_hook_cmd)
   if [ -z "$existing_cmd" ]; then
     jq --arg cmd "$canonical_cmd" \
       '.hooks.SessionStart += [{"matcher": "", "hooks": [{"type": "command", "command": $cmd}]}]' \
@@ -358,9 +376,8 @@ cmd_apply() {
       echo "APPLIED: .mcp.json"
       ;;
     hook-config)
-      local canonical_msg canonical_cmd
-      canonical_msg=$(render "$ASSETS_DIR/hook-message.txt.template")
-      canonical_cmd="echo '${canonical_msg}'"
+      local canonical_cmd
+      canonical_cmd=$(canonical_hook_cmd)
       jq --arg cmd "$canonical_cmd" '
         .hooks.SessionStart |= map(
           .hooks |= map(
@@ -378,9 +395,20 @@ cmd_apply() {
   esac
 }
 
+cmd_drift_warn() {
+  local file=".claude/skills/save-session/SKILL.md" installed_version
+  [ -f "$file" ] || return 0
+  installed_version=$(grep -o 'setup-memory-workflow-version:[0-9]*' "$file" 2>/dev/null | grep -o '[0-9]*$' || true)
+  [ -n "$installed_version" ] || return 0
+  if [ "$installed_version" -lt "$SMW_VERSION" ] 2>/dev/null; then
+    echo "[setup-memory-workflow] save-session skill is v$installed_version, latest is v$SMW_VERSION — run the setup-memory-workflow skill (or check-drift.sh update) to refresh it."
+  fi
+}
+
 case "${1:-}" in
   check) cmd_check ;;
   update) cmd_update ;;
   apply) cmd_apply "${2:?Usage: check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script>}" ;;
-  *) echo "Usage: check-drift.sh <check|update|apply PIECE>" >&2; exit 1 ;;
+  drift-warn) cmd_drift_warn ;;
+  *) echo "Usage: check-drift.sh <check|update|apply PIECE|drift-warn>" >&2; exit 1 ;;
 esac

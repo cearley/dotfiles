@@ -3,7 +3,7 @@ name: save-session-maintenance
 description: Roll over an oversized session log and triage an oversized status note. Never invoked by the model on its own initiative — runs only on explicit manual invocation (/save-session-maintenance).
 disable-model-invocation: true
 ---
-<!-- setup-memory-workflow-version:12 -->
+<!-- setup-memory-workflow-version:13 -->
 
 This skill owns all size/rollover/triage logic for basic-memory notes in this project. It
 runs decoupled from any particular save — on its own trigger (see the "Trigger" section

@@ -4,6 +4,28 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v13 (2026-10-22)
+`save-session`'s Step 1/2 now explicitly tell the model to pass `project="__PROJECT__"` on
+every basic-memory tool call and to check the result's own `project` field before the next
+call. Root cause: basic-memory's `project` parameter is not session-sticky — the server
+resolves it per call and silently falls back to a different project if it's omitted,
+rather than erroring — so a model correctly passing `project` on earlier calls (e.g.
+`search_notes`) can still drop it on a later `edit_note` call without any synchronous
+signal beyond the (easily-missed) `project` field in that call's own result. This produced
+a real incident: a `save-session` run created a duplicate "Chezmoi Session Notes" note in
+the wrong project. No migration needed — this is a content-only change to the rendered
+skill body, not a schema/piece change.
+
+The SessionStart hook now also nudges on staleness. `check-drift.sh` gains a `drift-warn`
+subcommand (silent and fast: one line if the installed `save-session` skill is behind this
+script's own `SMW_VERSION`, nothing otherwise), and the rendered hook command — built by a
+new shared `canonical_hook_cmd()` instead of duplicating the same `echo '...'` string in
+three places — now calls it via `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh
+drift-warn`, redirected and `|| true`'d so a missing/broken script can never break the
+primary reminder. Previously a project's deployed pieces could sit arbitrarily far behind
+the canonical template with no discovery path short of someone remembering to re-run
+`check` by hand.
+
 ## v12 (2026-08-27)
 Split `save-session` into two skills with separate triggers.
 
