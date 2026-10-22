@@ -2,7 +2,10 @@
 # hcom-herdr-register — SessionStart hook. Two independent behaviors, both
 # gated on HERDR_PANE_ID (i.e. running under herdr at all):
 #   1. Registration: if HCOM_INSTANCE_NAME is also set, reports this hcom
-#      agent's handle to herdr's pane sidebar metadata.
+#      agent's handle to herdr's pane sidebar metadata — but only after
+#      confirming HERDR_PANE_ID actually matches the pane this process is
+#      running in (via `herdr pane current --current`), so a stale/spoofed/
+#      inherited env var can never write another pane's metadata.
 #   2. Agent map: emits a "## Herdr Agent Map" markdown table of every herdr
 #      agent's pane_id, hcom token, and project directory (so the model has
 #      cross-pane context at session start). Stdout here is injected into the
@@ -16,7 +19,10 @@ if [[ -z "${HERDR_PANE_ID:-}" ]]; then
 fi
 
 if [[ -n "${HCOM_INSTANCE_NAME:-}" ]]; then
-    herdr pane report-metadata "$HERDR_PANE_ID" --source hcom --token "hcom=$HCOM_INSTANCE_NAME"
+    actual_pane_id=$(herdr pane current --current 2>/dev/null | jq -r '.result.pane.pane_id // ""') || actual_pane_id=""
+    if [[ "$actual_pane_id" == "$HERDR_PANE_ID" ]]; then
+        herdr pane report-metadata "$HERDR_PANE_ID" --source hcom --token "hcom=$HCOM_INSTANCE_NAME"
+    fi
 fi
 
 # Resolve a cwd's project name: basename of its git toplevel, or of the cwd
