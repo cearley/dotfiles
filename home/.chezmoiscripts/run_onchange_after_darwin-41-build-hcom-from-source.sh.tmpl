@@ -1,0 +1,31 @@
+{{- if and (eq .chezmoi.os "darwin") (has "dev" .tags) -}}
+#!/bin/bash
+
+# run_onchange trigger - rebuild when hcom source changes: {{ output "sh" "-c" "find \"$HOME/work/hcom\" \\( -path \"$HOME/work/hcom/src\" -o -name Cargo.toml -o -name Cargo.lock \\) -print0 2>/dev/null | xargs -0 shasum -a 256 2>/dev/null | shasum -a 256 | cut -d' ' -f1" | trim }}
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+HCOM_SRC="$HOME/work/hcom"
+
+if [[ ! -f "$HCOM_SRC/Cargo.toml" ]]; then
+    print_message "skip" "hcom source not found at $HCOM_SRC — skipping local build (uv-installed release stays in use)"
+    exit 0
+fi
+
+source "{{ .chezmoi.homeDir -}}/.cargo/env"
+
+if ! require_tools cargo; then
+    exit 1
+fi
+
+print_message "info" "Building hcom from local source ($HCOM_SRC)..."
+cargo build --release --manifest-path "$HCOM_SRC/Cargo.toml"
+
+mkdir -p "$HOME/.local/bin"
+install -m 755 "$HCOM_SRC/target/release/hcom" "$HOME/.local/bin/hcom"
+
+print_message "success" "hcom built from source and installed to $HOME/.local/bin/hcom"
+
+{{ end -}}
