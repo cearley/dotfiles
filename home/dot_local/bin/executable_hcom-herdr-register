@@ -1,65 +1,12 @@
 #!/bin/bash
-# hcom-herdr-register — SessionStart hook. Two independent behaviors, both
-# gated on HERDR_PANE_ID (i.e. running under herdr at all):
-#   1. Registration: if HCOM_INSTANCE_NAME is also set, reports this hcom
-#      agent's handle to herdr's pane sidebar metadata. No independent way
-#      to verify HERDR_PANE_ID actually names this process's own pane: herdr
-#      exposes no tty/pid-based identity check, and `pane current --current`
-#      is defined to just echo HERDR_PANE_ID back (confirmed against
-#      `herdr --skill`) — so a stale/inherited env var from a forked or
-#      backgrounded process can still write another pane's metadata. No
-#      fix available via the current herdr CLI; flagged upstream.
-#   2. Agent map: emits a "## Herdr Agent Map" markdown table of every herdr
-#      agent's pane_id, hcom token, and project directory (so the model has
-#      cross-pane context at session start). Stdout here is injected into the
-#      session as a system-reminder. No agent-name column: names are
-#      ephemeral and usually unset at session start, so they're noise.
-# No-op entirely outside herdr (HERDR_PANE_ID unset).
+# hcom-herdr-register — SessionStart hook: reports this hcom agent's handle to
+# herdr's pane sidebar metadata, so the sidebar shows which hcom instance is
+# running in each pane. No-op outside herdr (HERDR_PANE_ID unset) or outside an
+# active hcom session (HCOM_INSTANCE_NAME unset).
 set -euo pipefail
 
-if [[ -z "${HERDR_PANE_ID:-}" ]]; then
+if [[ -z "${HERDR_PANE_ID:-}" || -z "${HCOM_INSTANCE_NAME:-}" ]]; then
     exit 0
 fi
 
-if [[ -n "${HCOM_INSTANCE_NAME:-}" ]]; then
-    herdr pane report-metadata "$HERDR_PANE_ID" --source hcom --token "hcom=$HCOM_INSTANCE_NAME" || true
-fi
-
-# Resolve a cwd's project name: basename of its git toplevel, or of the cwd
-# itself outside a git repo.
-resolve_project() {
-    local cwd=$1 toplevel
-    toplevel=$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null || echo "$cwd")
-    basename "$toplevel"
-}
-
-# Strip table/row-breaking characters so untrusted field values (hcom tokens,
-# directory names) can't corrupt the markdown table or inject extra lines
-# into the system-reminder this script's stdout becomes.
-sanitize() {
-    local s=$1
-    s=${s//|/ }
-    s=${s//$'\n'/ }
-    s=${s//$'\r'/ }
-    printf '%s' "$s"
-}
-
-agents_json=$(herdr agent list 2>/dev/null) || exit 0
-
-rows=""
-while IFS= read -r agent; do
-    cwd=$(jq -r '.cwd // ""' <<<"$agent")
-    [[ -z "$cwd" ]] && continue
-    pane_id=$(jq -r '.pane_id // ""' <<<"$agent")
-    token=$(jq -r '.tokens.hcom // ""' <<<"$agent")
-    project=$(resolve_project "$cwd")
-    rows+="| $(sanitize "$pane_id") | $(sanitize "$token") | $(sanitize "$project") |"$'\n'
-done < <(jq -c '.result.agents[]?' <<<"$agents_json" 2>/dev/null)
-
-if [[ -n "$rows" ]]; then
-    echo "## Herdr Agent Map"
-    echo
-    echo "| Pane | hcom | Project |"
-    echo "|---|---|---|"
-    printf '%s' "$rows"
-fi
+herdr pane report-metadata "$HERDR_PANE_ID" --source hcom --token "hcom=$HCOM_INSTANCE_NAME"
