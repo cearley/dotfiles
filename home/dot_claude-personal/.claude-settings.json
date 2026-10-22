@@ -92,10 +92,6 @@
           {
             "type": "command",
             "command": "check-claude-overrides --session-start"
-          },
-          {
-            "type": "command",
-            "command": "hcom-herdr-register"
           }
         ]
       }
