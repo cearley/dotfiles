@@ -188,7 +188,6 @@ packages:
       - 'copilot-cli@prerelease'       # Brings the power of Copilot coding agent directly to your terminal
       - 'google-gemini'                # Google's Gemini AI desktop app
       - 'jan'                          # Offline AI chat tool
-      - 'lm-studio'                    # Discover, download, and run local LLMs
       - 'ollama-app'                   # Get up and running with large language models locally
       uv:
       - "basic-memory"
