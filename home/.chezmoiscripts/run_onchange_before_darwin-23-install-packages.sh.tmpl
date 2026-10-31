@@ -41,6 +41,7 @@ brew tap {{ . | quote }}
 {{- end }}
 {{- end }}
 
+export HOMEBREW_NO_AUTO_UPDATE=1
 brew update
 
 {{- $allEnv := dict }}
@@ -87,7 +88,7 @@ export {{ $k }}={{ $v | quote }}
 
 # Taps and formulae install unconditionally — fast, no confirmation needed.
 brew_exit=0
-brew bundle --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
+brew bundle -v --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
 {{- range .packages.darwin.taps }}
 tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{- end }}
@@ -133,7 +134,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     print_message "skip" "Skipping cask package installation"
 else
     cask_exit=0
-    brew bundle --file=/dev/stdin <<'CASK_EOF' || cask_exit=$?
+    brew bundle -v --file=/dev/stdin <<'CASK_EOF' || cask_exit=$?
 {{- range $category := prepend .tag_choices "core" }}
   {{- $caskItems := index $caskByCategory $category }}
   {{- if $caskItems }}
@@ -167,7 +168,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     print_message "skip" "Skipping Mac App Store package installation"
 else
     mas_exit=0
-    brew bundle --file=/dev/stdin <<'MAS_EOF' || mas_exit=$?
+    brew bundle -v --file=/dev/stdin <<'MAS_EOF' || mas_exit=$?
 {{- range $category := prepend .tag_choices "core" }}
   {{- $masItems := index $masByCategory $category }}
   {{- if and $icloudSignedIn $masItems }}
