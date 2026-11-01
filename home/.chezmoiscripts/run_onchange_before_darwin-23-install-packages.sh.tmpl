@@ -86,9 +86,9 @@ export {{ $k }}={{ $v | quote }}
   {{- end }}
 {{- end }}
 
-# Taps and formulae install unconditionally — fast, no confirmation needed.
+# Taps and formulae install unconditionally — only what's missing, no confirmation needed.
 brew_exit=0
-brew bundle -v --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
+brew bundle install --no-upgrade -v --file=/dev/stdin <<'BUNDLE_EOF' || brew_exit=$?
 {{- range .packages.darwin.taps }}
 tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{- end }}
@@ -123,18 +123,8 @@ fi
 {{ if not $hasCasks -}}
 print_message "skip" "No cask packages to install for this tag set"
 {{ else -}}
-if [ -t 0 ]; then
-    read -p "🍺 Install cask packages? (y/N): " -n 1 -r
-    echo
-else
-    print_message "skip" "Non-interactive session (no TTY) — defaulting to skip cask packages"
-    REPLY="N"
-fi
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_message "skip" "Skipping cask package installation"
-else
-    cask_exit=0
-    brew bundle -v --file=/dev/stdin <<'CASK_EOF' || cask_exit=$?
+cask_exit=0
+brew bundle install --no-upgrade -v --file=/dev/stdin <<'CASK_EOF' || cask_exit=$?
 {{- range $category := prepend .tag_choices "core" }}
   {{- $caskItems := index $caskByCategory $category }}
   {{- if $caskItems }}
@@ -147,28 +137,18 @@ cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ en
 {{- end }}
 CASK_EOF
 
-    if [ "$cask_exit" -ne 0 ]; then
-        print_message "warning" "brew bundle (casks) completed with errors — some packages may not be installed."
-        print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
-    fi
+if [ "$cask_exit" -ne 0 ]; then
+    any_failed=1
+    print_message "warning" "brew bundle (casks) completed with errors — some packages may not be installed."
+    print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
 fi
 {{ end }}
 
 {{ if not $hasMas -}}
 print_message "skip" "No Mac App Store packages to install for this tag set"
 {{ else -}}
-if [ -t 0 ]; then
-    read -p "🍺 Install Mac App Store packages? (y/N): " -n 1 -r
-    echo
-else
-    print_message "skip" "Non-interactive session (no TTY) — defaulting to skip Mac App Store packages"
-    REPLY="N"
-fi
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_message "skip" "Skipping Mac App Store package installation"
-else
-    mas_exit=0
-    brew bundle -v --file=/dev/stdin <<'MAS_EOF' || mas_exit=$?
+mas_exit=0
+brew bundle install --no-upgrade -v --file=/dev/stdin <<'MAS_EOF' || mas_exit=$?
 {{- range $category := prepend .tag_choices "core" }}
   {{- $masItems := index $masByCategory $category }}
   {{- if and $icloudSignedIn $masItems }}
@@ -181,17 +161,119 @@ mas {{ . }}
 {{- end }}
 MAS_EOF
 
-    if [ "$mas_exit" -ne 0 ]; then
-        any_failed=1
-        print_message "warning" "brew bundle (mas) completed with errors — some packages may not be installed."
-        print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
-    fi
+if [ "$mas_exit" -ne 0 ]; then
+    any_failed=1
+    print_message "warning" "brew bundle (mas) completed with errors — some packages may not be installed."
+    print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
 fi
 {{ end }}
 
 {{ if not $icloudSignedIn -}}
 print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
 {{ end -}}
+
+# Everything missing is now installed. Check whether anything already
+# installed (tap, formula, cask, or mas) is outdated, and ask once, combined
+# across all four types, before upgrading — installing missing packages
+# must never silently drag in unrelated upgrades.
+check_exit=0
+brew bundle check --verbose --file=/dev/stdin <<'CHECK_EOF' || check_exit=$?
+{{- range .packages.darwin.taps }}
+tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{- end }}
+{{- range $category := prepend .tag_choices "core" }}
+  {{- $tapItems := index $tapByCategory $category }}
+  {{- $brewItems := index $brewByCategory $category }}
+  {{- $caskItems := index $caskByCategory $category }}
+  {{- $masItems := index $masByCategory $category }}
+  {{- if or $tapItems $brewItems $caskItems (and $icloudSignedIn $masItems) }}
+
+# {{ $category }} packages
+    {{- if $tapItems }}
+{{ range $tapItems -}}
+tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{ end -}}
+    {{- end }}
+
+    {{- if $brewItems }}
+{{ range $brewItems -}}
+brew {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{ end -}}
+    {{- end }}
+
+    {{- if $caskItems }}
+{{ range $caskItems -}}
+cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{ end -}}
+    {{- end }}
+
+    {{- if and $icloudSignedIn $masItems }}
+{{ range $masItems -}}
+mas {{ . }}
+{{ end -}}
+    {{- end }}
+  {{- end }}
+{{- end }}
+CHECK_EOF
+
+if [ "$check_exit" -ne 0 ]; then
+    if [ -t 0 ]; then
+        read -p "🍺 Some installed packages have updates available — install them now? (y/N): " -n 1 -r
+        echo
+    else
+        print_message "skip" "Non-interactive session (no TTY) — defaulting to skip package updates"
+        REPLY="N"
+    fi
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_message "skip" "Skipping package updates"
+    else
+        upgrade_exit=0
+        brew bundle install --upgrade -v --file=/dev/stdin <<'UPGRADE_EOF' || upgrade_exit=$?
+{{- range .packages.darwin.taps }}
+tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{- end }}
+{{- range $category := prepend .tag_choices "core" }}
+  {{- $tapItems := index $tapByCategory $category }}
+  {{- $brewItems := index $brewByCategory $category }}
+  {{- $caskItems := index $caskByCategory $category }}
+  {{- $masItems := index $masByCategory $category }}
+  {{- if or $tapItems $brewItems $caskItems (and $icloudSignedIn $masItems) }}
+
+# {{ $category }} packages
+    {{- if $tapItems }}
+{{ range $tapItems -}}
+tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{ end -}}
+    {{- end }}
+
+    {{- if $brewItems }}
+{{ range $brewItems -}}
+brew {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{ end -}}
+    {{- end }}
+
+    {{- if $caskItems }}
+{{ range $caskItems -}}
+cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
+{{ end -}}
+    {{- end }}
+
+    {{- if and $icloudSignedIn $masItems }}
+{{ range $masItems -}}
+mas {{ . }}
+{{ end -}}
+    {{- end }}
+  {{- end }}
+{{- end }}
+UPGRADE_EOF
+
+        if [ "$upgrade_exit" -ne 0 ]; then
+            any_failed=1
+            print_message "warning" "brew bundle (upgrade) completed with errors — some packages may not be updated."
+            print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
+        fi
+    fi
+fi
 
 if [ "$any_failed" -eq 1 ]; then
     exit 1

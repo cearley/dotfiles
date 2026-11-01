@@ -35,14 +35,7 @@ if [[ ! -f $brewfile ]]; then
 fi
 
 if brew bundle check --file=$brewfile >/dev/null 2>&1; then
-    print_message "skip" "Skipping additional package installation - all packages already installed"
-    exit 0
-fi
-
-read -p "🍺 Install additional packages from your brewfile? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    print_message "skip" "Skipping additional package installation"
+    print_message "skip" "Skipping additional package installation - all packages already installed and up to date"
     exit 0
 fi
 
@@ -52,7 +45,23 @@ _icloud_available=true
 warn_icloud_not_signed_in || { _icloud_available=false; export HOMEBREW_BUNDLE_MAS_SKIP=1; }
 
 export HOMEBREW_ACCEPT_EULA=Y
-brew update && brew bundle -v --file=$brewfile
+brew update
+brew bundle install --no-upgrade -v --file=$brewfile
+
+if ! brew bundle check --file=$brewfile >/dev/null 2>&1; then
+    if [ -t 0 ]; then
+        read -p "🍺 Packages from your brewfile have updates available — install them now? (y/N): " -n 1 -r
+        echo
+    else
+        print_message "skip" "Non-interactive session (no TTY) — defaulting to skip package updates"
+        REPLY="N"
+    fi
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_message "skip" "Skipping package updates"
+    else
+        brew bundle install --upgrade -v --file=$brewfile
+    fi
+fi
 
 if [[ "$_icloud_available" == false ]]; then
     print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
