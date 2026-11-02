@@ -1,11 +1,12 @@
 #!/bin/bash
-# claude-tooling-write-guard — PreToolUse hook (Bash|Edit|Write matcher). Redirects
+# claude-tooling-write-guard — PreToolUse hook (Bash|Edit|Write|Read matcher). Redirects
 # direct edits to chezmoi-managed Claude Code tooling files (settings.json, skills/,
-# rules/, plugins/) to their real source, using `chezmoi managed`/`source-path`.
+# rules/, plugins/) to their real source, using `chezmoi managed`/`source-path`. Also
+# flags reads/writes that cross persona boundaries (see "Persona mismatch" tier below).
 #
-# Edit/Write give a structured tool_input.file_path; Bash only gives a command string,
-# so mutation detection there is heuristic. A command referencing a deployed path that
-# isn't a recognized mutation (a read, an unrecognized shape) falls back to an
+# Edit/Write/Read give a structured tool_input.file_path; Bash only gives a command
+# string, so mutation detection there is heuristic. A command referencing a deployed
+# path that isn't a recognized mutation (a read, an unrecognized shape) falls back to an
 # informational nudge, once per session. That nudge makes no permission decision —
 # the call goes through Claude Code's normal permission flow. The guard never returns
 # an allow decision: it can't vouch for a command it didn't classify.
@@ -20,6 +21,13 @@
 #     declaration — won't be reverted, but drifts from what a fresh install would
 #     produce, and a local toggle is sometimes a deliberate choice. permissionDecision
 #     "ask". Point at packages.yaml.
+#   - Persona mismatch: the path belongs to a persona (settings.json/.claude.json/
+#     plugins/projects/CLAUDE.md, live or chezmoi-source) other than the one
+#     $CLAUDE_CONFIG_DIR says is active. skills/ and rules/ are symlink-shared across
+#     every persona (see claude-tooling.md) and are never flagged. permissionDecision
+#     "ask" — cross-persona work is sometimes deliberate, never silently allowed through
+#     unremarked. Composes with the tiers above (appends to their message) rather than
+#     replacing them; stands alone for Read, which the other tiers don't cover.
 #   - Neither: out of scope, exit clean.
 #
 # Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_claude-tooling-write-guard.tmpl —
@@ -65,6 +73,41 @@ emit_by_tier() {
   fi
 }
 
+# Active persona name from $CLAUDE_CONFIG_DIR ("default" for the unnamed persona,
+# empty if $CLAUDE_CONFIG_DIR is set to something unrecognized).
+active_persona() {
+  local dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  if [[ "$dir" == "$HOME/.claude" ]]; then
+    echo "default"
+  elif [[ "$dir" =~ ^"$HOME"/\.claude-(.+)$ ]]; then
+    echo "${BASH_REMATCH[1]}"
+  fi
+}
+
+# Which persona a path belongs to, for ONLY the categories that are NOT shared
+# across personas (settings.json, .claude.json, plugins/, projects/, CLAUDE.md, and
+# the chezmoi-source equivalents under dot_claude-<name>/). skills/ and rules/ are
+# symlink-shared across every persona (see "Personas Share Skills and Rules via
+# Symlink" in claude-tooling.md) — there is no "wrong persona" for those, so they
+# must never be flagged. Echoes empty string if the path isn't in-scope for this
+# check at all (not under any persona dir, or it's a shared skills/rules path).
+path_persona() {
+  local p="$1"
+  if [[ "$p" =~ /\.claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]] || \
+     [[ "$p" =~ /dot_claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]]; then
+    return
+  fi
+  if [[ "$p" =~ /\.claude-([A-Za-z0-9_-]+)/ ]]; then
+    echo "${BASH_REMATCH[1]}"
+  elif [[ "$p" =~ /\.claude/ ]]; then
+    echo "default"
+  elif [[ "$p" =~ /dot_claude-([A-Za-z0-9_-]+)/ ]]; then
+    echo "${BASH_REMATCH[1]}"
+  elif [[ "$p" =~ /dot_claude/ ]]; then
+    echo "default"
+  fi
+}
+
 # Tiered guard advice for one deployed-target path (resolving persona symlinks first).
 # Prints "DENY|<message>" or "ASK|<message>" if in scope (see emit_by_tier); otherwise
 # prints nothing and always returns 0, so a bare `reason=$(check_path ...)` never trips
@@ -80,25 +123,41 @@ check_path() {
     resolved_path="${real_parent}/$(basename "$file_path")"
   fi
 
+  local active target mismatch=""
+  active=$(active_persona)
+  target=$(path_persona "$resolved_path")
+  if [[ -n "$active" && -n "$target" && "$active" != "$target" ]]; then
+    mismatch=" Active persona is ${active} (\$CLAUDE_CONFIG_DIR); this path belongs to ${target}."
+  fi
+
+  if [[ "$tool" == "Read" ]]; then
+    if [[ -n "$mismatch" ]]; then
+      echo "ASK|This reads a ${target} persona's file.${mismatch}"
+    fi
+    return 0
+  fi
+
   local managed source_path
   if managed=$(chezmoi managed --path-style absolute "$resolved_path" 2>/dev/null) && [[ -n "$managed" ]]; then
     source_path=$(chezmoi source-path "$resolved_path" 2>/dev/null) || source_path="(run: chezmoi source-path \"$resolved_path\")"
     if [[ "$resolved_path" == *settings.json ]]; then
       if [[ "$tool" == "Write" ]]; then
-        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply."
+        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply.${mismatch}"
       else
         local old_new
         old_new=$(jq -r '(.tool_input.old_string // "") + "\n" + (.tool_input.new_string // "")' <<<"$payload" 2>/dev/null) || old_new=""
-        if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions)"' <<<"$old_new"; then
-          echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions in settings.json are chezmoi-managed baseline keys, not local toggles. Edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
+        if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions|_chezmoiManaged)"' <<<"$old_new"; then
+          echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions/_chezmoiManaged in settings.json are chezmoi-managed baseline keys, not local toggles. Edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply.${mismatch}"
+        elif [[ -n "$mismatch" ]]; then
+          echo "ASK|This edits a ${target} persona's settings.json.${mismatch}"
         fi
       fi
     else
-      echo "DENY|This file is chezmoi-managed (tracked from ${source_path}). Editing the deployed copy directly gets silently overwritten or reasserted on the next chezmoi apply — edit the source instead."
+      echo "DENY|This file is chezmoi-managed (tracked from ${source_path}). Editing the deployed copy directly gets silently overwritten or reasserted on the next chezmoi apply — edit the source instead.${mismatch}"
     fi
   elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*)/plugins/ ]]; then
     local claude_dir="${BASH_REMATCH[1]}"
-    echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/plugins/ is populated by 'claude plugins install' per the plugin_marketplaces/plugins lists in {{ $sourceDir }}/.chezmoidata/packages.yaml. A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
+    echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/plugins/ is populated by 'claude plugins install' per the plugin_marketplaces/plugins lists in {{ $sourceDir }}/.chezmoidata/packages.yaml. A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead.${mismatch}"
   elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*/skills/[^/]+)(/.*)?$ ]]; then
     local skill_root="${BASH_REMATCH[1]}" claude_dir skill_managed skill_source
     claude_dir="${skill_root%/skills/*}"
@@ -108,6 +167,8 @@ check_path() {
     else
       echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/skills/ is populated from packages.darwin.ai.agents.claude_code.skills in {{ $sourceDir }}/.chezmoidata/packages.yaml (externally-fetched skills land here, unlike native ones which chezmoi tracks directly). A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
     fi
+  elif [[ -n "$mismatch" ]]; then
+    echo "ASK|This touches a ${target} persona's file.${mismatch}"
   fi
   return 0
 }
@@ -167,7 +228,7 @@ extract_bash_target() {
 }
 
 case "$tool_name" in
-Edit|Write)
+Edit|Write|Read)
   file_path=$(jq -r '.tool_input.file_path // ""' <<<"$payload")
   [[ -z "$file_path" ]] && exit 0
   reason=$(check_path "$file_path" "$tool_name")

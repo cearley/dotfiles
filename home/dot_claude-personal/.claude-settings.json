@@ -30,6 +30,11 @@
       "mcp__basic-memory__recent_activity",
       "mcp__basic-memory__list_memory_projects",
       "mcp__basic-memory__read_note"
+    ],
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "mcp__basic-memory__bm_write"
     ]
   },
   "skillOverrides": {
@@ -76,7 +81,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Edit|Write",
+        "matcher": "Bash|Edit|Write|Read",
         "hooks": [
           {
             "type": "command",

@@ -20,6 +20,13 @@
       }
     }
   },
+  "permissions": {
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "mcp__basic-memory__bm_write"
+    ]
+  },
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -56,7 +63,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Edit|Write",
+        "matcher": "Bash|Edit|Write|Read",
         "hooks": [
           {
             "type": "command",
