@@ -35,11 +35,11 @@ mas "Easy Streaming", id: 6449092750
 mas "G App Launcher", id: 1543803459
 mas "Highlighter", id: 1385628859
 mas "ImproveTube", id: 1672777754
-mas "Keynote", id: 409183694
+mas "Keynote", id: 361285480
 mas "Memory Diag", id: 748212890
 mas "MonitorControlLite", id: 1595464182
 mas "Page Screenshot for Safari", id: 1472715727
-mas "Pages", id: 409201541
+mas "Pages", id: 361309726
 mas "Prime Video", id: 545519333
 mas "QR Capture", id: 1369524274
 mas "Save to Raindrop.io", id: 1549370672
@@ -47,16 +47,9 @@ mas "Tabby", id: 1586203406
 mas "Tabs Saver for Safari", id: 1440006971
 mas "Tabs Switcher", id: 1406718335
 mas "Timery", id: 1425368544
-vscode "2guys1account.quackrack-cursor"
-vscode "amazonwebservices.amazon-q-vscode"
 vscode "glaider.glaider-secrets-sniper"
-vscode "github.copilot"
-vscode "github.copilot-chat"
-vscode "hounddog.hounddog-scanner"
 vscode "jetbrains.jetbrains-ai-assistant"
-vscode "ms-dotnettools.csdevkit"
 vscode "snyk-security.snyk-vulnerability-scanner"
-vscode "sonarsource.sonarlint-vscode"
 vscode "sourcegraph.cody-ai"
 go "golang.org/x/tools/gopls"
 go "honnef.co/go/tools/cmd/staticcheck"
