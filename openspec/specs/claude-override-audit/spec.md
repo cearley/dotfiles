@@ -54,11 +54,7 @@ in its body.
   resolved only in each machine's own untracked, rendered output
 
 ### Requirement: Persona Environment Enumeration
-The persona list — the unnamed default (`~/.claude`) unconditionally, plus every persona
-declared in the machine's `claude_envs` machine-config list — SHALL be resolved at
-chezmoi-apply render time (via `{{ range $claudeEnvs }}`) and baked into the deployed
-executable as literal values, not discovered by scanning the filesystem or re-derived at
-runtime.
+The persona list — the unnamed default (`~/.claude`) unconditionally, plus every persona declared in the machine's `claude_envs` machine-config list — SHALL be resolved at chezmoi-apply render time via the shared `home/.chezmoitemplates/persona-list` template and baked into the deployed executable as literal values, not discovered by scanning the filesystem or re-derived at runtime.
 
 #### Scenario: Declared personas checked
 - **WHEN** the machine's `claude_envs` list declares one or more named personas at the time
