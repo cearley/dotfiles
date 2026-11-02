@@ -205,6 +205,8 @@ packages:
             command: uvx --python 3.12 basic-memory mcp
           skills: # Installed via `npx skills add <args> -g`
           - 'basicmachines-co/basic-memory-skills --skill memory-defrag'
+          - 'basicmachines-co/basic-memory-skills --skill memory-lifecycle'
+          - 'basicmachines-co/basic-memory-skills --skill memory-notes'
           - 'basicmachines-co/basic-memory-skills --skill memory-schema'
           - 'cearley/claude-session-index --skill session-index'
           - 'herdrdev/herdr --skill herdr'
@@ -218,6 +220,7 @@ packages:
           - 'specstoryai/agent-skills --skill specstory-yak'
           plugin_marketplaces: # Registered via `claude plugins marketplace add`
           - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace, deployed under home/dot_local/share/claude-plugins/
+          - '$HOME/Business/time-tracking/claude-plugins' # Local timesheet-tools marketplace (separate repo, this machine only)
           - 'anthropics/claude-plugins-official' # Official Claude plugins from Anthropics
           - 'anthropics/skills' # Official skills from Anthropics
           - 'aws/agent-toolkit-for-aws' # Official AWS agent toolkit
@@ -232,6 +235,7 @@ packages:
           - 'oh-my-claudecode@omc'
           - 'opsx-omc-bridge@opsx-omc-bridge'
           - 'superpowers@claude-plugins-official'
+          - 'timesheet-tools@timesheet-tools'
           # - 'example-skills@anthropic-agent-skills'  # removed 2026-08-21 /doctor: 5 lifetime uses, last Aug 2
           # - 'fulcrum-skills@viewpoint-tools' # Project/local-only plugin
         # codex:
