@@ -111,21 +111,21 @@ edit or a rule edit takes effect for every persona after one `chezmoi apply`, wi
 per-persona copy to keep in sync. For anything under `skills/` or `rules/`, the edit target is
 the source file under `{{ $sourceDir }}/dot_claude/`, not the deployed copy under `~/.claude/`.
 
+## Per-Persona Settings: The Managed-Settings Ledger
+
 What's **not** shared per persona: `settings.json`, `.claude.json`, `plugins/`, session
 history (`projects/`), and `CLAUDE.md`. Each resolves as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/<name>`
 — compute it explicitly rather than substituting a bare `~/.claude/` path — except
 `.claude.json`, which is `$CLAUDE_CONFIG_DIR/.claude.json` when `CLAUDE_CONFIG_DIR` is set and
-`~/.claude.json` (in the home directory, not in `~/.claude/`) when it is unset. Reading or
-writing the wrong persona's file silently uses its skillUsage/pluginUsage/mcpServers, settings,
-or transcripts. When an audit, health check, or cleanup could mean every persona rather than
+`~/.claude.json` (in the home directory, not in `~/.claude/`) when it is unset.
+`claude-tooling-write-guard` flags cross-persona reads/writes to these automatically (skills/
+rules are symlink-shared and never flagged). When an audit, health check, or cleanup could mean every persona rather than
 just the active one, ask which is wanted before running. Each persona's
 `.claude-settings.json`, next to its `modify_settings.json.tmpl` in
 `{{ $sourceDir }}/dot_claude*/`, is written in `settings.json`'s own shape and declares everything chezmoi manages
-in that persona's `settings.json` — its `hooks` (deliberately not shared via the skills/rules
-symlink above: separate files exist precisely so hooks *can* diverge per persona, e.g. a
-stricter write-guard for a work persona than a personal one; today's four personas happen to
-declare the same five hooks, but that's current fact, not an invariant to preserve — a
-persona-specific hook is exactly what this separation is for) plus a
+in that persona's `settings.json` — its `hooks` (not shared via the skills/rules symlink
+above, by design: separate files let hooks diverge per persona, e.g. a stricter write-guard
+for work than personal; the four happen to match today, but that's not an invariant) plus a
 baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
 workload (these postures are derived from `/doctor` runs per-persona, and copying them
 verbatim between personas skips re-running that analysis for a different workload). The
@@ -144,13 +144,10 @@ merge script with a snapshot of the live file, and the write guard denies it.
 
 Full rules are in the header of `{{ $sourceDir }}/.chezmoitemplates/claude-settings-modifier`.
 
-**Drift note**: chezmoi saves a copy of each persona's managed JSON as the string
-`_chezmoiManaged` inside `settings.json`, so an entry removed from the JSON file is
-retracted from the live file on the next `chezmoi apply`. Ad hoc `/skill`/`/plugin` toggles
-made directly in a session still survive — the ledger only retracts entries chezmoi itself
-wrote — so the live `~/.claude*/settings.json` can carry more `skillOverrides`/
-`enabledPlugins` entries than the managed JSON declares. "Checking for Override Drift"
-above covers how to find and resolve these. Don't hand-edit `_chezmoiManaged`.
+**Drift note**: the live `~/.claude*/settings.json` can carry more `skillOverrides`/
+`enabledPlugins` entries than the managed JSON declares — ad hoc `/skill`/`/plugin` toggles
+survive because the ledger (`_chezmoiManaged`, don't hand-edit) only retracts entries chezmoi
+itself wrote. See "Checking for Override Drift" above to find and resolve these.
 
 ## Permission Patterns Are a Separate Axis from Persona Selection
 
