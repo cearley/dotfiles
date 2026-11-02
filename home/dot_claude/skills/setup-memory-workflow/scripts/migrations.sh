@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # migrations.sh — cleans up this skill's own prior-version artifacts.
 #
 # Sourced by check-drift.sh; never run standalone (no shebang, not chmod +x).

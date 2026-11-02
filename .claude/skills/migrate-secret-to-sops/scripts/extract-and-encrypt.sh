@@ -41,6 +41,10 @@ usage() {
     exit 1
 }
 
+encrypt() {
+    sops --encrypt --filename-override "$target" --input-type "$type" --output-type "$type" /dev/stdin
+}
+
 if [[ $# -lt 1 ]]; then
     usage
 fi
@@ -61,12 +65,10 @@ attachment | attribute)
 
     if [[ "$mode" == attachment ]]; then
         keepassxc-cli attachment-export --stdout "$db" "$entry" "$name" |
-            sops --encrypt --filename-override "$target" --input-type "$type" --output-type "$type" /dev/stdin \
-                >"$target"
+            encrypt >"$target"
     else
         keepassxc-cli show -s -a "$name" "$db" "$entry" |
-            sops --encrypt --filename-override "$target" --input-type "$type" --output-type "$type" /dev/stdin \
-                >"$target"
+            encrypt >"$target"
     fi
     ;;
 
@@ -104,8 +106,7 @@ combine)
     done
 
     echo "$json" |
-        sops --encrypt --filename-override "$target" --input-type "$type" --output-type "$type" /dev/stdin \
-            >"$target"
+        encrypt >"$target"
     ;;
 
 *)

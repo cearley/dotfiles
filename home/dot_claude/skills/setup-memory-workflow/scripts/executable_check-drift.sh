@@ -93,6 +93,7 @@ canonical_hook_cmd() {
   echo "echo '${canonical_msg}'; \"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh\" drift-warn 2>/dev/null || true"
 }
 
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/migrations.sh
 source "$SKILL_DIR/scripts/migrations.sh"
 
 # Cleans up legacy artifacts from prior versions of this skill, unconditionally,
