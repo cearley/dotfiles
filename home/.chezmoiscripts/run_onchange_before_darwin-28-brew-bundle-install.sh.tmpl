@@ -71,7 +71,11 @@ if ! missing=$(brew bundle check --no-upgrade --verbose --file=$brewfile 2>&1); 
     fi
 fi
 
-if ! brew bundle check --file=$brewfile >/dev/null 2>&1; then
+# The full check reports missing and outdated items alike, so only offer
+# upgrades when nothing is missing (declined or failed installs stay missing).
+if ! brew bundle check --no-upgrade --file=$brewfile >/dev/null 2>&1; then
+    print_message "skip" "Skipping update check — some brewfile packages are still missing"
+elif ! brew bundle check --file=$brewfile >/dev/null 2>&1; then
     if [ -t 0 ]; then
         read -p "🍺 Packages from your brewfile have updates available — install them now? (y/N): " -n 1 -r
         echo

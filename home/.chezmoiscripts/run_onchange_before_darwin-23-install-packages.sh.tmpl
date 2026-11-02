@@ -173,12 +173,11 @@ fi
 print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
 {{ end -}}
 
-# Everything missing is now installed. Check whether anything already
-# installed (tap, formula, cask, or mas) is outdated, and ask once, combined
-# across all four types, before upgrading — installing missing packages
-# must never silently drag in unrelated upgrades.
-check_exit=0
-brew bundle check --verbose --file=/dev/stdin <<'CHECK_EOF' || check_exit=$?
+# Full declared set (taps, formulae, casks, mas), shared by the checks and
+# the upgrade below.
+combined_brewfile=$(mktemp)
+trap 'rm -f "$combined_brewfile"' EXIT
+cat > "$combined_brewfile" <<'CHECK_EOF'
 {{- range .packages.darwin.taps }}
 tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{- end }}
@@ -217,7 +216,13 @@ mas {{ . }}
 {{- end }}
 CHECK_EOF
 
-if [ "$check_exit" -ne 0 ]; then
+# Ask once, combined across all four types, before upgrading anything outdated.
+# The full check reports missing and outdated items alike, so only offer
+# upgrades when nothing is missing — otherwise a failed install would show up
+# as "updates available".
+if ! brew bundle check --no-upgrade --file="$combined_brewfile" >/dev/null 2>&1; then
+    print_message "skip" "Skipping update check — some packages are still missing (see warnings above)"
+elif ! brew bundle check --verbose --file="$combined_brewfile"; then
     if [ -t 0 ]; then
         read -p "🍺 Some installed packages have updates available — install them now? (y/N): " -n 1 -r
         echo
@@ -229,44 +234,7 @@ if [ "$check_exit" -ne 0 ]; then
         print_message "skip" "Skipping package updates"
     else
         upgrade_exit=0
-        brew bundle install --upgrade -v --file=/dev/stdin <<'UPGRADE_EOF' || upgrade_exit=$?
-{{- range .packages.darwin.taps }}
-tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
-{{- end }}
-{{- range $category := prepend .tag_choices "core" }}
-  {{- $tapItems := index $tapByCategory $category }}
-  {{- $brewItems := index $brewByCategory $category }}
-  {{- $caskItems := index $caskByCategory $category }}
-  {{- $masItems := index $masByCategory $category }}
-  {{- if or $tapItems $brewItems $caskItems (and $icloudSignedIn $masItems) }}
-
-# {{ $category }} packages
-    {{- if $tapItems }}
-{{ range $tapItems -}}
-tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
-{{ end -}}
-    {{- end }}
-
-    {{- if $brewItems }}
-{{ range $brewItems -}}
-brew {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
-{{ end -}}
-    {{- end }}
-
-    {{- if $caskItems }}
-{{ range $caskItems -}}
-cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
-{{ end -}}
-    {{- end }}
-
-    {{- if and $icloudSignedIn $masItems }}
-{{ range $masItems -}}
-mas {{ . }}
-{{ end -}}
-    {{- end }}
-  {{- end }}
-{{- end }}
-UPGRADE_EOF
+        brew bundle install --upgrade -v --file="$combined_brewfile" || upgrade_exit=$?
 
         if [ "$upgrade_exit" -ne 0 ]; then
             any_failed=1

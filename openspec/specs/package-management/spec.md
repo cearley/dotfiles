@@ -137,7 +137,7 @@ Additional packages SHALL be defined in machine-specific Brewfiles located in th
 - **AND** SHALL be accessible for manual `brew bundle` operations
 
 ### Requirement: User Confirmation for Additional Packages
-Installing a missing package declared in `packages.yaml` SHALL proceed unconditionally and silently in `run_onchange_before_darwin-23-install-packages.sh.tmpl`, regardless of package type. Installing a missing package declared in a machine-specific Brewfile SHALL require explicit user confirmation in `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl`, gated on a missing-only `brew bundle check --no-upgrade` against that Brewfile. Upgrading a package that is already installed but outdated SHALL require explicit user confirmation in both scripts. Each script SHALL gate its upgrade prompt on the result of a `brew bundle check` run against its full declared package set after the missing-item step completes, not on whether any package category is non-empty.
+Installing a missing package declared in `packages.yaml` SHALL proceed unconditionally and silently in `run_onchange_before_darwin-23-install-packages.sh.tmpl`, regardless of package type. Installing a missing package declared in a machine-specific Brewfile SHALL require explicit user confirmation in `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl`, gated on a missing-only `brew bundle check --no-upgrade` against that Brewfile. Upgrading a package that is already installed but outdated SHALL require explicit user confirmation in both scripts. Each script SHALL gate its upgrade prompt on a `brew bundle check` run against its full declared package set after the missing-item step completes, not on whether any package category is non-empty, and SHALL offer that prompt only when a `brew bundle check --no-upgrade` against the same set passes (nothing still missing).
 
 #### Scenario: Confirmation prompt for core casks
 - **WHEN** `packages.yaml` resolves one or more cask entries for the active tag set
@@ -160,6 +160,11 @@ Installing a missing package declared in `packages.yaml` SHALL proceed unconditi
 - **WHEN** the user declines darwin-28's missing-package install prompt, or stdin is not a TTY
 - **THEN** darwin-28 SHALL skip the missing-item install without invoking `brew bundle install`
 - **AND** SHALL continue to the upgrade check
+
+#### Scenario: Packages still missing after the install step
+- **WHEN** a missing-only `brew bundle check --no-upgrade` still fails after the missing-item step, because an install failed or the user declined darwin-28's install prompt
+- **THEN** the script SHALL skip the upgrade prompt and print a `print_message "skip"` notice that packages are still missing
+- **AND** SHALL NOT describe the still-missing packages as having updates available
 
 #### Scenario: Confirmation denied
 - **WHEN** the user declines a script's confirmation prompt
