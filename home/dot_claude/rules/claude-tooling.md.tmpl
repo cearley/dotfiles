@@ -121,8 +121,11 @@ or transcripts. When an audit, health check, or cleanup could mean every persona
 just the active one, ask which is wanted before running. Each persona's
 `.claude-settings.json`, next to its `modify_settings.json.tmpl` in
 `{{ $sourceDir }}/dot_claude*/`, is written in `settings.json`'s own shape and declares everything chezmoi manages
-in that persona's `settings.json` — its `hooks` (the same five in every persona, repeated on
-purpose so each file is self-contained: a hook edit means editing all four files) plus a
+in that persona's `settings.json` — its `hooks` (deliberately not shared via the skills/rules
+symlink above: separate files exist precisely so hooks *can* diverge per persona, e.g. a
+stricter write-guard for a work persona than a personal one; today's four personas happen to
+declare the same five hooks, but that's current fact, not an invariant to preserve — a
+persona-specific hook is exactly what this separation is for) plus a
 baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
 workload (these postures are derived from `/doctor` runs per-persona, and copying them
 verbatim between personas skips re-running that analysis for a different workload). The
