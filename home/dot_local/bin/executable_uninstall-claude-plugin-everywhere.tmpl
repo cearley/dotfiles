@@ -18,11 +18,10 @@
 */ -}}
 #!/bin/bash
 set -euo pipefail
-{{- $settings := includeTemplate "machine-settings" . | fromJson }}
-{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+{{- $personas := includeTemplate "persona-list" . | fromJson }}
 
 # The unnamed default is always first; named personas come from this machine's claude_envs.
-PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
+PERSONA_DIRS=({{ range $i, $p := $personas }}{{ if $i }} {{ end }}"{{ $p.dir }}"{{ end }})
 
 plugin="${1:?usage: uninstall-claude-plugin-everywhere <plugin@marketplace>}"
 name="${plugin%@*}"

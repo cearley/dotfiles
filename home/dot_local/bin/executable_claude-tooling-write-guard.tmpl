@@ -35,10 +35,9 @@
 set -euo pipefail
 {{- $sourceDir := .chezmoi.sourceDir }}
 {{- $repoRoot := trimSuffix "/home" $sourceDir }}
-{{- $settings := includeTemplate "machine-settings" . | fromJson }}
-{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+{{- $personas := includeTemplate "persona-list" . | fromJson }}
 {{- $personaList := "~/.claude" }}
-{{- range $claudeEnvs }}{{ $personaList = printf "%s, %s" $personaList . }}{{ end }}
+{{- range $personas }}{{ if ne .name "default" }}{{ $personaList = printf "%s, ~/.claude-%s" $personaList .name }}{{ end }}{{ end }}
 
 payload=$(cat)
 tool_name=$(jq -r '.tool_name // ""' <<<"$payload")

@@ -1,0 +1,32 @@
+{{- /* Returns the list of Claude Code personas configured on this machine -- the single
+     source of truth for every script that needs to enumerate them, replacing five
+     independent inline derivations of claude_envs -> persona name/dir/baseline
+     (check-claude-overrides, uninstall-claude-plugin-everywhere, audit-claude-code.sh,
+     the darwin-44 CLAUDE.md-symlink migration, claude-tooling-write-guard).
+
+     Resolves `claude_envs` from this machine's config the same way every current caller
+     already does (`includeTemplate "machine-settings" .` -> `.claude_envs`, defaulting to
+     an empty list) -- no special params beyond the chezmoi context itself.
+
+     Returns a JSON array: [{"name": <bare name>, "dir": <live config dir>,
+     "baseline": <chezmoi-source managed-settings file>}, ...]. The unnamed default persona
+     is always first: name "default", dir literally the string "$HOME/.claude" (a bash
+     variable reference for the consuming script to expand, not expanded here), baseline
+     the dot_claude/.claude-settings.json source path. One entry per claude_envs entry
+     follows, in declared order: name has the "~/.claude-" prefix trimmed, dir is literally
+     "$HOME/.claude-<name>", baseline is that persona's dot_claude-<name>/.claude-settings.json
+     source path.
+
+     Example:
+       {{- $personas := includeTemplate "persona-list" . | fromJson -}}
+       PERSONA_DIRS=({{ range $personas }}"{{ .dir }}" {{ end }})
+*/ -}}
+{{- $sourceDir := .chezmoi.sourceDir -}}
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $claudeEnvs := default (list) (index $settings "claude_envs") -}}
+{{- $result := list (dict "name" "default" "dir" "$HOME/.claude" "baseline" (printf "%s/dot_claude/.claude-settings.json" $sourceDir)) -}}
+{{- range $claudeEnvs -}}
+  {{- $name := trimPrefix "~/.claude-" . -}}
+  {{- $result = append $result (dict "name" $name "dir" (printf "$HOME/.claude-%s" $name) "baseline" (printf "%s/dot_claude-%s/.claude-settings.json" $sourceDir $name)) -}}
+{{- end -}}
+{{- toJson $result -}}

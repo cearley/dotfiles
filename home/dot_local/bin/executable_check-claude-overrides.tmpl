@@ -16,8 +16,7 @@
 #        check-claude-overrides --session-start
 set -euo pipefail
 {{- $sourceDir := .chezmoi.sourceDir }}
-{{- $settings := includeTemplate "machine-settings" . | fromJson }}
-{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+{{- $personas := includeTemplate "persona-list" . | fromJson }}
 
 PACKAGES_YAML="{{ $sourceDir }}/.chezmoidata/packages.yaml"
 NATIVE_SKILLS_DIR="{{ $sourceDir }}/dot_claude/skills"
@@ -26,9 +25,9 @@ NATIVE_SKILLS_DIR="{{ $sourceDir }}/dot_claude/skills"
 # source file (same shape as settings.json).
 # The unnamed default is always first; named personas come from this machine's claude_envs,
 # baked in here at chezmoi-apply time rather than rediscovered at runtime.
-PERSONA_NAMES=("default"{{ range $claudeEnvs }} "{{ trimPrefix "~/.claude-" . }}"{{ end }})
-PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
-PERSONA_BASELINES=("{{ $sourceDir }}/dot_claude/.claude-settings.json"{{ range $claudeEnvs }} "{{ $sourceDir }}/dot_claude-{{ trimPrefix "~/.claude-" . }}/.claude-settings.json"{{ end }})
+PERSONA_NAMES=({{ range $i, $p := $personas }}{{ if $i }} {{ end }}"{{ $p.name }}"{{ end }})
+PERSONA_DIRS=({{ range $i, $p := $personas }}{{ if $i }} {{ end }}"{{ $p.dir }}"{{ end }})
+PERSONA_BASELINES=({{ range $i, $p := $personas }}{{ if $i }} {{ end }}"{{ $p.baseline }}"{{ end }})
 
 print_usage() {
     cat <<'EOF'

@@ -25,8 +25,7 @@ CHEZMOI_MANAGED_SKILLS_DIR="{{ .chezmoi.sourceDir }}/dot_claude/skills"
 CLAUDE_HOME="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 SETTINGS="$CLAUDE_HOME/settings.json"
 
-{{- $settings := includeTemplate "machine-settings" . | fromJson }}
-{{- $claudeEnvs := default (list) (index $settings "claude_envs") }}
+{{- $personas := includeTemplate "persona-list" . | fromJson }}
 {{- $localMarketplaceName := includeTemplate "local-marketplace-name" . }}
 # Declared personas only (this machine's claude_envs config) — not a `.claude*` glob. A
 # glob was the original audit-packages.tmpl's choice specifically to avoid a chezmoi-data
@@ -38,7 +37,7 @@ SETTINGS="$CLAUDE_HOME/settings.json"
 #
 # Public (no leading underscore): list-claude-orphans.sh's own ## environments section
 # consumes this array directly instead of re-deriving it from claude_envs itself.
-CLAUDE_PERSONA_DIRS=("$HOME/.claude"{{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
+CLAUDE_PERSONA_DIRS=({{ range $i, $p := $personas }}{{ if $i }} {{ end }}"{{ $p.dir }}"{{ end }})
 
 # Every settings.json this machine might have: one per declared persona, plus $SETTINGS
 # explicitly in case $CLAUDE_CONFIG_DIR points somewhere outside that declared list — the

@@ -25,7 +25,8 @@ exit 0
 {{- else }}
 
 SHARED_TARGET="$HOME/.claude/CLAUDE.md"
-PERSONA_DIRS=({{ range $claudeEnvs }} "$HOME/.claude-{{ trimPrefix "~/.claude-" . }}"{{ end }})
+{{- $personas := includeTemplate "persona-list" . | fromJson }}
+PERSONA_DIRS=({{ range $personas }}{{ if ne .name "default" }} "{{ .dir }}"{{ end }}{{ end }})
 
 for dir in "${PERSONA_DIRS[@]}"; do
     path="$dir/CLAUDE.md"
