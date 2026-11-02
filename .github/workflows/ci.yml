@@ -4,6 +4,61 @@ name: CI
 
 jobs:
 
+  lint_invariants:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Check script position numbers are unique
+        shell: bash
+        run: |
+          # Filenames in home/.chezmoiscripts/ encode execution order as a number
+          # (see home-scripts.md). A duplicate number makes run order ambiguous.
+          dupes="$(ls home/.chezmoiscripts/ | grep -oE '[0-9]+' | sort | uniq -d)"
+          if [ -n "$dupes" ]; then
+            echo "❌ Duplicate script position number(s):"
+            echo "$dupes"
+            exit 1
+          fi
+          echo "✅ All script position numbers are unique"
+
+      - name: Check Homebrew trusted-list covers all third-party taps/formulae
+        shell: bash
+        run: |
+          # CLAUDE.md invariant: every third-party tap, and every brew/cask
+          # installed from a third-party tap (owner/tap/formula form), must
+          # also appear in packages.darwin.trusted or it silently installs
+          # without `trusted: true` in the generated Brewfile (see
+          # run_onchange_before_darwin-23-install-packages.sh.tmpl).
+          yq -o=json home/.chezmoidata/packages.yaml > /tmp/packages.json
+          result="$(jq -r '
+            .packages.darwin as $d
+            | ($d.trusted) as $trusted
+            | [ $d | .. | objects | .taps? // empty | .[]? ] as $taps
+            | [ $d | .. | objects | (.brews? // [], .casks? // [])[]? | select(contains("/")) ] as $slashed
+            | ($taps + $slashed | unique) as $need
+            | ($need - $trusted) as $missing
+            | ($trusted - $need) as $extra
+            | {missing: $missing, extra: $extra}
+          ' /tmp/packages.json)"
+          missing="$(echo "$result" | jq -r '.missing[]')"
+          extra="$(echo "$result" | jq -r '.extra[]')"
+          status=0
+          if [ -n "$missing" ]; then
+            echo "❌ Third-party tap/formula missing from packages.darwin.trusted:"
+            echo "$missing"
+            status=1
+          fi
+          if [ -n "$extra" ]; then
+            echo "❌ packages.darwin.trusted has entries not used by any tap/brew/cask:"
+            echo "$extra"
+            status=1
+          fi
+          if [ "$status" -eq 0 ]; then
+            echo "✅ trusted list exactly matches third-party taps/formulae in use"
+          fi
+          exit "$status"
+
   test_remote_install:
     runs-on: macos-latest
     steps:
