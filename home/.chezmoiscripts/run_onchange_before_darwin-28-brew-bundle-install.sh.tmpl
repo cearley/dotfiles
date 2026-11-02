@@ -46,7 +46,23 @@ warn_icloud_not_signed_in || { _icloud_available=false; export HOMEBREW_BUNDLE_M
 
 export HOMEBREW_ACCEPT_EULA=Y
 brew update
-brew bundle install --no-upgrade -v --file=$brewfile
+
+# Missing machine-specific packages (App Store apps, VS Code extensions, etc.) install only after confirmation.
+if ! missing=$(brew bundle check --no-upgrade --verbose --file=$brewfile 2>&1); then
+    echo "$missing"
+    if [ -t 0 ]; then
+        read -p "🍺 Install missing packages from your brewfile? (y/N): " -n 1 -r
+        echo
+    else
+        print_message "skip" "Non-interactive session (no TTY) — defaulting to skip missing package installation"
+        REPLY="N"
+    fi
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_message "skip" "Skipping missing package installation"
+    else
+        brew bundle install --no-upgrade -v --file=$brewfile
+    fi
+fi
 
 if ! brew bundle check --file=$brewfile >/dev/null 2>&1; then
     if [ -t 0 ]; then
