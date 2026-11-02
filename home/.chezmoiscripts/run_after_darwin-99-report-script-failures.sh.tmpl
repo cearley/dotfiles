@@ -1,0 +1,32 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/bash
+
+# Summarizes, at the end of `chezmoi apply`, the scripts that recorded a failure
+# via record_script_failure, since their warnings scroll past mid-output.
+#
+# Plain run_after_ (runs on every apply): failures are recorded while the apply
+# runs, after templates are rendered, so a run_onchange trigger would only see
+# them on the following apply.
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+stamp_dir="$HOME/.local/state/chezmoi-scripts"
+
+shopt -s nullglob
+pending=("$stamp_dir"/*.pending)
+shopt -u nullglob
+
+if [ ${#pending[@]} -eq 0 ]; then
+    exit 0
+fi
+
+print_message "warning" "Some scripts failed during this apply and will run again on the next 'chezmoi apply':"
+for file in "${pending[@]}"; do
+    print_message "warning" "  $(basename "$file" .pending) — failed at $(cat "$file")"
+    rm -f "$file"
+done
+print_message "tip" "Scroll up to each script's output for the error details."
+
+{{ end -}}

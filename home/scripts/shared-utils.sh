@@ -207,11 +207,16 @@ warn_icloud_not_signed_in() {
 
 # Record a script failure so the script re-runs on the next `chezmoi apply` without
 # aborting this one. Pair with the "failure-stamp" template embedded in the script.
+# <name>.last-failure is the retry trigger and is never removed; <name>.pending is
+# listed and removed by the end-of-apply summary (darwin-99).
 # Usage: record_script_failure <name>
 record_script_failure() {
     local stamp_dir="$HOME/.local/state/chezmoi-scripts"
+    local now
+    now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     mkdir -p "$stamp_dir"
-    date -u +%Y-%m-%dT%H:%M:%SZ > "$stamp_dir/$1.last-failure"
+    echo "$now" > "$stamp_dir/$1.last-failure"
+    echo "$now" > "$stamp_dir/$1.pending"
     print_message "warning" "Recorded failure — this script will run again on the next 'chezmoi apply'"
 }
 
