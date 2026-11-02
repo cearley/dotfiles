@@ -205,6 +205,16 @@ warn_icloud_not_signed_in() {
     return 0
 }
 
+# Record a script failure so the script re-runs on the next `chezmoi apply` without
+# aborting this one. Pair with the "failure-stamp" template embedded in the script.
+# Usage: record_script_failure <name>
+record_script_failure() {
+    local stamp_dir="$HOME/.local/state/chezmoi-scripts"
+    mkdir -p "$stamp_dir"
+    date -u +%Y-%m-%dT%H:%M:%SZ > "$stamp_dir/$1.last-failure"
+    print_message "warning" "Recorded failure — this script will run again on the next 'chezmoi apply'"
+}
+
 # Iterate over Claude environment directories, expanding ~ and skipping missing dirs.
 # Usage: for_each_claude_env <callback_fn> [<raw_dir>...]
 # The callback receives the fully-expanded directory path as $1.

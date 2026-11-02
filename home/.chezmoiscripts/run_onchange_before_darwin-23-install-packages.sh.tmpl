@@ -2,6 +2,7 @@
 #!/bin/bash
 
 # run_onchange trigger - packages.yaml changes or every 7 days:  {{ includeTemplate "time-bucket" (dict "days" 7) }}
+# retry trigger - last failure: {{ includeTemplate "failure-stamp" (merge (dict "name" "brew-23") .) }}
 
 set -euo pipefail
 
@@ -275,7 +276,9 @@ UPGRADE_EOF
     fi
 fi
 
+# Record the failure and exit 0 so the rest of `chezmoi apply` (file updates,
+# after scripts) still runs; the failure stamp re-triggers this script next time.
 if [ "$any_failed" -eq 1 ]; then
-    exit 1
+    record_script_failure "brew-23"
 fi
 {{ end -}}

@@ -1,6 +1,8 @@
 {{- if eq .chezmoi.os "darwin" -}}
 #!/bin/bash
 
+# retry trigger - last failure: {{ includeTemplate "failure-stamp" (merge (dict "name" "brew-28") .) }}
+
 set -euo pipefail
 
 source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
@@ -45,7 +47,11 @@ _icloud_available=true
 warn_icloud_not_signed_in || { _icloud_available=false; export HOMEBREW_BUNDLE_MAS_SKIP=1; }
 
 export HOMEBREW_ACCEPT_EULA=Y
-brew update
+any_failed=0
+if ! brew update; then
+    any_failed=1
+    print_message "warning" "brew update failed — continuing with the current Homebrew metadata."
+fi
 
 # Missing machine-specific packages (App Store apps, VS Code extensions, etc.) install only after confirmation.
 if ! missing=$(brew bundle check --no-upgrade --verbose --file=$brewfile 2>&1); then
@@ -59,8 +65,9 @@ if ! missing=$(brew bundle check --no-upgrade --verbose --file=$brewfile 2>&1); 
     fi
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         print_message "skip" "Skipping missing package installation"
-    else
-        brew bundle install --no-upgrade -v --file=$brewfile
+    elif ! brew bundle install --no-upgrade -v --file=$brewfile; then
+        any_failed=1
+        print_message "warning" "brew bundle completed with errors — some packages may not be installed."
     fi
 fi
 
@@ -74,13 +81,20 @@ if ! brew bundle check --file=$brewfile >/dev/null 2>&1; then
     fi
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         print_message "skip" "Skipping package updates"
-    else
-        brew bundle install --upgrade -v --file=$brewfile
+    elif ! brew bundle install --upgrade -v --file=$brewfile; then
+        any_failed=1
+        print_message "warning" "brew bundle (upgrade) completed with errors — some packages may not be updated."
     fi
 fi
 
 if [[ "$_icloud_available" == false ]]; then
     print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
+fi
+
+# Record the failure and exit 0 so the rest of `chezmoi apply` (file updates,
+# after scripts) still runs; the failure stamp re-triggers this script next time.
+if [ "$any_failed" -eq 1 ]; then
+    record_script_failure "brew-28"
 fi
 
 {{ end -}}

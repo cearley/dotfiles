@@ -1,0 +1,28 @@
+{{- /* Last-failure stamp for a `run_onchange_*` script - forces a retry after a failed run.
+
+     A script that records a failure with `record_script_failure <name>`
+     (home/scripts/shared-utils.sh) can exit 0 so `chezmoi apply` continues,
+     yet still re-run on the next apply: embed this template's value in a
+     comment near the top of the script, and each new failure timestamp
+     changes the rendered-script hash. Success leaves the stamp untouched,
+     so the hash stays at the value chezmoi last recorded and no extra run
+     happens.
+
+     Parameter (merge into the template context):
+     - name (required): stamp name, must match the record_script_failure argument
+
+     Example:
+       # retry trigger - last failure: {{ includeTemplate "failure-stamp" (merge (dict "name" "brew-28") .) }}
+
+     Returns:
+     - Contents of ~/.local/state/chezmoi-scripts/<name>.last-failure, or "none".
+*/ -}}
+{{- if not (hasKey . "name") -}}
+{{-   fail "failure-stamp: 'name' parameter is required" -}}
+{{- end -}}
+{{- $stamp := joinPath .chezmoi.homeDir ".local/state/chezmoi-scripts" (printf "%s.last-failure" .name) -}}
+{{- if stat $stamp -}}
+{{-   include $stamp | trim -}}
+{{- else -}}
+none
+{{- end -}}
