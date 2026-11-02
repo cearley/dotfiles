@@ -22,9 +22,9 @@ the chezmoi dotfiles repo at `{{ $repoRoot }}` (source tree at `{{ $sourceDir }}
 of which project or repo you're currently working in, that is where the guidance below applies.
 Global preferences are the rule `rules/global-preferences.md`; edit
 `{{ $sourceDir }}/dot_claude/rules/global-preferences.md.tmpl`, not any `CLAUDE.md`.
-This machine may run multiple named Claude Code profiles ("personas") in addition to the
+This machine may run multiple named Claude Code profiles in addition to the
 unnamed default, each with its own `CLAUDE_CONFIG_DIR` — the guidance below refers to them as
-"personas" throughout, whether or not any are currently configured on this machine.
+"profiles" throughout, whether or not any are currently configured on this machine.
 Diagnosing installation health, editing settings/plugins, or reasoning about skill/MCP usage
 (e.g. `/doctor`) concerns that repo's `{{ $sourceDir }}/dot_claude/`,
 `{{ $sourceDir }}/.chezmoidata/`, and `{{ $sourceDir }}/.chezmoiscripts/`, not the current
@@ -36,8 +36,8 @@ working directory.
 the chezmoi repo above. `ls` there is authoritative over any hand-maintained list — same
 anti-drift principle as `{{ $sourceDir }}/.chezmoiscripts/`, where `ls` is likewise
 authoritative over any hand-maintained table.
-Deployed by `chezmoi apply` to `~/.claude/skills/`, symlinked from each persona's
-`~/.claude-<name>/skills` (see "Personas Share Skills and Rules via Symlink" below).
+Deployed by `chezmoi apply` to `~/.claude/skills/`, symlinked from each profile's
+`~/.claude-<name>/skills` (see "Profiles Share Skills and Rules via Symlink" below).
 
 **External skills**: declared in `packages.darwin.ai.agents.claude_code.skills` in
 `{{ $sourceDir }}/.chezmoidata/packages.yaml`, fetched from third-party GitHub repos
@@ -57,7 +57,7 @@ Also declared under `packages.darwin.ai.agents.claude_code` in that same `packag
 - `plugin_marketplaces` / `plugins` — installed by
   `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`,
   which runs `claude plugins install <id> --scope user` per entry; that CLI command is what
-  actually records `enabledPlugins: true` in each persona's `settings.json`, not the script directly
+  actually records `enabledPlugins: true` in each profile's `settings.json`, not the script directly
 
 ## Disabling, Removing, or Overriding Requires a packages.yaml Cross-Check (e.g. /doctor audits)
 
@@ -77,8 +77,8 @@ logic for applying it by hand.
 `clean-claude-orphans` handles installed-but-undeclared drift. This is the opposite
 direction — **declared-but-locally-suppressed**. `check-claude-overrides` detects it, and is
 relevant whenever auditing tooling health (`/doctor`-style checks) or when a skill/plugin isn't
-behaving despite being installed and declared — it checks every persona's live `settings.json`
-against that persona's own managed-settings baseline,
+behaving despite being installed and declared — it checks every profile's live `settings.json`
+against that profile's own managed-settings baseline,
 `{{ $sourceDir }}/dot_claude*/.claude-settings.json`, and flags:
 
 - `skillOverrides.<skill>: "off"` for a **native** skill (listed under
@@ -93,9 +93,9 @@ against that persona's own managed-settings baseline,
 
 Each flagged entry needs the user's input on which way it should go:
 
-- **Keep the override** → `check-claude-overrides --fix <persona>
+- **Keep the override** → `check-claude-overrides --fix <profile>
   <skillOverrides|enabledPlugins|permissions|env> <key>` reads the live value straight from
-  `settings.json`, writes it into that persona's `.claude-settings.json`, and
+  `settings.json`, writes it into that profile's `.claude-settings.json`, and
   verifies the write on a copy before the tracked file is touched (editing the JSON by hand
   also works).
 - **Drop the override** → removing the key via the equivalent `/skill` or `/plugin` command (or
@@ -103,35 +103,35 @@ Each flagged entry needs the user's input on which way it should go:
   for a `permissions`/`env` value, the next `chezmoi apply` restores the baseline.
   This direction stays manual — `check-claude-overrides` never modifies a live `settings.json`.
 
-## Personas Share Skills and Rules via Symlink
+## Profiles Share Skills and Rules via Symlink
 
-Each persona (`{{ $sourceDir }}/dot_claude-<name>/`) gets `symlink_skills.tmpl` and
+Each profile (`{{ $sourceDir }}/dot_claude-<name>/`) gets `symlink_skills.tmpl` and
 `symlink_rules.tmpl` pointing back at `~/.claude/skills` and `~/.claude/rules` — so a skill
-edit or a rule edit takes effect for every persona after one `chezmoi apply`, with no
-per-persona copy to keep in sync. For anything under `skills/` or `rules/`, the edit target is
+edit or a rule edit takes effect for every profile after one `chezmoi apply`, with no
+per-profile copy to keep in sync. For anything under `skills/` or `rules/`, the edit target is
 the source file under `{{ $sourceDir }}/dot_claude/`, not the deployed copy under `~/.claude/`.
 
-## Per-Persona Settings: The Managed-Settings Ledger
+## Per-Profile Settings: The Managed-Settings Ledger
 
-What's **not** shared per persona: `settings.json`, `.claude.json`, `plugins/`, session
+What's **not** shared per profile: `settings.json`, `.claude.json`, `plugins/`, session
 history (`projects/`), and `CLAUDE.md`. Each resolves as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/<name>`
 — compute it explicitly rather than substituting a bare `~/.claude/` path — except
 `.claude.json`, which is `$CLAUDE_CONFIG_DIR/.claude.json` when `CLAUDE_CONFIG_DIR` is set and
 `~/.claude.json` (in the home directory, not in `~/.claude/`) when it is unset.
-`claude-tooling-write-guard` flags cross-persona reads/writes to these automatically (skills/
-rules are symlink-shared and never flagged). When an audit, health check, or cleanup could mean every persona rather than
-just the active one, ask which is wanted before running. Each persona's
+`claude-tooling-write-guard` flags cross-profile reads/writes to these automatically (skills/
+rules are symlink-shared and never flagged). When an audit, health check, or cleanup could mean every profile rather than
+just the active one, ask which is wanted before running. Each profile's
 `.claude-settings.json`, next to its `modify_settings.json.tmpl` in
 `{{ $sourceDir }}/dot_claude*/`, is written in `settings.json`'s own shape and declares everything chezmoi manages
-in that persona's `settings.json` — its `hooks` (not shared via the skills/rules symlink
-above, by design: separate files let hooks diverge per persona, e.g. a stricter write-guard
+in that profile's `settings.json` — its `hooks` (not shared via the skills/rules symlink
+above, by design: separate files let hooks diverge per profile, e.g. a stricter write-guard
 for work than personal; the four happen to match today, but that's not an invariant) plus a
-baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that persona's typical
-workload (these postures are derived from `/doctor` runs per-persona, and copying them
-verbatim between personas skips re-running that analysis for a different workload). The
+baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that profile's typical
+workload (these postures are derived from `/doctor` runs per-profile, and copying them
+verbatim between profiles skips re-running that analysis for a different workload). The
 `modify_settings.json.tmpl` files are identical one-line callers; don't put settings there.
 The source directory's leading dot makes chezmoi skip it: the file is neither deployed nor
-template-parsed. Never `chezmoi add`/`re-add` a persona `settings.json`: `add` replaces the
+template-parsed. Never `chezmoi add`/`re-add` a profile `settings.json`: `add` replaces the
 merge script with a snapshot of the live file, and the write guard denies it.
 
 **What `chezmoi apply` does to it:**
@@ -149,17 +149,17 @@ Full rules are in the header of `{{ $sourceDir }}/.chezmoitemplates/claude-setti
 survive because the ledger (`_chezmoiManaged`, don't hand-edit) only retracts entries chezmoi
 itself wrote. See "Checking for Override Drift" above to find and resolve these.
 
-## Permission Patterns Are a Separate Axis from Persona Selection
+## Permission Patterns Are a Separate Axis from Profile Selection
 
-Persona selection (`CLAUDE_CONFIG_DIR`, "Personas Share Skills and Rules via Symlink" above)
+Profile selection (`CLAUDE_CONFIG_DIR`, "Profiles Share Skills and Rules via Symlink" above)
 answers *whose account is this* — it says nothing about *how much rope should this task get* in
 the repo in front of you. That's a second, independent axis: `apply-claude-pattern a|b|c`
 (`{{ $sourceDir }}/dot_local/bin/executable_apply-claude-pattern.tmpl`) stamps one of three
 chezmoi-templated permission postures — Pattern A (approval-first), Pattern B (curated
 allow-list), Pattern C (sandboxed full-auto, refused without container evidence) — into the
 *current project repo's* gitignored `.claude/settings.local.json`. It never reads or writes any
-persona's `settings.json` or the `_chezmoiManaged` ledger described above, and choosing a
-persona never implies or constrains which pattern, if any, is stamped into a given repo. The
+profile's `settings.json` or the `_chezmoiManaged` ledger described above, and choosing a
+profile never implies or constrains which pattern, if any, is stamped into a given repo. The
 three patterns themselves live at
 `{{ $sourceDir }}/.chezmoitemplates/claude-pattern-{a,b,c}`, plus a companion Pattern C
 devcontainer definition at `{{ $sourceDir }}/.chezmoitemplates/claude-pattern-c-devcontainer/`.
@@ -175,7 +175,7 @@ and `claude-settings-ledger` (referenced above) remain the identity axis, untouc
 ## Two Deliberately Different Install Models
 
 - **`{{ $sourceDir }}/dot_claude/skills/` + `packages.yaml`** (this file's subject): global,
-  always-on, identical across every persona and project on this machine.
+  always-on, identical across every profile and project on this machine.
 - **The `{{ $localMarketplaceName }}` marketplace** (`{{ $sourceDir }}/dot_local/share/claude-plugins/`,
   deployed by `chezmoi apply` to `~/.local/share/claude-plugins`): chezmoi-managed like any
   other `home/` content — its path is declared as a plain entry in `packages.yaml`'s

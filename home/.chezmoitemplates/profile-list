@@ -1,6 +1,6 @@
-{{- /* Returns the list of Claude Code personas configured on this machine -- the single
+{{- /* Returns the list of Claude Code profiles configured on this machine -- the single
      source of truth for every script that needs to enumerate them, replacing five
-     independent inline derivations of claude_envs -> persona name/dir/baseline
+     independent inline derivations of claude_envs -> profile name/dir/baseline
      (check-claude-overrides, uninstall-claude-plugin-everywhere, audit-claude-code.sh,
      the darwin-44 CLAUDE.md-symlink migration, claude-tooling-write-guard).
 
@@ -9,17 +9,17 @@
      an empty list) -- no special params beyond the chezmoi context itself.
 
      Returns a JSON array: [{"name": <bare name>, "dir": <live config dir>,
-     "baseline": <chezmoi-source managed-settings file>}, ...]. The unnamed default persona
+     "baseline": <chezmoi-source managed-settings file>}, ...]. The unnamed default profile
      is always first: name "default", dir literally the string "$HOME/.claude" (a bash
      variable reference for the consuming script to expand, not expanded here), baseline
      the dot_claude/.claude-settings.json source path. One entry per claude_envs entry
      follows, in declared order: name has the "~/.claude-" prefix trimmed, dir is literally
-     "$HOME/.claude-<name>", baseline is that persona's dot_claude-<name>/.claude-settings.json
+     "$HOME/.claude-<name>", baseline is that profile's dot_claude-<name>/.claude-settings.json
      source path.
 
      Example:
-       {{- $personas := includeTemplate "persona-list" . | fromJson -}}
-       PERSONA_DIRS=({{ range $personas }}"{{ .dir }}" {{ end }})
+       {{- $profiles := includeTemplate "profile-list" . | fromJson -}}
+       PROFILE_DIRS=({{ range $profiles }}"{{ .dir }}" {{ end }})
 */ -}}
 {{- $sourceDir := .chezmoi.sourceDir -}}
 {{- $settings := includeTemplate "machine-settings" . | fromJson -}}

@@ -6,9 +6,9 @@ Quick reference guide for AI assistants working with this chezmoi dotfiles repos
 ## Quick Navigation
 
 ### Essential Files
-- **Glossary**: `GLOSSARY.md` - Disambiguates overloaded terms (`persona`, `trusted`, script-ordering vocabulary, two-tier secret model)
+- **Glossary**: `GLOSSARY.md` - Disambiguates overloaded terms (`profile`, `trusted`, script-ordering vocabulary, two-tier secret model)
 - **OpenSpec specs**: `openspec/specs/` - Capability specifications and design
-- **Claude Code persona settings**: `home/dot_claude*/.claude-settings.json`, next to each `modify_settings.json.tmpl`. It's plain JSON in `settings.json`'s shape; the header of `home/.chezmoitemplates/claude-settings-modifier` explains how it's applied. Never `chezmoi add` a persona `settings.json`.
+- **Claude Code profile settings**: `home/dot_claude*/.claude-settings.json`, next to each `modify_settings.json.tmpl`. It's plain JSON in `settings.json`'s shape; the header of `home/.chezmoitemplates/claude-settings-modifier` explains how it's applied. Never `chezmoi add` a profile `settings.json`.
 - **Code style examples**: "Code Style Quick Reference" note in the `chezmoi` basic-memory project - Extended cookbook
 
 ## Common Commands

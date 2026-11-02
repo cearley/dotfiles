@@ -16,7 +16,7 @@
 # backticks. The ledger is compared as parsed JSON, not as a string.
 #
 # Every case is also re-run on its own output and must come back byte-identical
-# (idempotence), and every persona's real source file must render and apply cleanly.
+# (idempotence), and every profile's real source file must render and apply cleanly.
 # A crashing modifier counts as a failure.
 #
 # Usage: tests/test-claude-settings-ledger.sh
@@ -79,14 +79,14 @@ for dir in "$FIXTURES"/*/; do
     '(._chezmoiManaged? // "") | type == "string"' <<<"$out1" >/dev/null 2>&1 && echo 1)"
 done
 
-# Every persona's real caller must find its sibling .claude-settings.json, and applying it
+# Every profile's real caller must find its sibling .claude-settings.json, and applying it
 # to {} must write exactly that file. Callers are rendered by absolute path, so
 # .chezmoi.sourceFile resolves; the host needs the ai tag for the non-pass-through branch.
 for src in "$REPO_ROOT"/home/dot_claude*/.claude-settings.json; do
   dir=$(dirname "$src"); name=$(basename "$dir")
-  "$SCRIPT_DIR/run-template" "$dir/modify_settings.json.tmpl" > "$scratch/persona-$name.sh"
-  got=$(bash "$scratch/persona-$name.sh" <<<'{}' 2>/dev/null | jq -S 'del(._chezmoiManaged)') || got=""
-  check "persona $name: caller applies its sibling source file" "$([[ "$got" == "$(jq -S . "$src")" ]] && echo 1)"
+  "$SCRIPT_DIR/run-template" "$dir/modify_settings.json.tmpl" > "$scratch/profile-$name.sh"
+  got=$(bash "$scratch/profile-$name.sh" <<<'{}' 2>/dev/null | jq -S 'del(._chezmoiManaged)') || got=""
+  check "profile $name: caller applies its sibling source file" "$([[ "$got" == "$(jq -S . "$src")" ]] && echo 1)"
 done
 
 echo "---"

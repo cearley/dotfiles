@@ -23,13 +23,13 @@ source "$HOME/.local/lib/audit-claude-code.sh"
 # ---------------------------------------------------------------------------
 # Claude Code environments present on this machine (openspec/specs/claude-environments).
 # One object per dir with `current` marked inline, rather than a separate "current" vs
-# "found" line for the same dir — avoids listing the active persona twice under two
+# "found" line for the same dir — avoids listing the active profile twice under two
 # different labels.
 # ---------------------------------------------------------------------------
 echo "## environments"
 current_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 current_seen=0
-for dir in "${CLAUDE_PERSONA_DIRS[@]}"; do
+for dir in "${CLAUDE_PROFILE_DIRS[@]}"; do
     [[ -d "$dir" ]] || continue
     if [[ "$dir" == "$current_dir" ]]; then
         is_current=true
@@ -40,7 +40,7 @@ for dir in "${CLAUDE_PERSONA_DIRS[@]}"; do
     jq -cn --arg path "$dir" --argjson current "$is_current" '{path: $path, current: $current}'
 done
 if [[ "$current_seen" -eq 0 ]]; then
-    # $CLAUDE_CONFIG_DIR points somewhere outside the declared persona list — still
+    # $CLAUDE_CONFIG_DIR points somewhere outside the declared profile list — still
     # report it as the current environment rather than silently dropping it.
     jq -cn --arg path "$current_dir" '{path: $path, current: true}'
 fi

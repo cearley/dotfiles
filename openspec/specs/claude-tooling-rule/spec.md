@@ -3,9 +3,7 @@
 ## Purpose
 
 Defines the user-level Claude Code rule that delivers installation-health and skill/MCP/plugin diagnostic guidance to the model automatically when relevant files are touched, replacing the previous directory-scoped auto-load with reliable path-scoped triggering.
-
 ## Requirements
-
 ### Requirement: Rule Deployed to User-Level Rules Directory
 The chezmoi source SHALL provide `home/dot_claude/rules/claude-tooling.md.tmpl`, deployed by `chezmoi apply` to `~/.claude/rules/claude-tooling.md`.
 
@@ -15,16 +13,17 @@ The chezmoi source SHALL provide `home/dot_claude/rules/claude-tooling.md.tmpl`,
 - **AND** its content SHALL match the rendered output of `home/dot_claude/rules/claude-tooling.md.tmpl`
 
 ### Requirement: Path-Scoped Auto-Load Trigger
+
 The rule SHALL declare a `paths:` frontmatter field so it loads only when Claude reads or edits a file matching one of these:
-- a Claude settings file (`settings.json`, `.claude.json`) under any persona directory
+- a Claude settings file (`settings.json`, `.claude.json`) under any profile directory
 - `packages.yaml`
-- deployed `skills/`, `rules/`, or `plugins/` content, session transcripts (`projects/`), or `CLAUDE.md`, under any persona directory
+- deployed `skills/`, `rules/`, or `plugins/` content, session transcripts (`projects/`), or `CLAUDE.md`, under any profile directory
 - the chezmoi source `dot_claude/` or `dot_claude-*/` trees
 
 The frontmatter SHALL contain a glob that actually matches each of these locations.
 
-#### Scenario: Loads when a persona's settings.json is touched
-- **WHEN** Claude reads or edits `~/.claude-personal/settings.json` (or the equivalent file under any other declared persona, or the unnamed default `~/.claude`)
+#### Scenario: Loads when a profile's settings.json is touched
+- **WHEN** Claude reads or edits `~/.claude-personal/settings.json` (or the equivalent file under any other declared profile, or the unnamed default `~/.claude`)
 - **THEN** Claude Code SHALL auto-load `claude-tooling.md` into context
 
 #### Scenario: Loads when packages.yaml is touched
@@ -37,11 +36,11 @@ The frontmatter SHALL contain a glob that actually matches each of these locatio
 - **AND** the rule's `paths:` frontmatter SHALL contain a glob matching those source paths (a `.claude*` glob does not match `dot_claude`)
 
 #### Scenario: Loads when a deployed rule is touched
-- **WHEN** Claude reads or edits `~/.claude/rules/global-preferences.md` or any other file under a persona's `rules/`
+- **WHEN** Claude reads or edits `~/.claude/rules/global-preferences.md` or any other file under a profile's `rules/`
 - **THEN** Claude Code SHALL auto-load `claude-tooling.md` into context
 
-#### Scenario: Loads when a persona transcript is touched
-- **WHEN** Claude reads a file under any persona's `projects/` directory
+#### Scenario: Loads when a profile transcript is touched
+- **WHEN** Claude reads a file under any profile's `projects/` directory
 - **THEN** Claude Code SHALL auto-load `claude-tooling.md` into context
 
 #### Scenario: Does not load for unrelated files
@@ -49,28 +48,29 @@ The frontmatter SHALL contain a glob that actually matches each of these locatio
 - **THEN** Claude Code SHALL NOT auto-load `claude-tooling.md` on account of that read/edit alone
 
 ### Requirement: Content Coverage
+
 The rule's content SHALL cover these topics:
 - the distinction between native (repo-authored) and external (`packages.yaml`-declared) skills
 - where MCP servers and plugins are declared and installed
 - the requirement to cross-check `packages.yaml` before disabling, removing, or overriding any declared skill, MCP server, or plugin
-- the persona sharing model: `skills/` and `rules/` are shared via symlink, and `CLAUDE.md` is per-persona
+- the profile sharing model: `skills/` and `rules/` are shared via symlink, and `CLAUDE.md` is per-profile
 - where chezmoi-managed global preferences live (`rules/global-preferences.md`) and their source edit target
 - the distinction between the chezmoi-managed global skill set and the separate, not-chezmoi-managed `chezmoi-personal` plugin marketplace
-- how to detect `skillOverrides`/`enabledPlugins` entries that silently diverge from a persona's chezmoi-managed baseline
+- how to detect `skillOverrides`/`enabledPlugins` entries that silently diverge from a profile's chezmoi-managed baseline
 
 #### Scenario: Cross-check guidance present
 - **WHEN** the rule is loaded
 - **THEN** it SHALL instruct that a declared-but-unwanted skill, MCP server, or plugin must be removed by editing `packages.yaml`, not by a local `skillOverrides`/`disabledMcpServers` entry
 
-#### Scenario: Persona sharing model documented
+#### Scenario: Profile sharing model documented
 - **WHEN** the rule is loaded
 - **THEN** it SHALL state that `skills/` and `rules/` are shared via symlink
-- **AND** it SHALL state that `settings.json`, `.claude.json`, `plugins/`, `projects/`, and `CLAUDE.md` are per-persona
+- **AND** it SHALL state that `settings.json`, `.claude.json`, `plugins/`, `projects/`, and `CLAUDE.md` are per-profile
 
 #### Scenario: Global preferences edit target documented
 - **WHEN** the rule is loaded
 - **AND** a diagnosis concludes the global preferences should change
-- **THEN** the rule SHALL direct the edit to `{{ .chezmoi.sourceDir }}/dot_claude/rules/global-preferences.md.tmpl`, not to any persona's `CLAUDE.md`
+- **THEN** the rule SHALL direct the edit to `{{ .chezmoi.sourceDir }}/dot_claude/rules/global-preferences.md.tmpl`, not to any profile's `CLAUDE.md`
 
 #### Scenario: Override-drift script pointer present
 - **WHEN** the rule is loaded
@@ -79,7 +79,7 @@ The rule's content SHALL cover these topics:
 #### Scenario: Fix-mode pointer present for the keep resolution
 - **WHEN** the rule is loaded
 - **AND** the resolve guidance covers the "keep the override" direction
-- **THEN** it SHALL direct the reader to `check-claude-overrides --fix <persona> <kind> <key>` instead of describing a fully manual template edit
+- **THEN** it SHALL direct the reader to `check-claude-overrides --fix <profile> <kind> <key>` instead of describing a fully manual template edit
 - **AND** it SHALL state that the "drop the override" direction remains a manual `/skill`/`/plugin` command, unchanged
 
 ### Requirement: Path References Use sourceDir Variable
@@ -88,3 +88,4 @@ Any reference to the chezmoi source directory within the rule's rendered content
 #### Scenario: Rendered path is machine-correct
 - **WHEN** `home/dot_claude/rules/claude-tooling.md.tmpl` is rendered on a machine whose chezmoi source directory is not the default location
 - **THEN** any path reference to `packages.yaml` or other source-tree files in the rendered content SHALL resolve to that machine's actual source directory
+

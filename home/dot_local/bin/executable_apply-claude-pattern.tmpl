@@ -1,8 +1,8 @@
 {{- /* apply-claude-pattern — stamps a chosen repo-local permission posture (Pattern A/B/C,
      see home/.chezmoitemplates/claude-pattern-{a,b,c}) into the CURRENT working directory's
-     gitignored .claude/settings.local.json. This is a second, independent axis from persona
+     gitignored .claude/settings.local.json. This is a second, independent axis from profile
      selection (claude-environments/claude-settings-ledger/claude-settings-modifier) — it
-     never reads or writes anything under a persona settings.json or $CLAUDE_CONFIG_DIR, only
+     never reads or writes anything under a profile settings.json or $CLAUDE_CONFIG_DIR, only
      ./.claude/settings.local.json relative to wherever it is invoked.
 
      The three patterns' JSON is baked in at chezmoi-apply time (below) rather than looked up
@@ -182,7 +182,7 @@ esac
 
 # --- stamp into ./.claude/settings.local.json ---------------------------
 # Deliberately relative to $PWD, never $HOME/.claude* or $CLAUDE_CONFIG_DIR: this tool is
-# repo-scoped and must never touch a persona's settings. ($settings_dir is set earlier, near the
+# repo-scoped and must never touch a profile's settings. ($settings_dir is set earlier, near the
 # pattern-c isolation check, since that check also needs it.)
 settings_file="${settings_dir}/settings.local.json"
 mkdir -p "$settings_dir"

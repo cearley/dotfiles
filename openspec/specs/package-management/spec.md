@@ -6,9 +6,7 @@ The package management system provides a unified approach for installing package
 - **UV Tools**: Python-based CLI tools and utilities (tag-based, within `packages.yaml`)
 - **Bun Global Packages**: JavaScript/TypeScript CLI tools and utilities (tag-based, within `packages.yaml`)
 - **SDKMAN SDKs**: JVM ecosystem SDKs and build tools (tag-based, within `packages.yaml`, requires `dev` tag)
-
 ## Requirements
-
 ### Requirement: Central Package Definition
 All packages SHALL be defined in `home/.chezmoidata/packages.yaml` organized by platform and tag.
 
@@ -997,6 +995,7 @@ All package-layer installation scripts (positions 23–27) SHALL obtain their pe
 - **THEN** the generated shell output SHALL be byte-identical to the pre-refactor baseline
 
 ### Requirement: Claude Registrations Reach the Unnamed Default Config
+
 When a machine declares no `claude_envs`, the MCP-server and plugin install scripts SHALL register into the configuration that a Claude Code session with `CLAUDE_CONFIG_DIR` unset reads. Both scripts SHALL invoke `claude` only through `run_claude_in_env`.
 
 #### Scenario: User-scope MCP server visible to a default session
@@ -1008,9 +1007,9 @@ When a machine declares no `claude_envs`, the MCP-server and plugin install scri
 - **WHEN** either script runs on a machine with no `claude_envs`
 - **THEN** it SHALL NOT create `~/.claude/.claude.json`
 
-#### Scenario: Persona machines unchanged
+#### Scenario: Profile machines unchanged
 - **WHEN** either script runs on a machine that declares `claude_envs`
-- **THEN** each registration SHALL land in `~/.claude-<name>/` for each declared persona, exactly as before
+- **THEN** each registration SHALL land in `~/.claude-<name>/` for each declared profile, exactly as before
 
 ### Requirement: Private package-index configuration SHALL NOT enable dependency confusion
 When a package-manager configuration (e.g. `pip.conf`'s `extra-index-url`) adds a private, credential-bearing package index alongside a public default index, the configuration SHALL prevent a public package from being silently resolved in place of a same-named private package. This MAY be satisfied by scoping the private index to a specific package-name prefix, by using an index-priority/pinning mechanism the package manager supports, or by another mechanism that achieves the same guarantee.

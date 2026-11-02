@@ -2,12 +2,10 @@
 
 ## Purpose
 
-Defines how the chezmoi `modify_` script for each Claude Code persona's `settings.json`
+Defines how the chezmoi `modify_` script for each Claude Code profile's `settings.json`
 tracks every setting chezmoi manages there, hooks included, so that removals in source
 reach the live file and entries written by Claude Code, plugins, or the user are preserved.
-
 ## Requirements
-
 ### Requirement: Ledger Holds the Last-Applied Managed Settings
 The modifier SHALL store the managed settings it applied as a single JSON string in the
 top-level `_chezmoiManaged` key of the same `settings.json`, and SHALL rewrite it on every
@@ -29,6 +27,7 @@ modifier SHALL remove `_chezmoiManaged`.
 - **THEN** the second output SHALL be identical to the first
 
 ### Requirement: Retraction of Previously Written Settings
+
 Before applying the current managed settings, the modifier SHALL retract everything that the
 previous ledger declares and the current managed settings do not. A scalar whose key the
 current managed settings lack SHALL be deleted only if its live value still equals the
@@ -40,7 +39,7 @@ absent, is not a string, or does not parse as JSON, the modifier SHALL retract n
 
 #### Scenario: Key removed from source is removed from live file
 - **WHEN** the previous ledger declares `skillOverrides.audit-skills = "off"`
-- **AND** that key is no longer in the persona's managed settings
+- **AND** that key is no longer in the profile's managed settings
 - **AND** the live value is still `"off"`
 - **THEN** the output SHALL NOT contain `skillOverrides.audit-skills`
 
@@ -93,6 +92,7 @@ same SHALL hold for arrays.
 - **THEN** the output array SHALL contain that element exactly once
 
 ### Requirement: Unmanaged Settings Preserved
+
 Apart from JSON re-serialization, the modifier SHALL leave unchanged every key and array
 element that neither the previous ledger nor the current managed settings declare, other than
 the ledger itself. The modifier SHALL have no hook-specific behavior.
@@ -102,8 +102,8 @@ the ledger itself. The modifier SHALL have no hook-specific behavior.
   entries, or `enabledPlugins` entries that chezmoi never wrote
 - **THEN** those keys and values SHALL appear unchanged in the output
 
-#### Scenario: Persona without hooks in source gets none
-- **WHEN** a persona's managed settings contain no `hooks` key
+#### Scenario: Profile without hooks in source gets none
+- **WHEN** a profile's managed settings contain no `hooks` key
 - **AND** its previous ledger declares no hooks
 - **THEN** the output's `hooks` SHALL equal the input's `hooks`
 
@@ -116,14 +116,15 @@ through unchanged.
 - **THEN** the output SHALL equal the input
 
 ### Requirement: Hooks Managed Through the Ledger
-Each persona's managed-settings source file SHALL be the only place where chezmoi declares
-the hooks it writes into that persona's `settings.json`. The modifier SHALL treat each hook
+
+Each profile's managed-settings source file SHALL be the only place where chezmoi declares
+the hooks it writes into that profile's `settings.json`. The modifier SHALL treat each hook
 group, one element of a `hooks.<Event>` array, as an array element, compared by full JSON
 value with object key order ignored. Hook groups SHALL therefore follow the same retraction
 and union semantics as every other managed array.
 
 #### Scenario: Hook declared in source is written
-- **WHEN** a persona's managed settings contain a `hooks.SessionStart` group running
+- **WHEN** a profile's managed settings contain a `hooks.SessionStart` group running
   `check-claude-overrides --session-start`
 - **AND** the live `settings.json` has no such group
 - **THEN** the output's `hooks.SessionStart` SHALL contain that group exactly once
@@ -155,26 +156,28 @@ and union semantics as every other managed array.
 - **AND** SHALL append the managed group from source as its own element
 
 ### Requirement: Managed Settings Source Files
-Each persona's chezmoi-managed settings SHALL be declared in a `.claude-settings.json` file
-in the same source directory as that persona's `modify_settings.json.tmpl`
-(`home/dot_claude/` for `~/.claude`, `home/dot_claude-<name>/` for a named persona), as JSON
-in the same shape as `settings.json`. Every persona's `modify_settings.json.tmpl` SHALL be
+
+Each profile's chezmoi-managed settings SHALL be declared in a `.claude-settings.json` file
+in the same source directory as that profile's `modify_settings.json.tmpl`
+(`home/dot_claude/` for `~/.claude`, `home/dot_claude-<name>/` for a named profile), as JSON
+in the same shape as `settings.json`. Every profile's `modify_settings.json.tmpl` SHALL be
 identical and SHALL declare no settings; the `claude-settings-modifier` partial SHALL locate
 the sibling file from the caller's `.chezmoi.sourceFile`. Invalid JSON in a source file, or a
 source file that is not a JSON object, SHALL fail template rendering.
 
 #### Scenario: Source file mirrors settings.json
 - **WHEN** a maintainer wants chezmoi to manage `permissions.defaultMode = "auto"` for the
-  personal persona
+  personal profile
 - **THEN** they SHALL add `"permissions": {"defaultMode": "auto"}` to
   `home/dot_claude-personal/.claude-settings.json`, and no other file
 
-#### Scenario: New persona needs no caller edit
-- **WHEN** a maintainer adds a persona by copying `home/dot_claude-work/` to
+#### Scenario: New profile needs no caller edit
+- **WHEN** a maintainer adds a profile by copying `home/dot_claude-work/` to
   `home/dot_claude-new/` and editing only the copied `.claude-settings.json`
 - **THEN** rendering `home/dot_claude-new/modify_settings.json.tmpl` SHALL apply that copied
   file, not `home/dot_claude-work/.claude-settings.json`
 
 #### Scenario: Malformed source fails the render
-- **WHEN** a persona's source file is not valid JSON
-- **THEN** rendering that persona's `modify_settings.json.tmpl` SHALL fail
+- **WHEN** a profile's source file is not valid JSON
+- **THEN** rendering that profile's `modify_settings.json.tmpl` SHALL fail
+

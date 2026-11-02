@@ -1,59 +1,59 @@
 #!/bin/bash
 # check-claude-overrides — Detect Claude Code skillOverrides/enabledPlugins/permissions/env entries that
-# silently diverge from a persona's chezmoi-managed baseline (its
+# silently diverge from a profile's chezmoi-managed baseline (its
 # dot_claude*/.claude-settings.json) — the mirror-image direction of the
 # installed-but-undeclared drift that audit-packages/clean-claude-orphans already cover.
 # Read-only by default; --fix codifies a single confirmed "keep" resolution directly into
 # that source file.
 #
 # Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_check-claude-overrides.tmpl —
-# edit the source template, then `chezmoi apply`. The persona list and every chezmoi-source
+# edit the source template, then `chezmoi apply`. The profile list and every chezmoi-source
 # path below are baked in at render time from this machine's claude_envs config and
 # .chezmoi.sourceDir — never hardcoded, never rediscovered at runtime.
 #
 # Usage: check-claude-overrides [--help]
-#        check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins|permissions|env> <key>
+#        check-claude-overrides --fix <profile> <skillOverrides|enabledPlugins|permissions|env> <key>
 #        check-claude-overrides --session-start
 set -euo pipefail
 {{- $sourceDir := .chezmoi.sourceDir }}
-{{- $personas := includeTemplate "persona-list" . | fromJson }}
+{{- $profiles := includeTemplate "profile-list" . | fromJson }}
 
 PACKAGES_YAML="{{ $sourceDir }}/.chezmoidata/packages.yaml"
 NATIVE_SKILLS_DIR="{{ $sourceDir }}/dot_claude/skills"
 
-# Parallel arrays, one entry per checked persona: name / live config dir / managed-settings
+# Parallel arrays, one entry per checked profile: name / live config dir / managed-settings
 # source file (same shape as settings.json).
-# The unnamed default is always first; named personas come from this machine's claude_envs,
+# The unnamed default is always first; named profiles come from this machine's claude_envs,
 # baked in here at chezmoi-apply time rather than rediscovered at runtime.
-PERSONA_NAMES=({{ range $i, $p := $personas }}{{ if $i }} {{ end }}"{{ $p.name }}"{{ end }})
-PERSONA_DIRS=({{ range $i, $p := $personas }}{{ if $i }} {{ end }}"{{ $p.dir }}"{{ end }})
-PERSONA_BASELINES=({{ range $i, $p := $personas }}{{ if $i }} {{ end }}"{{ $p.baseline }}"{{ end }})
+PROFILE_NAMES=({{ range $i, $p := $profiles }}{{ if $i }} {{ end }}"{{ $p.name }}"{{ end }})
+PROFILE_DIRS=({{ range $i, $p := $profiles }}{{ if $i }} {{ end }}"{{ $p.dir }}"{{ end }})
+PROFILE_BASELINES=({{ range $i, $p := $profiles }}{{ if $i }} {{ end }}"{{ $p.baseline }}"{{ end }})
 
 print_usage() {
     cat <<'EOF'
 Usage: check-claude-overrides [--help]
-       check-claude-overrides --fix <persona> <skillOverrides|enabledPlugins|permissions|env> <key>
+       check-claude-overrides --fix <profile> <skillOverrides|enabledPlugins|permissions|env> <key>
 
-Detects entries in any ~/.claude* persona's settings.json that silently diverge from that
-persona's chezmoi-managed baseline (dot_claude*/.claude-settings.json):
+Detects entries in any ~/.claude* profile's settings.json that silently diverge from that
+profile's chezmoi-managed baseline (dot_claude*/.claude-settings.json):
   - skillOverrides.<native skill> = "off" / enabledPlugins.<declared plugin> = false that
     the baseline doesn't explain — an override with no source-of-truth record;
   - a permissions.<key> / env.<key> scalar the baseline manages whose live value differs —
     a runtime change the next chezmoi apply will silently revert.
 
-Without --fix: read-only. Prints a "## drift" section (persona<TAB>kind<TAB>key<TAB>value),
+Without --fix: read-only. Prints a "## drift" section (profile<TAB>kind<TAB>key<TAB>value),
 one line per unexplained entry; empty if none found.
 
-With --fix <persona> <kind> <key>: codifies the "keep the override" resolution by writing
-the live value into the target persona's .claude-settings.json, after
+With --fix <profile> <kind> <key>: codifies the "keep the override" resolution by writing
+the live value into the target profile's .claude-settings.json, after
 re-confirming the entry is currently flagged. The value is always read from the live
 settings.json, never typed. Verifies the edited copy before touching the real file. Dropping
 an override instead remains manual (/skill, /plugin, or letting chezmoi apply revert it) — see claude-tooling.md's "Checking
 for Override Drift" section for the full resolve workflow.
 
 With --session-start: intended for automatic invocation from a Claude Code SessionStart
-hook, not interactive use. Checks only the persona matching $CLAUDE_CONFIG_DIR (never a full
-sweep), and only prints a one-line plain-text pointer when that persona's drift differs from
+hook, not interactive use. Checks only the profile matching $CLAUDE_CONFIG_DIR (never a full
+sweep), and only prints a one-line plain-text pointer when that profile's drift differs from
 what was last reported for it — silent on a clean or already-seen-and-unresolved state.
 Never modifies settings.json or any .claude-settings.json. Always exits 0.
 EOF
@@ -66,7 +66,7 @@ require_cmd() {
     fi
 }
 
-# Baseline: a persona's managed-settings source file, read as-is at runtime (it can change
+# Baseline: a profile's managed-settings source file, read as-is at runtime (it can change
 # without a chezmoi apply having run). Fails if the file is missing or not valid JSON.
 # ---------------------------------------------------------------------------
 read_baseline() {
@@ -89,9 +89,9 @@ declared_plugins() {
 }
 
 # ---------------------------------------------------------------------------
-# Drift detection for one persona: prints persona\tkind\tkey\tvalue lines to stdout
+# Drift detection for one profile: prints profile\tkind\tkey\tvalue lines to stdout
 # ---------------------------------------------------------------------------
-detect_persona_drift() {
+detect_profile_drift() {
     local name="$1" baseline_path="$2" config_dir="$3"
     local settings_file baseline_json
 
@@ -138,23 +138,23 @@ detect_persona_drift() {
 
 detect_all_drift() {
     local i
-    for ((i = 0; i < ${#PERSONA_NAMES[@]}; i++)); do
-        detect_persona_drift "${PERSONA_NAMES[$i]}" "${PERSONA_BASELINES[$i]}" "${PERSONA_DIRS[$i]}"
+    for ((i = 0; i < ${#PROFILE_NAMES[@]}; i++)); do
+        detect_profile_drift "${PROFILE_NAMES[$i]}" "${PROFILE_BASELINES[$i]}" "${PROFILE_DIRS[$i]}"
     done
 }
 
 # ---------------------------------------------------------------------------
-# --session-start support: resolve $CLAUDE_CONFIG_DIR against the persona arrays
-# above, and track per-persona dedup state. See design.md - Decisions.
+# --session-start support: resolve $CLAUDE_CONFIG_DIR against the profile arrays
+# above, and track per-profile dedup state. See design.md - Decisions.
 # ---------------------------------------------------------------------------
 
-# Prints the index into PERSONA_* for the persona matching $CLAUDE_CONFIG_DIR (or
-# $HOME/.claude when unset). Returns non-zero if no declared persona matches.
-resolve_current_persona_index() {
+# Prints the index into PROFILE_* for the profile matching $CLAUDE_CONFIG_DIR (or
+# $HOME/.claude when unset). Returns non-zero if no declared profile matches.
+resolve_current_profile_index() {
     local config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
     local i
-    for ((i = 0; i < ${#PERSONA_DIRS[@]}; i++)); do
-        if [[ "${PERSONA_DIRS[$i]}" == "$config_dir" ]]; then
+    for ((i = 0; i < ${#PROFILE_DIRS[@]}; i++)); do
+        if [[ "${PROFILE_DIRS[$i]}" == "$config_dir" ]]; then
             echo "$i"
             return 0
         fi
@@ -166,32 +166,32 @@ drift_state_file() {
     echo "$1/.check-claude-overrides-last-drift"
 }
 
-# Reads persona\tkind\tkey\tvalue lines (detect_persona_drift's output) on stdin, drops the
-# redundant persona column (the state file's location already scopes it to one persona), and
+# Reads profile\tkind\tkey\tvalue lines (detect_profile_drift's output) on stdin, drops the
+# redundant profile column (the state file's location already scopes it to one profile), and
 # sorts for a stable comparison.
-drift_lines_without_persona() {
+drift_lines_without_profile() {
     awk -F'\t' 'BEGIN{OFS="\t"} {print $2,$3,$4}' | sort
 }
 
 # ---------------------------------------------------------------------------
-# --session-start mode: single-persona check, dedup'd plain-text pointer, never fails a
-# session over a config edge case (missing tool, unrecognized persona) — always exits 0.
+# --session-start mode: single-profile check, dedup'd plain-text pointer, never fails a
+# session over a config edge case (missing tool, unrecognized profile) — always exits 0.
 # ---------------------------------------------------------------------------
 run_session_start() {
     command -v jq >/dev/null 2>&1 || exit 0
     command -v yq >/dev/null 2>&1 || exit 0
 
     local idx
-    idx="$(resolve_current_persona_index)" || exit 0
+    idx="$(resolve_current_profile_index)" || exit 0
 
-    local name="${PERSONA_NAMES[$idx]}" baseline_path="${PERSONA_BASELINES[$idx]}" config_dir="${PERSONA_DIRS[$idx]}"
+    local name="${PROFILE_NAMES[$idx]}" baseline_path="${PROFILE_BASELINES[$idx]}" config_dir="${PROFILE_DIRS[$idx]}"
 
     local drift_tsv
-    drift_tsv="$(detect_persona_drift "$name" "$baseline_path" "$config_dir" 2>/dev/null)" || true
+    drift_tsv="$(detect_profile_drift "$name" "$baseline_path" "$config_dir" 2>/dev/null)" || true
 
     local new_lines=""
     if [[ -n "$drift_tsv" ]]; then
-        new_lines="$(printf '%s\n' "$drift_tsv" | drift_lines_without_persona)"
+        new_lines="$(printf '%s\n' "$drift_tsv" | drift_lines_without_profile)"
     fi
 
     local state_file old_lines=""
@@ -199,7 +199,7 @@ run_session_start() {
     [[ -f "$state_file" ]] && old_lines="$(cat "$state_file")"
 
     if [[ -n "$new_lines" && "$new_lines" != "$old_lines" ]]; then
-        echo "Claude Code override drift detected for this persona — run check-claude-overrides for detail."
+        echo "Claude Code override drift detected for this profile — run check-claude-overrides for detail."
     fi
 
     printf '%s\n' "$new_lines" > "$state_file" 2>/dev/null || true
@@ -208,10 +208,10 @@ run_session_start() {
 
 # ---------------------------------------------------------------------------
 # --fix mode: codify a single, currently-flagged "keep" resolution into the target
-# persona's managed-settings source file.
+# profile's managed-settings source file.
 # ---------------------------------------------------------------------------
 run_fix() {
-    local persona="$1" kind="$2" key="$3"
+    local profile="$1" kind="$2" key="$3"
 
     if [[ ! "$kind" =~ ^(skillOverrides|enabledPlugins|permissions|env)$ ]]; then
         echo "error: kind must be skillOverrides, enabledPlugins, permissions, or env" >&2
@@ -219,22 +219,22 @@ run_fix() {
     fi
 
     local baseline_path="" config_dir="" i
-    for ((i = 0; i < ${#PERSONA_NAMES[@]}; i++)); do
-        if [[ "${PERSONA_NAMES[$i]}" == "$persona" ]]; then
-            baseline_path="${PERSONA_BASELINES[$i]}"
-            config_dir="${PERSONA_DIRS[$i]}"
+    for ((i = 0; i < ${#PROFILE_NAMES[@]}; i++)); do
+        if [[ "${PROFILE_NAMES[$i]}" == "$profile" ]]; then
+            baseline_path="${PROFILE_BASELINES[$i]}"
+            config_dir="${PROFILE_DIRS[$i]}"
             break
         fi
     done
     if [[ -z "$baseline_path" ]]; then
-        echo "error: unknown persona '${persona}' (not the default, not in this machine's claude_envs)" >&2
+        echo "error: unknown profile '${profile}' (not the default, not in this machine's claude_envs)" >&2
         exit 1
     fi
 
     local flagged
-    flagged="$(detect_persona_drift "$persona" "$baseline_path" "$config_dir" 2>/dev/null | K="$kind" KEY="$key" awk -F'\t' '$2==ENVIRON["K"] && $3==ENVIRON["KEY"] && !found {print; found=1}')"
+    flagged="$(detect_profile_drift "$profile" "$baseline_path" "$config_dir" 2>/dev/null | K="$kind" KEY="$key" awk -F'\t' '$2==ENVIRON["K"] && $3==ENVIRON["KEY"] && !found {print; found=1}')"
     if [[ -z "$flagged" ]]; then
-        echo "error: ${persona} ${kind}.${key} is not currently flagged as drift — nothing to fix" >&2
+        echo "error: ${profile} ${kind}.${key} is not currently flagged as drift — nothing to fix" >&2
         exit 1
     fi
 
@@ -253,7 +253,7 @@ run_fix() {
 
     cp -f "$tmp_file" "$baseline_path"
     rm -f "$tmp_file"
-    echo "fixed: ${persona} ${kind}.${key} = ${live_value} written to ${baseline_path}"
+    echo "fixed: ${profile} ${kind}.${key} = ${live_value} written to ${baseline_path}"
 }
 
 # ---------------------------------------------------------------------------
@@ -277,7 +277,7 @@ require_cmd yq
 if [[ "${1:-}" == "--fix" ]]; then
     shift
     if [[ $# -ne 3 ]]; then
-        echo "error: --fix requires exactly 3 arguments: <persona> <skillOverrides|enabledPlugins|permissions|env> <key>" >&2
+        echo "error: --fix requires exactly 3 arguments: <profile> <skillOverrides|enabledPlugins|permissions|env> <key>" >&2
         exit 1
     fi
     run_fix "$1" "$2" "$3"

@@ -2,9 +2,7 @@
 
 ## Purpose
 The shared utilities system provides common functions for scripts, ensuring consistency in messaging, error handling, and common operations across all installation and setup scripts.
-
 ## Requirements
-
 ### Requirement: Shared Utility Functions File
 Common utility functions SHALL be provided in `scripts/shared-utils.sh` for sourcing by all scripts.
 
@@ -270,9 +268,10 @@ The `for_each_claude_env` function SHALL iterate over a list of Claude environme
 - **THEN** the function SHALL return 0 without calling the callback
 
 ### Requirement: Claude CLI Invocation per Environment
+
 The `run_claude_in_env` function SHALL run the `claude` CLI against one Claude environment directory, passing all remaining arguments through unchanged and returning `claude`'s exit status. When the directory is `$HOME/.claude` (the unnamed default), it SHALL run `claude` with `CLAUDE_CONFIG_DIR` absent from the environment, even if the caller's environment exports it. For any other directory, it SHALL run `claude` with `CLAUDE_CONFIG_DIR` set to that directory.
 
-#### Scenario: Named persona directory
+#### Scenario: Named profile directory
 - **WHEN** `run_claude_in_env "$HOME/.claude-work" mcp list` is called
 - **THEN** `claude mcp list` SHALL run with `CLAUDE_CONFIG_DIR=$HOME/.claude-work`
 

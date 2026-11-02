@@ -2,7 +2,7 @@
 # claude-tooling-write-guard — PreToolUse hook (Bash|Edit|Write|Read matcher). Redirects
 # direct edits to chezmoi-managed Claude Code tooling files (settings.json, skills/,
 # rules/, plugins/) to their real source, using `chezmoi managed`/`source-path`. Also
-# flags reads/writes that cross persona boundaries (see "Persona mismatch" tier below).
+# flags reads/writes that cross profile boundaries (see "Profile mismatch" tier below).
 #
 # Edit/Write/Read give a structured tool_input.file_path; Bash only gives a command
 # string, so mutation detection there is heuristic. A command referencing a deployed
@@ -21,11 +21,11 @@
 #     declaration — won't be reverted, but drifts from what a fresh install would
 #     produce, and a local toggle is sometimes a deliberate choice. permissionDecision
 #     "ask". Point at packages.yaml.
-#   - Persona mismatch: the path belongs to a persona (settings.json/.claude.json/
+#   - Profile mismatch: the path belongs to a profile (settings.json/.claude.json/
 #     plugins/projects/CLAUDE.md, live or chezmoi-source) other than the one
 #     $CLAUDE_CONFIG_DIR says is active. skills/ and rules/ are symlink-shared across
-#     every persona (see claude-tooling.md) and are never flagged. permissionDecision
-#     "ask" — cross-persona work is sometimes deliberate, never silently allowed through
+#     every profile (see claude-tooling.md) and are never flagged. permissionDecision
+#     "ask" — cross-profile work is sometimes deliberate, never silently allowed through
 #     unremarked. Composes with the tiers above (appends to their message) rather than
 #     replacing them; stands alone for Read, which the other tiers don't cover.
 #   - Neither: out of scope, exit clean.
@@ -35,9 +35,9 @@
 set -euo pipefail
 {{- $sourceDir := .chezmoi.sourceDir }}
 {{- $repoRoot := trimSuffix "/home" $sourceDir }}
-{{- $personas := includeTemplate "persona-list" . | fromJson }}
-{{- $personaList := "~/.claude" }}
-{{- range $personas }}{{ if ne .name "default" }}{{ $personaList = printf "%s, ~/.claude-%s" $personaList .name }}{{ end }}{{ end }}
+{{- $profiles := includeTemplate "profile-list" . | fromJson }}
+{{- $profileList := "~/.claude" }}
+{{- range $profiles }}{{ if ne .name "default" }}{{ $profileList = printf "%s, ~/.claude-%s" $profileList .name }}{{ end }}{{ end }}
 
 payload=$(cat)
 tool_name=$(jq -r '.tool_name // ""' <<<"$payload")
@@ -72,9 +72,9 @@ emit_by_tier() {
   fi
 }
 
-# Active persona name from $CLAUDE_CONFIG_DIR ("default" for the unnamed persona,
+# Active profile name from $CLAUDE_CONFIG_DIR ("default" for the unnamed profile,
 # empty if $CLAUDE_CONFIG_DIR is set to something unrecognized).
-active_persona() {
+active_profile() {
   local dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
   if [[ "$dir" == "$HOME/.claude" ]]; then
     echo "default"
@@ -83,14 +83,14 @@ active_persona() {
   fi
 }
 
-# Which persona a path belongs to, for ONLY the categories that are NOT shared
-# across personas (settings.json, .claude.json, plugins/, projects/, CLAUDE.md, and
+# Which profile a path belongs to, for ONLY the categories that are NOT shared
+# across profiles (settings.json, .claude.json, plugins/, projects/, CLAUDE.md, and
 # the chezmoi-source equivalents under dot_claude-<name>/). skills/ and rules/ are
-# symlink-shared across every persona (see "Personas Share Skills and Rules via
-# Symlink" in claude-tooling.md) — there is no "wrong persona" for those, so they
+# symlink-shared across every profile (see "Profiles Share Skills and Rules via
+# Symlink" in claude-tooling.md) — there is no "wrong profile" for those, so they
 # must never be flagged. Echoes empty string if the path isn't in-scope for this
-# check at all (not under any persona dir, or it's a shared skills/rules path).
-path_persona() {
+# check at all (not under any profile dir, or it's a shared skills/rules path).
+path_profile() {
   local p="$1"
   if [[ "$p" =~ /\.claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]] || \
      [[ "$p" =~ /dot_claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]]; then
@@ -107,7 +107,7 @@ path_persona() {
   fi
 }
 
-# Tiered guard advice for one deployed-target path (resolving persona symlinks first).
+# Tiered guard advice for one deployed-target path (resolving profile symlinks first).
 # Prints "DENY|<message>" or "ASK|<message>" if in scope (see emit_by_tier); otherwise
 # prints nothing and always returns 0, so a bare `reason=$(check_path ...)` never trips
 # `set -e`.
@@ -123,15 +123,15 @@ check_path() {
   fi
 
   local active target mismatch=""
-  active=$(active_persona)
-  target=$(path_persona "$resolved_path")
+  active=$(active_profile)
+  target=$(path_profile "$resolved_path")
   if [[ -n "$active" && -n "$target" && "$active" != "$target" ]]; then
-    mismatch=" Active persona is ${active} (\$CLAUDE_CONFIG_DIR); this path belongs to ${target}."
+    mismatch=" Active profile is ${active} (\$CLAUDE_CONFIG_DIR); this path belongs to ${target}."
   fi
 
   if [[ "$tool" == "Read" ]]; then
     if [[ -n "$mismatch" ]]; then
-      echo "ASK|This reads a ${target} persona's file.${mismatch}"
+      echo "ASK|This reads a ${target} profile's file.${mismatch}"
     fi
     return 0
   fi
@@ -148,7 +148,7 @@ check_path() {
         if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions|_chezmoiManaged)"' <<<"$old_new"; then
           echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions/_chezmoiManaged in settings.json are chezmoi-managed baseline keys, not local toggles. Edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply.${mismatch}"
         elif [[ -n "$mismatch" ]]; then
-          echo "ASK|This edits a ${target} persona's settings.json.${mismatch}"
+          echo "ASK|This edits a ${target} profile's settings.json.${mismatch}"
         fi
       fi
     else
@@ -167,7 +167,7 @@ check_path() {
       echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/skills/ is populated from packages.darwin.ai.agents.claude_code.skills in {{ $sourceDir }}/.chezmoidata/packages.yaml (externally-fetched skills land here, unlike native ones which chezmoi tracks directly). A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
     fi
   elif [[ -n "$mismatch" ]]; then
-    echo "ASK|This touches a ${target} persona's file.${mismatch}"
+    echo "ASK|This touches a ${target} profile's file.${mismatch}"
   fi
   return 0
 }
@@ -242,7 +242,7 @@ Bash)
   # (with --force, silently); re-add is a no-op there. Either way it's the wrong tool.
   add_pattern='(^|[;&|[:space:]])chezmoi[[:space:]]+([^;&|]*[[:space:]])?(add|re-add)[[:space:]][^;&|]*\.claude[A-Za-z0-9_-]*/settings\.json'
   if [[ "$command" =~ $add_pattern ]]; then
-    emit_deny "A persona settings.json is a chezmoi modify_ target: chezmoi add would replace its merge script with a full snapshot of the live file (runtime keys included), and re-add does nothing. Edit the .claude-settings.json next to that persona's modify_settings.json.tmpl ({{ $sourceDir }}/dot_claude*/) instead, then chezmoi apply."
+    emit_deny "A profile settings.json is a chezmoi modify_ target: chezmoi add would replace its merge script with a full snapshot of the live file (runtime keys included), and re-add does nothing. Edit the .claude-settings.json next to that profile's modify_settings.json.tmpl ({{ $sourceDir }}/dot_claude*/) instead, then chezmoi apply."
     exit 0
   fi
 
@@ -277,9 +277,9 @@ Bash)
     touch "$marker_file" 2>/dev/null || true
   fi
 
-  # Covers what the tiers above don't: cross-persona scope, and the two drift-audit
+  # Covers what the tiers above don't: cross-profile scope, and the two drift-audit
   # skills for scenarios this hook doesn't resolve itself.
-  message="This command touches Claude Code tooling that the chezmoi dotfiles repo at {{ $repoRoot }} manages. This machine runs independent personas ({{ $personaList }}) — settings.json/plugins/.claude.json aren't shared between them, so a check scoped to one won't see the others. For installed-but-undeclared drift see the clean-claude-orphans skill; for declared-but-locally-suppressed drift see check-claude-overrides."
+  message="This command touches Claude Code tooling that the chezmoi dotfiles repo at {{ $repoRoot }} manages. This machine runs independent profiles ({{ $profileList }}) — settings.json/plugins/.claude.json aren't shared between them, so a check scoped to one won't see the others. For installed-but-undeclared drift see the clean-claude-orphans skill; for declared-but-locally-suppressed drift see check-claude-overrides."
   jq -n --arg message "$message" '{
     hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: $message },
     systemMessage: $message

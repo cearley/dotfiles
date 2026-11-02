@@ -1,5 +1,5 @@
 {{- /* uninstall-claude-plugin-everywhere — force-uninstalls one Claude Code plugin from every
-     persona on this machine (user scope, then project scope, then local scope) and clears its
+     profile on this machine (user scope, then project scope, then local scope) and clears its
      cache dir. A blunt personal utility, not a replacement for clean-claude-orphans: it does no
      packages.yaml cross-check and no "still-enabled-elsewhere" check before removing a
      project/local-scope plugin, so prefer that skill when the removal needs to be reasoned
@@ -10,7 +10,7 @@
 
      Rendered by chezmoi from
      {{ .chezmoi.sourceDir }}/dot_local/bin/executable_uninstall-claude-plugin-everywhere.tmpl —
-     edit the source template, then `chezmoi apply`. The persona list is baked in at render
+     edit the source template, then `chezmoi apply`. The profile list is baked in at render
      time from this machine's claude_envs config, never hardcoded, never rediscovered at
      runtime.
 
@@ -18,20 +18,20 @@
 */ -}}
 #!/bin/bash
 set -euo pipefail
-{{- $personas := includeTemplate "persona-list" . | fromJson }}
+{{- $profiles := includeTemplate "profile-list" . | fromJson }}
 
-# The unnamed default is always first; named personas come from this machine's claude_envs.
-PERSONA_DIRS=({{ range $i, $p := $personas }}{{ if $i }} {{ end }}"{{ $p.dir }}"{{ end }})
+# The unnamed default is always first; named profiles come from this machine's claude_envs.
+PROFILE_DIRS=({{ range $i, $p := $profiles }}{{ if $i }} {{ end }}"{{ $p.dir }}"{{ end }})
 
 plugin="${1:?usage: uninstall-claude-plugin-everywhere <plugin@marketplace>}"
 name="${plugin%@*}"
 marketplace="${plugin#*@}"
 
-for persona in "${PERSONA_DIRS[@]}"; do
-    [ -d "$persona" ] || continue
-    echo "== $persona =="
-    CLAUDE_CONFIG_DIR="$persona" command claude plugin uninstall "$plugin" -y 2>/dev/null || true
-    CLAUDE_CONFIG_DIR="$persona" command claude plugin uninstall "$plugin" -y -s project 2>/dev/null || true
-    CLAUDE_CONFIG_DIR="$persona" command claude plugin uninstall "$plugin" -y -s local 2>/dev/null || true
-    rm -rf "$persona/plugins/cache/$marketplace/$name"
+for profile in "${PROFILE_DIRS[@]}"; do
+    [ -d "$profile" ] || continue
+    echo "== $profile =="
+    CLAUDE_CONFIG_DIR="$profile" command claude plugin uninstall "$plugin" -y 2>/dev/null || true
+    CLAUDE_CONFIG_DIR="$profile" command claude plugin uninstall "$plugin" -y -s project 2>/dev/null || true
+    CLAUDE_CONFIG_DIR="$profile" command claude plugin uninstall "$plugin" -y -s local 2>/dev/null || true
+    rm -rf "$profile/plugins/cache/$marketplace/$name"
 done

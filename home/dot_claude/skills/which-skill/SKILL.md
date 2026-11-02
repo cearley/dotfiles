@@ -22,14 +22,14 @@ truncated to ~160 chars):
 - **invoke** — the ready-to-use id. Bare name (`/name`) for native/project skills,
   `plugin:skill` for plugin-bundled ones (e.g. `superpowers:brainstorming`) — use this
   column verbatim, don't construct it from the origin column yourself.
-- **origin** — `native` (native + external, shared across every persona),
+- **origin** — `native` (native + external, shared across every profile),
   `plugin:<marketplace>` (bundled in a plugin that's both installed and enabled under this
-  persona — stale cache entries and disabled plugins are excluded), or `project`
+  profile — stale cache entries and disabled plugins are excluded), or `project`
   (`.claude/skills/*` at the current project's root). Context only, not for invoking.
 
-Plugins and their marketplaces are **not** shared across personas — run this from the
-persona (`$CLAUDE_CONFIG_DIR`) the user actually means, or re-run under
-`CLAUDE_CONFIG_DIR=<other persona>` if they're asking about a different one.
+Plugins and their marketplaces are **not** shared across profiles — run this from the
+profile (`$CLAUDE_CONFIG_DIR`) the user actually means, or re-run under
+`CLAUDE_CONFIG_DIR=<other profile>` if they're asking about a different one.
 
 **This list is not everything.** Skills that ship built into Claude Code itself (e.g.
 `code-review`, `security-review`, `run`, `init`, `dataviz`) have no `SKILL.md` on disk and
@@ -57,7 +57,7 @@ trigger conditions, so match on the underlying problem it solves, not surface wo
 ## Common mistakes
 
 - Trusting the script's output as exhaustive — it misses built-in Claude Code skills (Step 1).
-- Checking only the current persona's plugins when the user is asking about a different one.
+- Checking only the current profile's plugins when the user is asking about a different one.
 - Recommending a skill on name/keyword match alone without reading what its description
   actually covers.
 - Reconstructing an invoke string from the `origin` column instead of using the `invoke`

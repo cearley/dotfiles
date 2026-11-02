@@ -1,4 +1,4 @@
-// oh-my-claudecode user config, read by every persona (project .claude/omc.jsonc wins if present).
+// oh-my-claudecode user config, read by every profile (project .claude/omc.jsonc wins if present).
 {
   "keywordDetector": {
     // Autopilot runs only via explicit /oh-my-claudecode:autopilot. Its keyword trigger has no

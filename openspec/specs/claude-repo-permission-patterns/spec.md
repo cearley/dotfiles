@@ -3,9 +3,7 @@
 ## Purpose
 
 Provides three reusable, chezmoi-templated Claude Code permission postures (approval-first, curated allow-list, sandboxed full-auto) and an explicit, repeatable way to stamp one into a project repo's local settings, replacing ad hoc accretion of `.claude/settings.local.json`.
-
 ## Requirements
-
 ### Requirement: Three permission-pattern templates
 Chezmoi SHALL provide three reusable templates under `home/.chezmoitemplates/`, one per pattern (A: approval-first, B: curated allow-list, C: sandboxed full-auto), each rendering a JSON object containing only a `permissions` key (`defaultMode`, and `allow`/`ask`/`deny` arrays) in `settings.json`'s own shape. No template SHALL declare `hooks`, `pluginConfigs`, `env`, or any other top-level key outside `permissions`.
 
@@ -43,13 +41,6 @@ When `.claude/settings.local.json` already exists, the stamping mechanism SHALL 
 - **WHEN** `.claude/settings.local.json` already contains `permissions.allow` entries not present in the chosen pattern
 - **THEN** after stamping, those entries SHALL still be present in `permissions.allow`
 
-### Requirement: Independence from the persona settings ledger
-Applying a permission pattern SHALL NOT read, write, or otherwise affect any persona's `~/.claude*/settings.json`, its `_chezmoiManaged` ledger, or any file under `home/dot_claude*/`. Persona selection (`CLAUDE_CONFIG_DIR`) and permission-pattern selection SHALL remain independent: choosing a persona SHALL NOT imply or constrain which pattern, if any, is stamped into a given repo.
-
-#### Scenario: Stamping does not touch persona settings
-- **WHEN** the stamping mechanism is invoked from within any persona (`~/.claude`, `-work`, `-personal`, `-bedrock`)
-- **THEN** no file under that persona's `CLAUDE_CONFIG_DIR` is read or modified
-
 ### Requirement: Pattern C requires evidence of container isolation
 Before writing Pattern C's `permissions` block, the stamping mechanism SHALL check for evidence that the current process is running inside an isolated container (e.g. a container marker file, or an explicit override flag the caller supplies deliberately) AND that the target `.claude/` directory itself is isolated from the host filesystem (e.g. backed by a distinct mount, not merely a subdirectory of a host bind mount). When either check fails, the mechanism SHALL refuse to write the Pattern C block and SHALL print a warning explaining the specific gap — that `bypassPermissions` on a bare host is unsafe, or that a `.claude/` directory shared with the host via bind mount would let the stamped posture outlive the container — referencing the companion container template's isolated-mount configuration as the fix.
 
@@ -78,8 +69,18 @@ Chezmoi SHALL provide a reusable container/devcontainer definition template for 
 - **AND** a file written under `.claude/` inside a running container built from this template SHALL NOT appear under `.claude/` in the host checkout
 
 ### Requirement: Tag-gated availability
-The permission-pattern templates and the stamping mechanism SHALL be available only on machines tagged `ai`, matching the existing gate on persona settings (`claude-settings-ledger`). The Pattern C container template and any container-runtime tooling it depends on SHALL additionally require the `dev` tag.
+
+The permission-pattern templates and the stamping mechanism SHALL be available only on machines tagged `ai`, matching the existing gate on profile settings (`claude-settings-ledger`). The Pattern C container template and any container-runtime tooling it depends on SHALL additionally require the `dev` tag.
 
 #### Scenario: Unavailable without the ai tag
 - **WHEN** `chezmoi apply` runs on a machine without the `ai` tag
 - **THEN** none of the permission-pattern templates or the stamping mechanism are deployed
+
+### Requirement: Independence from the profile settings ledger
+
+Applying a permission pattern SHALL NOT read, write, or otherwise affect any profile's `~/.claude*/settings.json`, its `_chezmoiManaged` ledger, or any file under `home/dot_claude*/`. Profile selection (`CLAUDE_CONFIG_DIR`) and permission-pattern selection SHALL remain independent: choosing a profile SHALL NOT imply or constrain which pattern, if any, is stamped into a given repo.
+
+#### Scenario: Stamping does not touch profile settings
+- **WHEN** the stamping mechanism is invoked from within any profile (`~/.claude`, `-work`, `-personal`, `-bedrock`)
+- **THEN** no file under that profile's `CLAUDE_CONFIG_DIR` is read or modified
+

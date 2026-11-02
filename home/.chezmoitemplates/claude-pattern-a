@@ -6,9 +6,9 @@
 
      Consumed only by the `apply-claude-pattern` stamping tool
      (home/dot_local/bin/executable_apply-claude-pattern.tmpl), which writes this block into
-     the CURRENT project repo's gitignored .claude/settings.local.json — never a persona
+     the CURRENT project repo's gitignored .claude/settings.local.json — never a profile
      settings.json (~/.claude, ~/.claude-work, etc.), and never part of the
-     claude-settings-ledger/claude-settings-modifier persona-settings mechanism. Not included
+     claude-settings-ledger/claude-settings-modifier profile-settings mechanism. Not included
      via `includeTemplate`
      by any modify_ script.
 

@@ -4,12 +4,15 @@ Terms that get reused across this repo's specs, scripts, and config in ways that
 aren't obvious from the name alone. This file disambiguates; it doesn't replace
 the canonical spec — follow the link for the full rules.
 
-## persona
-A named Claude Code profile: `~/.claude`, `~/.claude-personal`, `~/.claude-work`,
+## profile
+A named Claude Code config bundle: `~/.claude`, `~/.claude-personal`, `~/.claude-work`,
 `~/.claude-bedrock`. Each has its own `CLAUDE_CONFIG_DIR`, `settings.json`, and
 `.claude-settings.json` override. **Not** a macOS user account, and not a chezmoi
-machine profile. Hooks and permission postures are allowed to diverge per persona
-by design — that's not a bug to fix.
+machine profile. Hooks and permission postures are allowed to diverge per profile
+by design — that's not a bug to fix. Distinct from this repo's "environment"
+(`claude_envs`, the `zsh-claude-env` plugin): a profile is the static config
+bundle itself, while an environment is the active, switchable runtime binding
+of one.
 Canonical: `home/dot_claude/rules/claude-tooling.md.tmpl`
 
 ## trusted (packages.yaml)

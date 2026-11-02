@@ -40,8 +40,8 @@ is_overridden_off() {
 main() {
 
 # ---------------------------------------------------------------------------
-# Native + external skills (shared across every persona via symlink), minus
-# anything toggled off with /skill in this persona's settings.json.
+# Native + external skills (shared across every profile via symlink), minus
+# anything toggled off with /skill in this profile's settings.json.
 # ---------------------------------------------------------------------------
 if [[ -d "$CLAUDE_HOME/skills" ]]; then
     for f in "$CLAUDE_HOME"/skills/*/SKILL.md; do

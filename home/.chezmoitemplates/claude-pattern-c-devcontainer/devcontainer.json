@@ -22,7 +22,7 @@
      isolation at write time (checks `/proc/self/mountinfo`) before writing, and refuses if a
      hand-rolled container config bind-mounts `.claude/` instead of using a distinct volume.
 
-     Not part of the persona settings ledger (claude-settings-ledger/claude-settings-modifier)
+     Not part of the profile settings ledger (claude-settings-ledger/claude-settings-modifier)
      and not consumed by `apply-claude-pattern` — that tool only stamps the `permissions`
      JSON block; this container definition is a separate, manually-copied opt-in.
 
