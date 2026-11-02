@@ -6,7 +6,9 @@ The package management system provides a unified approach for installing package
 - **UV Tools**: Python-based CLI tools and utilities (tag-based, within `packages.yaml`)
 - **Bun Global Packages**: JavaScript/TypeScript CLI tools and utilities (tag-based, within `packages.yaml`)
 - **SDKMAN SDKs**: JVM ecosystem SDKs and build tools (tag-based, within `packages.yaml`, requires `dev` tag)
+
 ## Requirements
+
 ### Requirement: Central Package Definition
 All packages SHALL be defined in `home/.chezmoidata/packages.yaml` organized by platform and tag.
 
@@ -135,7 +137,7 @@ Additional packages SHALL be defined in machine-specific Brewfiles located in th
 - **AND** SHALL be accessible for manual `brew bundle` operations
 
 ### Requirement: User Confirmation for Additional Packages
-Only upgrading a package that is already installed but outdated requires explicit user confirmation. Installing a package that is currently missing SHALL proceed unconditionally and silently in both `run_onchange_before_darwin-23-install-packages.sh.tmpl` and `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl`, regardless of package type. Each script SHALL gate its own single combined upgrade prompt on the result of a `brew bundle check` run against its full declared package set after missing-item installation completes, not on whether any package category is non-empty.
+Installing a missing package declared in `packages.yaml` SHALL proceed unconditionally and silently in `run_onchange_before_darwin-23-install-packages.sh.tmpl`, regardless of package type. Installing a missing package declared in a machine-specific Brewfile SHALL require explicit user confirmation in `run_onchange_before_darwin-28-brew-bundle-install.sh.tmpl`, gated on a missing-only `brew bundle check --no-upgrade` against that Brewfile. Upgrading a package that is already installed but outdated SHALL require explicit user confirmation in both scripts. Each script SHALL gate its upgrade prompt on the result of a `brew bundle check` run against its full declared package set after the missing-item step completes, not on whether any package category is non-empty.
 
 #### Scenario: Confirmation prompt for core casks
 - **WHEN** `packages.yaml` resolves one or more cask entries for the active tag set
@@ -150,12 +152,18 @@ Only upgrading a package that is already installed but outdated requires explici
 
 #### Scenario: Confirmation prompt
 - **WHEN** a machine-specific Brewfile contains entries that are not yet installed
-- **THEN** the script SHALL install them via `brew bundle install --no-upgrade` without prompting
-- **AND** SHALL prompt the user for confirmation, via its own single prompt independent of darwin-23's prompt, only when a subsequent `brew bundle check` against that Brewfile finds something already-installed but outdated
+- **THEN** darwin-28 SHALL print the missing entries reported by `brew bundle check --no-upgrade --verbose` and prompt the user to confirm installing them, via its own prompt independent of darwin-23
+- **AND** SHALL run `brew bundle install --no-upgrade` against that Brewfile only if the user confirms
+- **AND** SHALL separately prompt for upgrade confirmation only when a subsequent `brew bundle check` against that Brewfile finds something already-installed but outdated
+
+#### Scenario: Machine Brewfile install declined
+- **WHEN** the user declines darwin-28's missing-package install prompt, or stdin is not a TTY
+- **THEN** darwin-28 SHALL skip the missing-item install without invoking `brew bundle install`
+- **AND** SHALL continue to the upgrade check
 
 #### Scenario: Confirmation denied
-- **WHEN** the user declines a script's upgrade confirmation prompt
-- **THEN** the script SHALL skip only the upgrade step
+- **WHEN** the user declines a script's confirmation prompt
+- **THEN** the script SHALL skip only the step that prompt gated
 - **AND** SHALL continue with other setup tasks
 - **AND** SHALL exit 0 so chezmoi records the script as successfully run, not as failed
 
@@ -175,13 +183,13 @@ Only upgrading a package that is already installed but outdated requires explici
 
 #### Scenario: Confirmation prompts are asked fresh every run
 - **WHEN** a script runs on a subsequent `chezmoi apply` invocation
-- **THEN** it SHALL display its upgrade confirmation prompt again if `brew bundle check` still fails at that point
+- **THEN** it SHALL display its confirmation prompts again if the corresponding `brew bundle check` still fails at that point
 - **AND** SHALL NOT read or write any cached decision from a previous run
 
 #### Scenario: No TTY attached
-- **WHEN** stdin is not a TTY when a script reaches its upgrade confirmation prompt
+- **WHEN** stdin is not a TTY when a script reaches any of its confirmation prompts
 - **THEN** `read` SHALL return an empty reply immediately
-- **AND** the script SHALL treat that as a decline and skip the upgrade step
+- **AND** the script SHALL treat that as a decline and skip the step that prompt gated
 - **AND** SHALL NOT hang waiting for input
 
 ### Requirement: Homebrew Core Bundle Split
