@@ -190,21 +190,6 @@ prompt_ready() {
     echo ""
 }
 
-# Check iCloud sign-in at runtime; print standard warning and return 1 if not signed in.
-# Returns 0 if signed in, 1 if not.
-warn_icloud_not_signed_in() {
-    local account_id=""
-    if [[ -f ~/Library/Preferences/MobileMeAccounts.plist ]]; then
-        account_id=$(defaults read MobileMeAccounts Accounts 2>/dev/null \
-            | grep -m 1 "AccountID" | sed 's/.*= "\(.*\)";/\1/')
-    fi
-    if [[ -z "$account_id" ]]; then
-        print_message "warning" "Not signed into iCloud - Mac App Store packages will be skipped"
-        return 1
-    fi
-    return 0
-}
-
 # Record a script failure so the script re-runs on the next `chezmoi apply` without
 # aborting this one. Pair with the "failure-stamp" template embedded in the script.
 # <name>.last-failure is the retry trigger and is never removed; <name>.pending is

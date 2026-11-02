@@ -144,7 +144,7 @@ Installing a missing package declared in `packages.yaml` SHALL proceed unconditi
 - **AND** WHEN that combined check instead passes (nothing in any category outdated) THEN no prompt SHALL be displayed at all
 
 #### Scenario: Confirmation prompt for core mas
-- **WHEN** `packages.yaml` resolves one or more `mas` entries for the active tag set (and the user is signed into iCloud)
+- **WHEN** `packages.yaml` resolves one or more `mas` entries for the active tag set
 - **THEN** the script SHALL install them via `brew bundle install --no-upgrade` without displaying a dedicated `mas` confirmation prompt
 - **AND** any such `mas` entry found outdated by the combined `brew bundle check` SHALL be covered only by darwin-23's single combined upgrade prompt, shared with taps, formulae, and casks — not an independent mas-only prompt
 
@@ -180,7 +180,7 @@ Installing a missing package declared in `packages.yaml` SHALL proceed unconditi
 - **AND** that empty bundle SHALL contribute nothing to the combined upgrade check
 
 #### Scenario: No mas packages to install
-- **WHEN** the resolved `mas` bundle for the active tag set is empty (including when excluded because the user is not signed into iCloud)
+- **WHEN** the resolved `mas` bundle for the active tag set is empty
 - **THEN** the script SHALL skip the `mas` install step silently, without attempting a `brew bundle` invocation
 - **AND** that empty bundle SHALL contribute nothing to the combined upgrade check
 
@@ -195,23 +195,41 @@ Installing a missing package declared in `packages.yaml` SHALL proceed unconditi
 - **AND** the script SHALL treat that as a decline and skip the step that prompt gated
 - **AND** SHALL NOT hang waiting for input
 
+### Requirement: Mac App Store Authentication During Installation
+The Homebrew installers (darwin-23 and darwin-28) SHALL let `mas` report App Store authentication errors during `brew bundle` installation. They SHALL NOT infer App Store authentication from iCloud preferences, omit declared `mas` entries based on those preferences, or automatically set `HOMEBREW_BUNDLE_MAS_SKIP` based on iCloud sign-in state. Existing installation and upgrade confirmation rules SHALL still apply.
+
+#### Scenario: Legacy iCloud preferences missing or empty
+- **WHEN** `MobileMeAccounts.plist` is absent, empty, or lacks an `Accounts` or `AccountID` value
+- **THEN** neither installer SHALL suppress declared App Store packages or print a signed-out warning based on that preference
+- **AND** eligible installation steps SHALL attempt the declared App Store apps through `brew bundle`
+
+#### Scenario: App Store signed in without iCloud
+- **WHEN** the user is signed out of iCloud but signed into the App Store
+- **THEN** the installers SHALL allow `mas` to install declared App Store apps subject to the existing confirmation rules
+
+#### Scenario: App Store authentication failure
+- **WHEN** a `brew bundle` installation invocation fails because `mas` cannot authenticate to the App Store
+- **THEN** the installer SHALL retain the command's error output and print the existing bundle failure warning
+- **AND** SHALL record the failure with `record_script_failure` so the script retries on the next `chezmoi apply`
+- **AND** SHALL exit 0 so the rest of `chezmoi apply` continues
+
 ### Requirement: Homebrew Core Bundle Split
-`run_onchange_before_darwin-23-install-packages.sh.tmpl` SHALL install taps, formulae (`brews`), casks, and `mas` packages via separate `brew bundle install --no-upgrade` invocations — taps+formulae unconditionally, casks only when the active tag set declares any, `mas` only when declared and the user is signed into iCloud — none of them gated by a confirmation prompt. After those complete, it SHALL run one combined `brew bundle check` across everything declared, and conditionally one combined `brew bundle install --upgrade` across the same set, gated by the prompt defined in "User Confirmation for Additional Packages".
+`run_onchange_before_darwin-23-install-packages.sh.tmpl` SHALL install taps, formulae (`brews`), casks, and `mas` packages via separate `brew bundle install --no-upgrade` invocations — taps+formulae unconditionally, casks only when the active tag set declares any, `mas` only when declared — none of them gated by a confirmation prompt. After those complete, it SHALL run one combined `brew bundle check` across everything declared, and conditionally one combined `brew bundle install --upgrade` across the same set, gated by the prompt defined in "User Confirmation for Additional Packages".
 
 #### Scenario: Three independent bundle invocations
 - **WHEN** the script resolves taps, brews, casks, and mas entries for the active tag set
 - **THEN** it SHALL run one `brew bundle install --no-upgrade` invocation containing only tap and brew entries, unconditionally
 - **AND** SHALL run a second `brew bundle install --no-upgrade` invocation containing only cask entries, when the cask bundle is non-empty
-- **AND** SHALL run a third `brew bundle install --no-upgrade` invocation containing only `mas` entries, when the mas bundle is non-empty and the user is signed into iCloud
+- **AND** SHALL run a third `brew bundle install --no-upgrade` invocation containing only `mas` entries, when the mas bundle is non-empty
 - **AND** none of these three invocations SHALL be gated by a confirmation prompt
 
 #### Scenario: Pre-tap step still precedes all three bundles
 - **WHEN** the script's existing pre-tap loop runs
 - **THEN** it SHALL continue to run before every `brew bundle` invocation — the three missing-item installs, the combined check, and the conditional combined upgrade — so taps are registered before any of them checks or installs casks from those taps
 
-#### Scenario: iCloud gating still applies to the mas bundle
-- **WHEN** the user is not signed into iCloud
-- **THEN** mas entries SHALL continue to be excluded from the generated bundle content via the existing `$icloudSignedIn` gating, across the missing-item install, the combined check, and the conditional combined upgrade alike
+#### Scenario: Declared mas entries remain in every bundle
+- **WHEN** the active tag set declares `mas` entries
+- **THEN** those entries SHALL be included in the missing-item install, the combined check, and the conditional combined upgrade regardless of iCloud sign-in state
 
 #### Scenario: Each bundle's partial failure is independent
 - **WHEN** one of the script's `brew bundle` invocations (the three missing-item installs or the conditional combined upgrade) exits non-zero
@@ -978,7 +996,7 @@ Category/tag eligibility resolution — determining which `packages.yaml` catego
 - **THEN** the partial SHALL emit the value as-is in the `items` field without transforming entries
 
 ### Requirement: Package-Layer Scripts Consume the Shared Partial
-All package-layer installation scripts (positions 23–27) SHALL obtain their per-category package items exclusively via the `package-layer-items` partial. Scripts SHALL NOT inline the category/tag eligibility iteration. Per-layer concerns — install command, tool bootstrap, skip-layer gating, and output line format (including Brewfile `trusted:` annotations and iCloud-gated `mas` entries) — SHALL remain in the individual scripts.
+All package-layer installation scripts (positions 23–27) SHALL obtain their per-category package items exclusively via the `package-layer-items` partial. Scripts SHALL NOT inline the category/tag eligibility iteration. Per-layer concerns — install command, tool bootstrap, skip-layer gating, and output line format (including Brewfile `trusted:` annotations and `mas` entries) — SHALL remain in the individual scripts.
 
 #### Scenario: Simple layers range over partial output
 - **WHEN** the SDKMAN (24), UV (25), Bun (26), or Cargo (27) script renders install commands
@@ -988,7 +1006,7 @@ All package-layer installation scripts (positions 23–27) SHALL obtain their pe
 #### Scenario: Homebrew script uses the partial for every category iteration
 - **WHEN** the Homebrew script (23) renders category-scoped taps, brews, casks, mas entries, or merges `brew_env`
 - **THEN** each of those sections SHALL consume the partial's output rather than an inline category loop
-- **AND** layer-specific rendering (`trusted: true` annotations, Brewfile syntax, skipping `mas` when not signed into iCloud) SHALL be applied by the script when ranging the returned items
+- **AND** layer-specific rendering (`trusted: true` annotations and Brewfile syntax) SHALL be applied by the script when ranging the returned items
 
 #### Scenario: Refactor preserves rendered output
 - **WHEN** the refactored scripts are rendered via `tests/run-template` for the machine's current tag set

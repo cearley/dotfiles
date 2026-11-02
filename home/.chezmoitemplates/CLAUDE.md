@@ -4,7 +4,6 @@ Available in `home/.chezmoitemplates/`:
 - `machine-name` - Cross-platform machine name detection
 - `machine-config` - Machine-specific setting lookup (single property)
 - `machine-settings` - All machine settings as JSON dict (preferred for multiple lookups)
-- `icloud-account-id` - Returns iCloud account ID if signed in (macOS)
 - `local-marketplace-name` - Returns the registered name of this repo's own local Claude Code plugin marketplace (currently `"chezmoi-personal"`). Single source of truth for that literal string across every `.tmpl` that names it, suffix-matches a plugin id against it, or builds a `## <name>-plugins`-style section header. Renaming here updates template source only — it doesn't re-register the marketplace on already-provisioned machines or retag already-installed plugin ids, both of which carry the name as a literal `@<name>` suffix.
 - `time-bucket` - Rolling epoch bucket for periodic `run_onchange_*` re-execution; embed in comment near script top
 - `failure-stamp` - Last-failure timestamp for a `run_onchange_*` script (pass `name`); embed in a comment near script top and call `record_script_failure <name>` (shared-utils) on failure, so the script can exit 0 without blocking `chezmoi apply` yet still re-run next time. Success leaves the stamp untouched. `record_script_failure` also writes `<name>.pending`, which `run_after_darwin-99-report-script-failures` lists at the end of the apply and deletes.

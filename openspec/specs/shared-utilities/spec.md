@@ -228,22 +228,6 @@ The `prompt_ready()` function SHALL prompt the user to press any key to continue
 - **THEN** it SHALL display the custom message
 - **AND** SHALL wait for a single keypress
 
-### Requirement: iCloud Sign-In Check
-The `warn_icloud_not_signed_in()` function SHALL check at runtime whether the user is signed into iCloud, printing a standard warning as a side effect when not.
-
-#### Scenario: User signed into iCloud
-- **WHEN** `warn_icloud_not_signed_in` is called and an iCloud account is configured
-- **THEN** the function SHALL return 0 (success) without printing anything
-
-#### Scenario: User not signed into iCloud
-- **WHEN** `warn_icloud_not_signed_in` is called and no iCloud account is configured
-- **THEN** the function SHALL print a `print_message "warning"` explaining that Mac App Store packages will be skipped
-- **AND** SHALL return 1 (failure)
-
-#### Scenario: MobileMeAccounts plist missing
-- **WHEN** the MobileMeAccounts.plist file does not exist
-- **THEN** the function SHALL treat this the same as not being signed in (warning printed, return 1)
-
 ### Requirement: Claude Environment Iterator
 The `for_each_claude_env` function SHALL iterate over a list of Claude environment directories, expand tilde prefixes, skip missing directories with a skip message, and invoke a caller-provided callback function for each valid directory.
 
@@ -283,19 +267,6 @@ The `run_claude_in_env` function SHALL run the `claude` CLI against one Claude e
 #### Scenario: Exit status and output pass through
 - **WHEN** the wrapped `claude` invocation exits non-zero or writes to stdout/stderr
 - **THEN** `run_claude_in_env` SHALL return the same exit status and leave the output unaltered
-
-### Requirement: iCloud Availability via Template-Time Partial and Runtime Warning
-A chezmoi template partial named `icloud-account-id` SHALL return the signed-in iCloud account ID (or an empty string if not signed in) at template-render time, for scripts that need to conditionally render content based on iCloud availability. This is a separate, complementary mechanism to the `warn_icloud_not_signed_in()` runtime check — the partial answers "should this line even be in the rendered script," while the function answers "warn the user right now."
-
-#### Scenario: Template-time gating of Mac App Store entries
-- **WHEN** `run_onchange_before_darwin-23-install-packages.sh.tmpl` renders and `icloud-account-id` returns a non-empty value
-- **THEN** the rendered Brewfile heredoc SHALL include `mas` entries
-- **AND** WHEN `icloud-account-id` returns empty, the heredoc SHALL omit `mas` entries and the script SHALL render a reminder to re-run `chezmoi apply` after signing in
-
-#### Scenario: Runtime warning alongside template-time gating
-- **WHEN** a script needs to both gate template output and inform the user during the run (e.g. script 23 and script 28's `brew bundle`/`HOMEBREW_BUNDLE_MAS_SKIP` handling)
-- **THEN** it SHALL call `warn_icloud_not_signed_in()` at runtime in addition to using `icloud-account-id` at template-render time
-- **AND** neither mechanism SHALL abort the script — both degrade gracefully by skipping iCloud-dependent work
 
 ### Requirement: Error Handling Standards
 Utility functions SHALL follow consistent error handling patterns.

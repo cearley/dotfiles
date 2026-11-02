@@ -43,9 +43,6 @@ fi
 
 print_message "info" "Installing additional packages using Homebrew..."
 
-_icloud_available=true
-warn_icloud_not_signed_in || { _icloud_available=false; export HOMEBREW_BUNDLE_MAS_SKIP=1; }
-
 export HOMEBREW_ACCEPT_EULA=Y
 any_failed=0
 if ! brew update; then
@@ -89,10 +86,6 @@ elif ! brew bundle check --file=$brewfile >/dev/null 2>&1; then
         any_failed=1
         print_message "warning" "brew bundle (upgrade) completed with errors — some packages may not be updated."
     fi
-fi
-
-if [[ "$_icloud_available" == false ]]; then
-    print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
 fi
 
 # Record the failure and exit 0 so the rest of `chezmoi apply` (file updates,

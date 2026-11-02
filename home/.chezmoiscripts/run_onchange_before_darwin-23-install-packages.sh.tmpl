@@ -16,10 +16,6 @@ any_failed=0
 
 print_message "info" "Installing packages using Homebrew..."
 
-{{ $icloudAccountId := includeTemplate "icloud-account-id" . | trim -}}
-{{ $icloudSignedIn := ne $icloudAccountId "" -}}
-warn_icloud_not_signed_in || true
-
 {{ $tapGroups := includeTemplate "package-layer-items" (merge (dict "key" "taps") .) | fromJson -}}
 {{- $brewGroups := includeTemplate "package-layer-items" (merge (dict "key" "brews") .) | fromJson -}}
 {{- $caskGroups := includeTemplate "package-layer-items" (merge (dict "key" "casks") .) | fromJson -}}
@@ -82,7 +78,7 @@ export {{ $k }}={{ $v | quote }}
   {{- if $caskItems }}
     {{- $hasCasks = true }}
   {{- end }}
-  {{- if and $icloudSignedIn $masItems }}
+  {{- if $masItems }}
     {{- $hasMas = true }}
   {{- end }}
 {{- end }}
@@ -152,7 +148,7 @@ mas_exit=0
 brew bundle install --no-upgrade -v --file=/dev/stdin <<'MAS_EOF' || mas_exit=$?
 {{- range $category := prepend .tag_choices "core" }}
   {{- $masItems := index $masByCategory $category }}
-  {{- if and $icloudSignedIn $masItems }}
+  {{- if $masItems }}
 
 # Install {{ $category }} Mac App Store packages
 {{ range $masItems -}}
@@ -169,10 +165,6 @@ if [ "$mas_exit" -ne 0 ]; then
 fi
 {{ end }}
 
-{{ if not $icloudSignedIn -}}
-print_message "info" "Sign in to iCloud in System Settings, then run 'chezmoi apply' again to install App Store apps"
-{{ end -}}
-
 # Full declared set (taps, formulae, casks, mas), shared by the checks and
 # the upgrade below.
 combined_brewfile=$(mktemp)
@@ -186,7 +178,7 @@ tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end
   {{- $brewItems := index $brewByCategory $category }}
   {{- $caskItems := index $caskByCategory $category }}
   {{- $masItems := index $masByCategory $category }}
-  {{- if or $tapItems $brewItems $caskItems (and $icloudSignedIn $masItems) }}
+  {{- if or $tapItems $brewItems $caskItems $masItems }}
 
 # {{ $category }} packages
     {{- if $tapItems }}
@@ -207,7 +199,7 @@ cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ en
 {{ end -}}
     {{- end }}
 
-    {{- if and $icloudSignedIn $masItems }}
+    {{- if $masItems }}
 {{ range $masItems -}}
 mas {{ . }}
 {{ end -}}
