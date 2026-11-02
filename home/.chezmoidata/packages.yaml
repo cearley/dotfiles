@@ -205,10 +205,17 @@ packages:
             command: uvx --python 3.12 basic-memory mcp
           skills: # Installed via `npx skills add <args> -g`
           - 'basicmachines-co/basic-memory-skills --skill memory-defrag'
+          - 'basicmachines-co/basic-memory-skills --skill memory-schema'
           - 'cearley/claude-session-index --skill session-index'
           - 'herdrdev/herdr --skill herdr'
           - 'vercel-labs/skills --skill find-skills'
           - 'microsoft/azure-skills --skill microsoft-foundry'
+          - 'specstoryai/agent-skills --skill specstory-guard'
+          - 'specstoryai/agent-skills --skill specstory-link-trail'
+          - 'specstoryai/agent-skills --skill specstory-organize'
+          - 'specstoryai/agent-skills --skill specstory-project-stats'
+          - 'specstoryai/agent-skills --skill specstory-session-summary'
+          - 'specstoryai/agent-skills --skill specstory-yak'
           plugin_marketplaces: # Registered via `claude plugins marketplace add`
           - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace, deployed under home/dot_local/share/claude-plugins/
           - 'anthropics/claude-plugins-official' # Official Claude plugins from Anthropics
@@ -220,6 +227,7 @@ packages:
           - 'microsoftdocs/mcp' # Microsoft Docs MCP marketplace
           - 'wondelai/skills' # Wondelai's collection of skills
           plugins: # Installed via `claude plugins install`
+          - 'claude-code-setup@claude-plugins-official'
           - 'claude-md-management@claude-plugins-official'
           - 'oh-my-claudecode@omc'
           - 'opsx-omc-bridge@opsx-omc-bridge'
