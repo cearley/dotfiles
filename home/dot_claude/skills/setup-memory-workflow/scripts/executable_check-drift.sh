@@ -20,7 +20,7 @@
 #     means "this should already look like canonical." Never touches a piece
 #     reporting NAME-MISMATCH, even if that piece is also version-stale.
 #
-#   check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script>
+#   check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|write-guard-hook|sync-memory-skill|sync-memory-script>
 #     Overwrites the named piece with the canonical version, regardless of
 #     its current status. This is the only path that repairs NAME-MISMATCH —
 #     only run it after the user has confirmed the identity change shown by
@@ -53,7 +53,7 @@
 
 set -euo pipefail
 
-SMW_VERSION=13
+SMW_VERSION=14
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS_DIR="$SKILL_DIR/assets"
 
@@ -91,6 +91,14 @@ canonical_hook_cmd() {
   local canonical_msg
   canonical_msg=$(render "$ASSETS_DIR/hook-message.txt.template")
   echo "echo '${canonical_msg}'; \"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh\" drift-warn 2>/dev/null || true"
+}
+
+# The canonical PreToolUse write-guard hook command: always the same global,
+# non-templated script path (see scripts/executable_basic-memory-write-guard.sh) —
+# the guard targets the whole ~/.local/share/basic-memory/ tree, not a per-project
+# path, so unlike canonical_hook_cmd() above there is no $PROJECT substitution here.
+canonical_write_guard_cmd() {
+  echo "\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/skills/setup-memory-workflow/scripts/basic-memory-write-guard.sh"
 }
 
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/migrations.sh
@@ -276,6 +284,26 @@ cmd_check() {
   fi
 
   echo
+  echo "== PreToolUse write-guard hook =="
+  local existing_guard_cmd canonical_guard_cmd
+  existing_guard_cmd=$(jq -r '[.hooks.PreToolUse[]?.hooks[]?.command // empty] | map(select(contains("basic-memory-write-guard")))[0] // empty' .claude/settings.local.json)
+  canonical_guard_cmd=$(canonical_write_guard_cmd)
+  if [ -z "$existing_guard_cmd" ]; then
+    jq --arg cmd "$canonical_guard_cmd" \
+      '.hooks.PreToolUse += [{"matcher": "Bash|Edit|Write", "hooks": [{"type": "command", "command": $cmd}]}]' \
+      .claude/settings.local.json > .claude/settings.local.json.tmp \
+      && mv .claude/settings.local.json.tmp .claude/settings.local.json
+    echo "CREATED: write-guard hook in .claude/settings.local.json"
+  elif [ "$existing_guard_cmd" = "$canonical_guard_cmd" ]; then
+    echo "UP-TO-DATE: write-guard hook"
+  else
+    echo "DRIFT: write-guard hook"
+    echo "  fix with: check-drift.sh update"
+    echo "  current:   $existing_guard_cmd"
+    echo "  canonical: $canonical_guard_cmd"
+  fi
+
+  echo
   echo "== verification =="
   if [ "$mcp_global_skip" = "yes" ]; then
     echo "SKIP: .mcp.json (basic-memory registered globally, see above)"
@@ -350,6 +378,29 @@ cmd_update() {
       echo "APPLIED: hook in .claude/settings.local.json"
     fi
   fi
+
+  echo
+  echo "== PreToolUse write-guard hook =="
+  local existing_guard_cmd canonical_guard_cmd
+  existing_guard_cmd=$(jq -r '[.hooks.PreToolUse[]?.hooks[]?.command // empty] | map(select(contains("basic-memory-write-guard")))[0] // empty' .claude/settings.local.json)
+  canonical_guard_cmd=$(canonical_write_guard_cmd)
+  if [ -z "$existing_guard_cmd" ]; then
+    jq --arg cmd "$canonical_guard_cmd" \
+      '.hooks.PreToolUse += [{"matcher": "Bash|Edit|Write", "hooks": [{"type": "command", "command": $cmd}]}]' \
+      .claude/settings.local.json > .claude/settings.local.json.tmp \
+      && mv .claude/settings.local.json.tmp .claude/settings.local.json
+    echo "CREATED: write-guard hook in .claude/settings.local.json"
+  elif [ "$existing_guard_cmd" != "$canonical_guard_cmd" ]; then
+    jq --arg cmd "$canonical_guard_cmd" '
+      .hooks.PreToolUse |= map(
+        .hooks |= map(
+          if (.command // "" | contains("basic-memory-write-guard")) then .command = $cmd else . end
+        )
+      )
+    ' .claude/settings.local.json > .claude/settings.local.json.tmp \
+      && mv .claude/settings.local.json.tmp .claude/settings.local.json
+    echo "APPLIED: write-guard hook in .claude/settings.local.json"
+  fi
 }
 
 cmd_apply() {
@@ -389,8 +440,29 @@ cmd_apply() {
         && mv .claude/settings.local.json.tmp .claude/settings.local.json
       echo "APPLIED: hook in .claude/settings.local.json"
       ;;
+    write-guard-hook)
+      local canonical_guard_cmd
+      canonical_guard_cmd=$(canonical_write_guard_cmd)
+      [ -f .claude/settings.local.json ] || echo '{}' > .claude/settings.local.json
+      if jq -e '[.hooks.PreToolUse[]?.hooks[]?.command // empty] | map(select(contains("basic-memory-write-guard"))) | length > 0' .claude/settings.local.json >/dev/null 2>&1; then
+        jq --arg cmd "$canonical_guard_cmd" '
+          .hooks.PreToolUse |= map(
+            .hooks |= map(
+              if (.command // "" | contains("basic-memory-write-guard")) then .command = $cmd else . end
+            )
+          )
+        ' .claude/settings.local.json > .claude/settings.local.json.tmp \
+          && mv .claude/settings.local.json.tmp .claude/settings.local.json
+      else
+        jq --arg cmd "$canonical_guard_cmd" \
+          '.hooks.PreToolUse += [{"matcher": "Bash|Edit|Write", "hooks": [{"type": "command", "command": $cmd}]}]' \
+          .claude/settings.local.json > .claude/settings.local.json.tmp \
+          && mv .claude/settings.local.json.tmp .claude/settings.local.json
+      fi
+      echo "APPLIED: write-guard hook in .claude/settings.local.json"
+      ;;
     *)
-      echo "Unknown piece: $piece (expected save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script)" >&2
+      echo "Unknown piece: $piece (expected save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|write-guard-hook|sync-memory-skill|sync-memory-script)" >&2
       exit 1
       ;;
   esac
@@ -409,7 +481,7 @@ cmd_drift_warn() {
 case "${1:-}" in
   check) cmd_check ;;
   update) cmd_update ;;
-  apply) cmd_apply "${2:?Usage: check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|sync-memory-skill|sync-memory-script>}" ;;
+  apply) cmd_apply "${2:?Usage: check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|write-guard-hook|sync-memory-skill|sync-memory-script>}" ;;
   drift-warn) cmd_drift_warn ;;
   *) echo "Usage: check-drift.sh <check|update|apply PIECE|drift-warn>" >&2; exit 1 ;;
 esac

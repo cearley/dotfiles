@@ -24,8 +24,8 @@ The script:
   `uv tool install basic-memory` first, then stop — nothing else can proceed without it).
 - Always performs the safe, idempotent pieces directly: registering the basic-memory
   project, and creating the save-session and save-session-maintenance skills / `.mcp.json`
-  entry / SessionStart reminder **only when each is entirely missing** — there's nothing to
-  lose by creating something that doesn't exist yet.
+  entry / SessionStart reminder / PreToolUse write-guard hook **only when each is entirely
+  missing** — there's nothing to lose by creating something that doesn't exist yet.
 - Reports `UP-TO-DATE` for anything that already matches canonical — leave those alone.
 - Reports `DRIFT` (with current vs. canonical shown side by side) for anything that
   exists but differs — **never overwrites these itself.**
@@ -46,6 +46,7 @@ If the user confirms an update, apply it with:
 ~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply save-session-maintenance-skill
 ~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply mcp-config
 ~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply hook-config
+~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply write-guard-hook
 ```
 
 ## Step 3: Confirm
@@ -59,6 +60,7 @@ repaired (user approved), or drift found and left as-is (user declined):
 ✓ .claude/skills/save-session-maintenance/SKILL.md — <created | up to date | repaired (was vN) | left as-is (user declined update)>
 ✓ .mcp.json — <configured | already registered globally | up to date | repaired | left as-is>
 ✓ .claude/settings.local.json — <SessionStart reminder added | up to date | repaired (was vN) | left as-is>
+✓ .claude/settings.local.json (write-guard hook) — <created | up to date | repaired | left as-is>
 ✓ .claude/skills/sync-memory/SKILL.md — <created | up to date | repaired (was vN) | left as-is (user declined update)>
 ✓ .claude/skills/sync-memory/scripts/sync-memory.py — <created | up to date | drift found (left as-is unless user confirms overwrite)>
 ```
@@ -74,6 +76,12 @@ Remind the user that:
 - The SessionStart hook is an instruction to call `search_notes` and `recent_activity` before
   responding. It does not itself invoke basic-memory; Basic Memory must be available through MCP
   and the model must follow the reminder.
+- The PreToolUse write-guard hook denies any Bash/Edit/Write call that would write directly into
+  `~/.local/share/basic-memory/` (any project, not just this one) — those files are indexed by
+  the basic-memory MCP server, and a direct filesystem write bypasses that index and can corrupt
+  `bm_edit`'s checksum-based concurrency guard. It points the model at `bm_write`/`bm_edit`
+  instead. The guard script itself is global (deployed once by chezmoi, not per-project); only
+  the hook *entry* pointing at it lives in this project's `.claude/settings.local.json`.
 - `sync-memory` is still installed by the current script for compatibility, but is legacy. The
   `memory-distiller` worker is the planned replacement for unattended transcript capture; this
   setup skill does not schedule it yet.
@@ -92,6 +100,14 @@ currently carries legacy `sync-memory` templates. All rendered pieces use `__PRO
 Whenever you edit a canonical rendered asset, bump the `SMW_VERSION` constant at
 the top of `scripts/check-drift.sh` so existing installs get flagged as drifted on their
 next check.
+
+The PreToolUse write-guard hook is the one piece that is *not* `__PROJECT__`-templated:
+`scripts/executable_basic-memory-write-guard.sh` is a plain static script, deployed
+machine-wide by chezmoi exactly like `check-drift.sh` itself (not rendered per project).
+Only the hook *entry* pointing at its fixed global path is managed per project, via
+`canonical_write_guard_cmd()` and literal command-string comparison — there is no version
+marker for it, so editing the guard script's content doesn't need an `SMW_VERSION` bump;
+only changing the hook entry's command string (e.g. the global path itself) would.
 
 If you add a self-referential check inside the script template (e.g. "fail if this looks
 un-rendered"), don't compare literally against the placeholder string itself — `render()`'s

@@ -4,6 +4,27 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v14 (2026-11-02)
+Nothing previously stopped an agent from using Bash (or Edit/Write with an absolute
+path) to write directly into `~/.local/share/basic-memory/<project>/`, bypassing the
+basic-memory MCP server's SQLite index and the per-note checksums `bm_edit` relies on
+for optimistic concurrency — a direct write there can make a later `bm_edit` silently
+fail its checksum guard, or leave `bm_search`/`recent_activity` stale.
+
+Adds a new `write-guard-hook` piece: a `PreToolUse` hook (matcher `Bash|Edit|Write`)
+that denies any write-shaped call targeting the whole `~/.local/share/basic-memory/`
+tree (not just the current project's subdirectory — the risk is identical regardless of
+which project's notes are targeted) and points the model at `bm_write`/`bm_edit`
+instead. Unlike every other managed piece, the guard script itself
+(`scripts/executable_basic-memory-write-guard.sh`) is *not* `__PROJECT__`-templated —
+it's a plain static script deployed machine-wide by chezmoi, exactly like
+`check-drift.sh` itself, modeled directly on the existing
+`home/dot_local/bin/executable_claude-tooling-write-guard.tmpl` hook's JSON contract and
+Bash-detection heuristics. Only the hook *entry* pointing at its fixed global path is
+managed per project (`canonical_write_guard_cmd()`, literal command-string comparison —
+no version marker needed). No migration needed — purely additive, same as
+`save-session-maintenance-skill` in v12.
+
 ## v13 (2026-10-22)
 `save-session`'s Step 1/2 now explicitly tell the model to pass `project="__PROJECT__"` on
 every basic-memory tool call and to check the result's own `project` field before the next

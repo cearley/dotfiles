@@ -1,7 +1,7 @@
 # setup-memory-workflow Specification
 
 ## Purpose
-Bootstraps and runs the basic-memory session workflow (`save-session`, `sync-memory`, and a `SessionStart` reminder hook) by copying rendered templates into each target project via `check-drift.sh`. Project identity resolves once, at apply-time, and is baked into every installed piece — there is no runtime resolution script. A version marker embedded in each installed piece lets `check-drift.sh check` report drift and `check-drift.sh update` unconditionally repair version-only drift; an identity mismatch (`NAME-MISMATCH`) is never auto-repaired and always requires an explicit `apply <piece>` after confirmation.
+Bootstraps and runs the basic-memory session workflow (`save-session`, `sync-memory`, a `SessionStart` reminder hook, and a `PreToolUse` write-guard hook) by copying rendered templates into each target project via `check-drift.sh`. Project identity resolves once, at apply-time, and is baked into every per-project-templated piece — there is no runtime resolution script. A version marker embedded in each templated piece lets `check-drift.sh check` report drift and `check-drift.sh update` unconditionally repair version-only drift; an identity mismatch (`NAME-MISMATCH`) is never auto-repaired and always requires an explicit `apply <piece>` after confirmation. The write-guard hook is the one piece that is not per-project-templated — see the dedicated requirement below.
 
 ## Requirements
 
@@ -60,6 +60,37 @@ The `save-session` skill, the `sync-memory` skill and script, and the `SessionSt
 #### Scenario: Updating the plugin updates every consumer
 - **WHEN** considering the retired plugin-era guarantee this scenario originally described — that changing the canonical plugin content and updating the marketplace propagated to every enabled project automatically, with no per-project drift-check or repair step
 - **THEN** it is deliberately inverted, not preserved: canonical template changes now reach an installed project only when `check-drift.sh update` (or `apply`) is explicitly run there — propagation is opt-in and per-project again, in exchange for eliminating the plugin's own weaker update story (a commit-SHA-pinned cache with no `needsUpdate` signal, confirmed stale on a real install during this change's own investigation)
+
+#### Scenario: PreToolUse write-guard hook is a deliberate exception
+- **WHEN** this requirement's version-marker guarantee is considered against the `PreToolUse` write-guard hook
+- **THEN** it does not apply to that piece — the guard script itself is a single, static file deployed machine-wide (not rendered per project) and carries no `setup-memory-workflow-version:N` marker; only the fixed hook *entry* pointing at it is managed per project, and its drift is detected by literal command-string comparison instead (see the dedicated "PreToolUse write-guard hook" requirement below)
+
+### Requirement: PreToolUse write-guard hook denies direct basic-memory filesystem writes
+The workflow SHALL install a `PreToolUse` hook (matcher `Bash|Edit|Write`) into the target project's `.claude/settings.local.json` that denies any Bash, Edit, or Write call writing to a path under `$HOME/.local/share/basic-memory/` (the whole basic-memory notes tree, not scoped to the current project alone), and directs the model to use the basic-memory MCP tools (`bm_write`/`bm_edit`) instead.
+
+#### Scenario: Guard script is global, not per-project
+- **WHEN** the write-guard hook is installed in any project
+- **THEN** its `.claude/settings.local.json` hook entry references a single, non-templated script deployed machine-wide — the same fixed global path in every project — rather than a per-project rendered copy
+
+#### Scenario: Bash write denied
+- **WHEN** a Bash tool call's command references a path under `$HOME/.local/share/basic-memory/` and is write-shaped (a redirect, or `rm`/`mv`/`cp`/`touch`/`mkdir`/`tee`/`sed -i`/etc.)
+- **THEN** the hook emits a `permissionDecision: deny` with a reason pointing at the basic-memory MCP tools, and the Bash call is blocked
+
+#### Scenario: Edit or Write denied
+- **WHEN** an `Edit` or `Write` tool call's `file_path` resolves under `$HOME/.local/share/basic-memory/`
+- **THEN** the hook denies it the same way as a Bash write
+
+#### Scenario: Reads and unrelated commands are not blocked
+- **WHEN** a Bash command only reads a path under the basic-memory tree (e.g. `cat`, `grep`, `jq`, `ls`), or a `Read` tool call targets that tree, or any tool call is unrelated to that tree entirely
+- **THEN** the hook makes no permission decision and emits no output
+
+#### Scenario: Missing piece is created unconditionally
+- **WHEN** `check-drift.sh check` finds no `PreToolUse` hook entry referencing the guard script in the current project
+- **THEN** it creates the entry directly, pointing at the fixed global script path, with no confirmation needed (same as any other missing piece)
+
+#### Scenario: Drift is detected and repaired by literal command-string comparison, not a version marker
+- **WHEN** an installed `PreToolUse` hook entry's command string (identified by containing `basic-memory-write-guard`) differs from the canonical command string
+- **THEN** `check-drift.sh check` reports `DRIFT`, and `check-drift.sh update` (or `apply write-guard-hook`) overwrites it with the canonical command — there is no `NAME-MISMATCH` concept for this piece, since the command string carries no project identity to mismatch
 
 ### Requirement: Project identity is resolved once, at apply-time
 `check-drift.sh` SHALL resolve the current project's basic-memory identity once per invocation, at the top of the script, and use that single resolved value for every piece it renders or checks in that invocation. No installed piece SHALL contain a runtime identity-resolution script or instruction.
