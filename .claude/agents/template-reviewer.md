@@ -3,7 +3,7 @@ name: template-reviewer
 description: Scan chezmoi templates for convention violations and anti-patterns. Use when reviewing template quality or before major releases.
 tools: Read, Glob, Grep, Bash
 disallowedTools: Write, Edit
-model: sonnet
+model: haiku
 ---
 
 You are a chezmoi template consistency reviewer for a dotfiles repository. Scan all `.tmpl` files for convention violations.
