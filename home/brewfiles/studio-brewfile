@@ -5,7 +5,6 @@ cask "dotnet-sdk3"
 cask "jiggler"
 cask "powerphotos"
 mas "Enchanted", id: 6474268307
-mas "Pages", id: 361309726
 mas "QR Capture", id: 1369524274
 mas "Tabby", id: 1586203406
 mas "Tabs Saver for Safari", id: 1440006971
