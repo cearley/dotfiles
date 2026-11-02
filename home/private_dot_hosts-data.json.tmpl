@@ -1,15 +1,26 @@
 {{- /*
 The ~/.hosts-data.json file is managed by chezmoi which uses it to add entries to /etc/hosts.
 
-The JSON structure of this file is expected to be:
-{
-  "hosts": [
-    {"address": "127.0.0.1", "name": "example.local"},
-    {"address": "10.0.0.1", "name": "router.local"}
-  ]
-}
+Host entries are stored in the KeePassXC entry "Hosts (Work)", attribute "hosts", as plain
+text, one "address,name" pair per line, e.g.:
+  127.0.0.1,example.local
+  10.0.0.1,router.local
+
+This template builds the JSON itself rather than storing it in the KeePassXC attribute:
+keepassxc-cli's placeholder resolver treats literal "{"/"}" characters as potential placeholder
+syntax, and brace-heavy content (i.e. literal JSON) can hit its recursion-depth guard, which
+prints a warning into the resolved value instead of the attribute's actual content, corrupting
+this file. Plain comma-separated lines contain no braces, so they're immune to that.
 */ -}}
 
-{{ if and (.has_keepassxc_db) (has "work" .tags) -}}
-{{ keepassxcAttribute "Hosts (Work)" "json" }}
-{{- end }}
+{{- if and (.has_keepassxc_db) (has "work" .tags) -}}
+{{- $hosts := list -}}
+{{- range splitList "\n" (keepassxcAttribute "Hosts (Work)" "hosts") -}}
+  {{- $line := trim . -}}
+  {{- if $line -}}
+    {{- $parts := splitList "," $line -}}
+    {{- $hosts = append $hosts (dict "address" (trim (index $parts 0)) "name" (trim (index $parts 1))) -}}
+  {{- end -}}
+{{- end -}}
+{{ dict "hosts" $hosts | toJson }}
+{{- end -}}
