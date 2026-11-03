@@ -65,6 +65,36 @@ The `save-session` skill, the `sync-memory` skill and script, and the `SessionSt
 - **WHEN** this requirement's version-marker guarantee is considered against the `PreToolUse` write-guard hook
 - **THEN** it does not apply to that piece — the guard script itself is a single, static file deployed machine-wide (not rendered per project) and carries no `setup-memory-workflow-version:N` marker; only the fixed hook *entry* pointing at it is managed per project, and its drift is detected by literal command-string comparison instead (see the dedicated "PreToolUse write-guard hook" requirement below)
 
+### Requirement: Active session-log note is resolved deterministically, not by search
+`save-session`'s Step 1 SHALL read the current status note and resolve the active
+session-log note from it by taking the most recent wikilink in its Status Summary
+section, rather than by issuing a `search_notes` query against the project's
+basic-memory corpus. Step 2 then appends to that resolved note. `search_notes` SHALL be
+used only as a fallback when no such wikilink can be found.
+
+#### Scenario: Status note has a recent Detail link
+- **WHEN** the current status note's most recent Status Summary entry contains one or
+  more wikilinks (e.g. a `Detail: [[...]]` pointer)
+- **THEN** Step 1 resolves the note named by the last wikilink in that entry and makes no
+  `search_notes` call; Step 2 appends to that note
+
+#### Scenario: No wikilink found — cold start
+- **WHEN** the current status note has no wikilink in its Status Summary section (e.g. a
+  brand-new project's first-ever `/save-session` run, before any entry has been written)
+- **THEN** Step 1 falls back to the prior `search_notes`-based behavior, unchanged
+
+#### Scenario: Multiple wikilinks in the most recent entry
+- **WHEN** the most recent Status Summary entry contains more than one wikilink
+- **THEN** Step 1 uses the last wikilink in that entry, matching this skill's own
+  established convention of placing the session-log pointer at the end of each dated
+  paragraph
+
+#### Scenario: Step ordering
+- **WHEN** `save-session` runs
+- **THEN** Step 1 (read the current status note and resolve the active session-log note)
+  completes before Step 2 (append to the session log) begins, so Step 2 appends to the
+  note Step 1 already resolved instead of issuing its own read or search
+
 ### Requirement: PreToolUse write-guard hook denies direct basic-memory filesystem writes
 The workflow SHALL install a `PreToolUse` hook (matcher `Bash|Edit|Write`) into the target project's `.claude/settings.local.json` that denies any Bash, Edit, or Write call writing to a path under `$HOME/.local/share/basic-memory/` (the whole basic-memory notes tree, not scoped to the current project alone), and directs the model to use the basic-memory MCP tools (`bm_write`/`bm_edit`) instead.
 

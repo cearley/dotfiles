@@ -2,7 +2,7 @@
 name: save-session
 description: Save today's session to basic-memory — fast, append-only (session log entry + status-note Open/Resolved edit), no size checks or triage. Invoke proactively, without asking for confirmation, whenever the session has produced decision-worthy content (an architectural decision, a resolved open item, a persistable finding) — gate this on substantial tool-call/conversation activity, not on whether any file was edited. Also run at explicit user request (/save-session) or when the user signals they're wrapping up.
 ---
-<!-- setup-memory-workflow-version:13 -->
+<!-- setup-memory-workflow-version:15 -->
 
 ## Step 0 — Decide whether to run this automatically, without asking
 
@@ -43,8 +43,6 @@ cd "$PROJECT_ROOT"
 If that check fails, stop here and tell the user what happened rather than continuing
 against a directory that isn't actually this project.
 
-## Step 1 — Append to the session log
-
 Pass `project="chezmoi"` explicitly on every basic-memory call in this skill — never
 omit it, even though the tool schema marks it optional. The server does not remember a
 project chosen on an earlier call; omitting it risks silent fallback to a different
@@ -53,23 +51,9 @@ write call (edit_note, write_note), check the result's own `project` field match
 `chezmoi` before issuing the next tool call — catch a misroute immediately, not on a
 later re-read.
 
-Search basic-memory project "chezmoi" for the most recent session note using
-search_notes with query "chezmoi session".
+## Step 1 — Read the current status note, and resolve the active session-log note from it
 
-Append today's update directly with edit_note (project="chezmoi",
-operation="append") including:
-- Date (use the currentDate value from context)
-- What was changed or decided today (decisions, findings, discoveries)
-- Any items resolved this session
-
-Do NOT include open items or next steps here — those go in Step 2. Never overwrite the
-existing note — always append. This step performs one quick append — don't check the
-note's size or restructure it here; that requires deliberate judgment a single append
-shouldn't attempt.
-
-## Step 2 — Update the current status note
-
-Read the current status note (project="chezmoi" explicitly — see Step 1):
+Read the current status note (project="chezmoi" explicitly):
   identifier: "chezmoi/status/chezmoi-current-status"
   project: "chezmoi"
 
@@ -78,8 +62,20 @@ summarization, ad hoc trimming) — report the failure (see "On failure" below) 
 too large to read needs deliberate restructuring, not an improvised fix squeezed into a
 routine save.
 
-Otherwise, update it with edit_note (project="chezmoi", operation="find_replace" or
-"replace_section") to reflect:
+Otherwise, before editing it, find the active session-log note: look at the most recent
+dated entry in its Status Summary section and take the **last** wikilink (`[[...]]`) that
+entry contains — that is the note Step 2 appends to. Don't search for it. A status note
+kept accurate by this skill's own past runs already names the right note in that link;
+trusting a fresh `search_notes` query over it risks ranking a stale, similarly-named note
+above the real one (this happened once — a `/save-session` run appended real content to
+an old, superseded session-log note because a broader search surfaced it ahead of the
+actually-active one). If the most recent entry contains **no** wikilink at all — a
+brand-new project's first-ever `/save-session` run, or a status note predating this
+convention — fall back to `search_notes` with query "chezmoi session" to find the
+most recent session note instead; this is the only case where searching is appropriate.
+
+Now update the status note itself with edit_note (project="chezmoi",
+operation="find_replace" or "replace_section") to reflect:
 - Any items resolved this session — move from Open to Resolved
 - Any new open items or next steps discovered
 - Any environment facts that changed (new deployments, confirmed config, etc.)
@@ -95,9 +91,24 @@ spot-check that every still-active item there has a matching Open entry before s
 This note is the authoritative source for current state. Keep it accurate and tidy. This
 step makes a targeted edit only — move resolved items, add new ones, update the date.
 Don't restructure or resize the note as a whole here; a rushed full-body rewrite risks
-colliding with unrelated content.
+colliding with unrelated content. Keep ending each new/updated Status Summary entry with
+a wikilink to the session-log note that has today's detail — Step 1 (on the *next* save)
+depends on that link being there and accurate.
 
 If the edit itself fails after a successful read, report the failure (see below) and stop.
+
+## Step 2 — Append to the session log
+
+Append today's update directly with edit_note (project="chezmoi",
+operation="append") to the note resolved in Step 1, including:
+- Date (use the currentDate value from context)
+- What was changed or decided today (decisions, findings, discoveries)
+- Any items resolved this session
+
+Do NOT include open items or next steps here — those went into Step 1's status-note edit.
+Never overwrite the existing note — always append. This step performs one quick append —
+don't check the note's size or restructure it here; that requires deliberate judgment a
+single append shouldn't attempt.
 
 ## On success
 

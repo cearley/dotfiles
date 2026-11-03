@@ -4,6 +4,25 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v15 (2026-11-02)
+`save-session`'s Step 1 (now Step 2) used to find "the most recent session note" with a
+fuzzy `search_notes` query. On a real project this just failed: several stale
+`Session Log — DATE` notes from an earlier rotation scheme sat alongside the actually-
+active session-log note, with nothing in the data or the instruction telling a search
+apart from a false match. A title-mode search correctly found the right note; a
+follow-up broader search plus an improvised `updated_at`-timestamp comparison across the
+stale notes then picked the wrong one, and real content got appended to it before the
+mistake was caught and undone.
+
+Reorders the two steps and removes the search for the common case: the status note (now
+read first, as Step 1) already ends every entry with a wikilink to wherever that
+session's detail lives — Step 1 extracts the **last** wikilink in its most recent Status
+Summary entry and hands that note name to Step 2 directly, with no `search_notes` call
+at all. `search_notes` is now a fallback used only when the most recent entry has no
+wikilink (a brand-new project's first-ever save, or a status note that predates this
+convention). No migration needed — this is a content-only change to the rendered skill
+body, not a schema/piece change, same as v13.
+
 ## v14 (2026-11-02)
 Nothing previously stopped an agent from using Bash (or Edit/Write with an absolute
 path) to write directly into `~/.local/share/basic-memory/<project>/`, bypassing the
