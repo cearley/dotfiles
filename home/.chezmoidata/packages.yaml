@@ -103,6 +103,7 @@ packages:
       - 'ack'
       - 'act'
       - 'age'                          # Simple, modern file-encryption tool used to decrypt SOPS-encrypted repo secrets
+      - 'alloy-analyzer'               # Open-source language and analyzer for software modeling
       - 'aws-cdk'                      # AWS Cloud Development Kit for defining cloud infrastructure in code
       - 'aws-sam-cli'
       - 'bats-core'
