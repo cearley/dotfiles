@@ -1,3 +1,32 @@
+> **ABANDONED / SUPERSEDED — 2026-11-06. Stalled at 33/45 tasks, never shipped.**
+>
+> This change reached section 8 of `tasks.md` (core worker + registry) but stalled before the
+> LaunchAgent wiring, removal, and archive steps in sections 9–12. It is archived with
+> `--skip-specs`: none of its delta specs are merged into `openspec/specs/`, because the two
+> breaking decisions below are being reversed rather than landed.
+>
+> **Why it was abandoned:**
+> 1. **The SpecStory-removal decision didn't hold up.** A `/research` pass on SpecStory
+>    utilization (2026-11-06) found SpecStory's `.specstory/history/` is the *only* surviving
+>    record of session content past Claude Code's own transcript retention window — native JSONL
+>    for sessions more than a few weeks old is already gone on this machine. This change's premise
+>    ("first-party JSONL transcripts become the sole input") assumed that archive wasn't needed;
+>    it is. SpecStory is being kept, not removed.
+> 2. **A simpler crash-recovery design was found instead of the polling worker.** The abandoned
+>    `autonomous-save-session` branch's `SessionStart` crash-recovery *detection* logic (find the
+>    latest prior transcript, compare against a last-saved marker) turned out to be sound — only
+>    its `spawn_headless()` call was the problem. Feeding the same catch-up instruction back as
+>    plain hook *stdout* (a system-reminder for the already-starting session to act on inline, the
+>    same mechanism the existing SessionStart reminder already uses) removes the recursion by
+>    construction without needing a separate machine-level launchd worker, a project registry, or
+>    polling.
+>
+> **What carries forward into the new change (`specstory-cleanup-and-crash-recovery`):** the
+> `sync-memory` removal (this change's task 11.2) — confirmed independently as the right call
+> (the distilled note it produces was never read, and isn't the note `/save-session` actually
+> maintains) — plus a from-scratch, hook-based (not polling-based) crash-recovery design, plus a
+> SpecStory duplicate-history cleanup this change never anticipated.
+
 ## Why
 
 `/save-session` only runs when the user remembers to type it, and a session ending by crash or
