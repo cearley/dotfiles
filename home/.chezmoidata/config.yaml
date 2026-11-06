@@ -25,11 +25,11 @@
 #                     chezmoi source directory and the machine's brewfile is
 #                     symlinked to $HOME/Brewfile during setup.
 #
-# keepassxc_entries - Machine-specific KeePassXC entry mappings.
-#                     Maps logical names (e.g., "ssh") to actual KeePassXC
-#                     entry names. (This is useful when different machines
-#                     share the same keepassxc database but have different
-#                     entries for the same purpose.)
+# secret_entries    - Machine-specific secret entry mappings.
+#                     Maps logical names (e.g., "ssh") to the actual secret
+#                     entry name for that secret on this machine. (This is
+#                     useful when different machines share the same secret
+#                     backend but have different entries for the same purpose.)
 #
 # claude_envs       - List of Claude environment directory paths for this machine.
 #                     Each entry MUST match the pattern ~/.claude-<name> (e.g., "~/.claude-work").
@@ -60,7 +60,7 @@ machines:
       - '~/.claude-bedrock'
       - '~/.claude-personal'
       - '~/.claude-work'
-    keepassxc_entries:
+    secret_entries:
       ssh: SSH (MacBook Pro)
     syncthing_folders: syncthing_shared_folders
   Mac Studio:
@@ -69,7 +69,7 @@ machines:
     claude_envs:
       - '~/.claude-personal'
       - '~/.claude-work'
-    keepassxc_entries:
+    secret_entries:
       ssh: SSH (Mac Studio)
     # Same 5 folders as MacBook Pro — see the `syncthing_shared_folders` key in
     # `.chezmoidata/syncthing.yaml`.
@@ -82,5 +82,5 @@ machines:
         keepassxc_entry: "Cloudflare Tunnel (ow-dev)"
   Mac mini:
     brewfile: mac-mini-brewfile
-    keepassxc_entries:
+    secret_entries:
       ssh: SSH (Mac mini)

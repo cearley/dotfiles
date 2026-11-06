@@ -42,7 +42,7 @@ This automatically installs all dependencies (chezmoi, Git, Homebrew, KeePassXC,
 ### Machine Configuration System
 - **Pattern-based detection** - Automatically detects machine type via `config.yaml`
 - **Reusable templates** - Cross-platform `machine-name` and `machine-config` templates
-- **Dot-notation support** - Access nested settings (e.g., `keepassxc_entries.ssh`)
+- **Dot-notation support** - Access nested settings (e.g., `secret_entries.ssh`)
 - **Extensible design** - Add new machine-specific properties without template changes
 
 ### Script Execution Framework

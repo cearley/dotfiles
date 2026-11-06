@@ -40,7 +40,7 @@ Used to force `chezmoi apply` to rerun a script on a schedule even when source f
 **Access machine config:**
 ```go-template
 {{- $brewfilePath := includeTemplate "machine-brewfile-path" . }}
-{{- $sshEntry := includeTemplate "machine-config" (merge (dict "setting" "keepassxc_entries.ssh") .) }}
+{{- $sshEntry := includeTemplate "machine-config" (merge (dict "setting" "secret_entries.ssh") .) }}
 ```
 
 See `openspec/specs/machine-config/` for complete machine configuration system documentation.

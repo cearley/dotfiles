@@ -1,7 +1,7 @@
 {{- if and (eq .chezmoi.os "darwin") .has_keepassxc_db -}}
 {{- $settings := includeTemplate "machine-settings" . | fromJson -}}
-{{- $keepassxcEntries := default dict (index $settings "keepassxc_entries") -}}
-{{- $sshEntryName := default "" (index $keepassxcEntries "ssh") -}}
+{{- $secretEntries := default dict (index $settings "secret_entries") -}}
+{{- $sshEntryName := default "" (index $secretEntries "ssh") -}}
 {{- $machineName := includeTemplate "machine-name" . | trim -}}
 {{- $sshPassphrase := "" -}}
 {{- if $sshEntryName -}}

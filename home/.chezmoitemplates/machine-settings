@@ -6,8 +6,8 @@
      Example (use index/default for safe property access):
        {{- $settings := includeTemplate "machine-settings" . | fromJson -}}
        {{- $brewfile := index $settings "brewfile" -}}
-       {{- $keepassxcEntries := default dict (index $settings "keepassxc_entries") -}}
-       {{- $sshEntry := index $keepassxcEntries "ssh" -}}
+       {{- $secretEntries := default dict (index $settings "secret_entries") -}}
+       {{- $sshEntry := index $secretEntries "ssh" -}}
        {{- $machineKey := index $settings "_machine_key" -}}
 
      Returns empty dict {} if no machine matches.

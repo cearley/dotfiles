@@ -8,7 +8,7 @@
      Machine data lives under .machines in config.yaml. Patterns are matched
      by substring (contains), so "MacBook Pro" matches "Craig's MacBook Pro".
 
-     Supports dot-notation for nested paths (e.g., "keepassxc_entries.ssh")
+     Supports dot-notation for nested paths (e.g., "secret_entries.ssh")
 
      Parameters (pass as dict merged with root context):
      - setting (optional): Name of the setting to retrieve, supports dot-notation for nested values
@@ -18,7 +18,7 @@
        Get brewfile:           {{ includeTemplate "machine-config" (merge (dict "setting" "brewfile") .) }}
        Get pattern key:        {{ includeTemplate "machine-config" (merge (dict "return_key" true) .) }}
        Get ssh_key_id:         {{ includeTemplate "machine-config" (merge (dict "setting" "ssh_key_id") .) }}
-       Get nested SSH entry:   {{ includeTemplate "machine-config" (merge (dict "setting" "keepassxc_entries.ssh") .) }}
+       Get nested SSH entry:   {{ includeTemplate "machine-config" (merge (dict "setting" "secret_entries.ssh") .) }}
 
      Returns:
      - The requested setting value, the matched pattern key name, or empty string if not found
