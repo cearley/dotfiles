@@ -9,6 +9,7 @@ __pycache__/
 .claude/*
 !.claude/commands/
 !.claude/hooks/
+!.claude/scripts/
 !.claude/skills/
 !.claude/agents/
 !.claude/rules/
