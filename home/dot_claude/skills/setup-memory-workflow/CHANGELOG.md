@@ -4,6 +4,34 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v17 (2026-11-07)
+Two independent additions, both responding to the same root cause: the `SessionStart`
+reminder and `drift-warn` nudge were both purely instructional/mechanical with no visibility
+into the status note's actual content or size, so a bloated note or a stale Open list could
+sit unnoticed between sessions with nothing surfacing it.
+
+Adds a new `extract_open_excerpt()` function plus `OPEN_EXCERPT_MAX_LINES=15` constant: a
+cheap, best-effort local read of the current-status note's `## Open` section, truncated to 15
+lines with a "N more open items" trailer when longer. `hook-message.txt.template` gains a new
+`__OPEN_EXCERPT__` placeholder, filled by `render()` with this excerpt (or left empty,
+rendering byte-identical to the no-excerpt message, on any missing file/section/read
+failure) — so the `SessionStart` reminder now surfaces a size-bounded slice of open items
+directly, rather than relying entirely on the model's own `search_notes`/`recent_activity`
+retrieval judgment.
+
+`cmd_drift_warn()` gains a second, independent signal alongside the existing save-session
+version-drift line: it now also checks the current-status note itself for bloat, reusing the
+same three thresholds `save-session-maintenance`'s own triage already documents (total size
+≥8,000 chars, ≥200 lines, or any single line ≥800 chars) and prints
+`[setup-memory-workflow] current-status note looks oversized — run /save-session-maintenance to triage it.`
+when any is crossed. Closes the gap where drift and note-bloat could otherwise sit unnoticed
+indefinitely between manual `/save-session-maintenance` runs, with nothing nudging a session
+to check.
+
+`SMW_VERSION` moves to 17 for both changes together — the rendered `hook-message.txt.template`
+content changed (new placeholder), and `check-drift.sh` itself gained the second drift-warn
+signal. No migration needed: this is additive/content-only, same as v13's staleness nudge.
+
 ## v16 (2026-11-06)
 Retires `sync-memory` (the skill + script that distilled SpecStory session logs into a
 separate basic-memory note via `--standalone` or cursor-tracked default mode) as a

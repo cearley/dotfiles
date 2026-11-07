@@ -53,9 +53,10 @@
 
 set -euo pipefail
 
-SMW_VERSION=16
+SMW_VERSION=17
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS_DIR="$SKILL_DIR/assets"
+OPEN_EXCERPT_MAX_LINES=15
 
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$PROJECT_ROOT"
@@ -78,8 +79,99 @@ resolve_project() {
 }
 PROJECT=$(resolve_project)
 
+# Resolves the on-disk current-status note path for $PROJECT by globbing the
+# status/ directory, since the literal filename is whatever Title Case the
+# note's title happened to be when created (e.g. "Chezmoi Current Status.md",
+# "herdr Current Status.md") — basic-memory's MCP permalink convention
+# ($PROJECT/status/$PROJECT-current-status) resolves server-side and gives no
+# guarantee about the on-disk filename, which this script has no MCP access
+# to resolve any other way. Excludes "...Archive...md" siblings. Degrades to
+# empty (no error) when the status directory is missing or nothing matches,
+# consistent with every other fallback in this script.
+resolve_status_note_path() {
+  local status_dir="$HOME/.local/share/basic-memory/$PROJECT/status"
+  [ -d "$status_dir" ] || return 0
+  find "$status_dir" -maxdepth 1 -iname '*current*status*.md' ! -iname '*archive*' 2>/dev/null | head -n1
+}
+
+# Bounded, best-effort excerpt of the current-status note's Open section, for
+# baking into the SessionStart reminder at render time (see canonical_hook_cmd()
+# below). A cheap local file read, not an MCP call — never fails loudly: any
+# missing file, unreadable file, or absent "## Open" section just means no
+# excerpt (empty stdout), so callers always get a usable render() either way.
+extract_open_excerpt() {
+  local note
+  note=$(resolve_status_note_path)
+  [ -n "$note" ] && [ -r "$note" ] || return 0
+
+  local lines
+  lines=$(awk '
+    /^## Open[[:space:]]*$/ { found=1; next }
+    found && /^##/ { exit }
+    found && NF { print }
+  ' "$note" 2>/dev/null) || true
+  [ -n "$lines" ] || return 0
+
+  local total_lines
+  total_lines=$(printf '%s\n' "$lines" | wc -l | tr -d ' ')
+  if [ "$total_lines" -gt "$OPEN_EXCERPT_MAX_LINES" ]; then
+    # Real Open-section bullets routinely wrap across indented continuation
+    # lines, so a plain physical-line cut can land mid-entry. Prefer cutting
+    # at the end of the last top-level bullet ("- ..." at column 0) that
+    # fully fits within the cap, and report remaining *bullets*, not
+    # remaining physical lines. Falls back to the old physical-line cut when
+    # the content has no detectable bullet markers, or when even the first
+    # bullet alone overruns the cap (nothing to cut at).
+    local bullet_starts=()
+    while IFS= read -r ln; do
+      bullet_starts+=("$ln")
+    done < <(printf '%s\n' "$lines" | grep -n '^- ' | cut -d: -f1 || true)
+
+    local cut_line=0 i boundary
+    for ((i = 1; i < ${#bullet_starts[@]}; i++)); do
+      boundary=$((bullet_starts[i] - 1))
+      [ "$boundary" -le "$OPEN_EXCERPT_MAX_LINES" ] && cut_line=$boundary
+    done
+
+    local shown remaining
+    if [ "$cut_line" -gt 0 ]; then
+      shown=$(printf '%s\n' "$lines" | head -n "$cut_line")
+      remaining=0
+      for ln in "${bullet_starts[@]}"; do
+        [ "$ln" -gt "$cut_line" ] && remaining=$((remaining + 1))
+      done
+    else
+      shown=$(printf '%s\n' "$lines" | head -n "$OPEN_EXCERPT_MAX_LINES")
+      remaining=$((total_lines - OPEN_EXCERPT_MAX_LINES))
+    fi
+    printf '%s\n... (%d more open items — see the status note)\n' "$shown" "$remaining"
+  else
+    printf '%s\n' "$lines"
+  fi
+}
+
+# Bash-native substring substitution, not sed: __OPEN_EXCERPT__ can expand to
+# multi-line content, and sed's s///g has no clean way to splice a replacement
+# string containing literal newlines.
+#
+# __OPEN_EXCERPT__ sits at the very end of hook-message.txt.template's single
+# line, with no template-literal newline of its own around it — when
+# extract_open_excerpt() has nothing, the substitution is empty and the
+# rendered message is byte-identical to the no-excerpt message. When it has
+# something, the leading "\n" below is what makes the excerpt its own line(s)
+# rather than text glued onto the end of the reminder sentence.
 render() {
-  sed -e "s/__PROJECT__/$PROJECT/g" -e "s/__SMW_VERSION__/$SMW_VERSION/g" "$1"
+  local content open_excerpt open_excerpt_block
+  content=$(cat "$1")
+  open_excerpt=$(extract_open_excerpt)
+  open_excerpt_block=""
+  if [ -n "$open_excerpt" ]; then
+    open_excerpt_block=$(printf '\nOpen items from the status note (may be stale — call search_notes/recent_activity for the latest):\n%s' "$open_excerpt")
+  fi
+  content=${content//__PROJECT__/$PROJECT}
+  content=${content//__SMW_VERSION__/$SMW_VERSION}
+  content=${content//__OPEN_EXCERPT__/$open_excerpt_block}
+  printf '%s\n' "$content"
 }
 
 # The canonical SessionStart hook command: the rendered reminder message,
@@ -88,9 +180,15 @@ render() {
 # `|| true` and stderr redirect mean a missing/broken check-drift.sh on some
 # future machine can never break the primary reminder.
 canonical_hook_cmd() {
-  local canonical_msg
+  local canonical_msg canonical_msg_escaped
   canonical_msg=$(render "$ASSETS_DIR/hook-message.txt.template")
-  echo "echo '${canonical_msg}'; \"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh\" drift-warn 2>/dev/null || true"
+  # canonical_msg can contain free text from the status note's Open section
+  # (apostrophes are routine — "doesn't", "machine's", ...), and it's spliced
+  # into a single-quoted `echo '...'` below. Escape each embedded single
+  # quote via the standard POSIX technique (close-quote, escaped literal
+  # quote, reopen-quote) so it can't terminate that string early.
+  canonical_msg_escaped=${canonical_msg//\'/\'\\\'\'}
+  echo "echo '${canonical_msg_escaped}'; \"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh\" drift-warn 2>/dev/null || true"
 }
 
 # The canonical PreToolUse write-guard hook command: always the same global,
@@ -517,12 +615,30 @@ cmd_apply() {
 
 cmd_drift_warn() {
   local file=".claude/skills/save-session/SKILL.md" installed_version
-  [ -f "$file" ] || return 0
-  installed_version=$(grep -o 'setup-memory-workflow-version:[0-9]*' "$file" 2>/dev/null | grep -o '[0-9]*$' || true)
-  [ -n "$installed_version" ] || return 0
-  if [ "$installed_version" -lt "$SMW_VERSION" ] 2>/dev/null; then
-    echo "[setup-memory-workflow] save-session skill is v$installed_version, latest is v$SMW_VERSION — run the setup-memory-workflow skill (or check-drift.sh update) to refresh it."
+  if [ -f "$file" ]; then
+    installed_version=$(grep -o 'setup-memory-workflow-version:[0-9]*' "$file" 2>/dev/null | grep -o '[0-9]*$' || true)
+    if [ -n "$installed_version" ] && [ "$installed_version" -lt "$SMW_VERSION" ] 2>/dev/null; then
+      echo "[setup-memory-workflow] save-session skill is v$installed_version, latest is v$SMW_VERSION — run the setup-memory-workflow skill (or check-drift.sh update) to refresh it."
+    fi
   fi
+
+  # Independent signal: current-status note bloat (same thresholds as
+  # save-session-maintenance's own triage, reusing the already-resolved
+  # $PROJECT — see resolve_project() above, not re-derived here).
+  local status_note
+  status_note=$(resolve_status_note_path)
+  if [ -n "$status_note" ] && [ -f "$status_note" ]; then
+    local total_chars total_lines max_line
+    total_chars=$(wc -c <"$status_note" 2>/dev/null | tr -d ' ')
+    total_lines=$(wc -l <"$status_note" 2>/dev/null | tr -d ' ')
+    max_line=$(awk '{ print length }' "$status_note" 2>/dev/null | sort -rn | head -n1)
+    [ -n "$max_line" ] || max_line=0
+    if [ "${total_chars:-0}" -ge 8000 ] || [ "${total_lines:-0}" -ge 200 ] || [ "${max_line:-0}" -ge 800 ] 2>/dev/null; then
+      echo "[setup-memory-workflow] current-status note looks oversized — run /save-session-maintenance to triage it."
+    fi
+  fi
+
+  return 0
 }
 
 case "${1:-}" in

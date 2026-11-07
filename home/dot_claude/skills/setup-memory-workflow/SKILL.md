@@ -88,9 +88,11 @@ Remind the user that:
 
 The canonical save-session and save-session-maintenance skill bodies live in
 `assets/save-session-skill.md.template` and `assets/save-session-maintenance-skill.md.template`;
-the canonical SessionStart message lives in `assets/hook-message.txt.template`. All rendered pieces use `__PROJECT__` and
-`__SMW_VERSION__` placeholders substituted at render time via the shared
-`check_templated_file()`/`apply_templated_file()` helpers in `scripts/check-drift.sh`.
+the canonical SessionStart message lives in `assets/hook-message.txt.template`. All rendered pieces use `__PROJECT__`,
+`__SMW_VERSION__`, and `__OPEN_EXCERPT__` placeholders, substituted identically — via bash-native
+`${content//pattern/replacement}` expansion, not `sed` — inside the single `render()` function in
+`scripts/check-drift.sh`; `apply_templated_file()` calls `render()` and writes the result to disk
+when repairing drift.
 Whenever you edit a canonical rendered asset, bump the `SMW_VERSION` constant at
 the top of `scripts/check-drift.sh` so existing installs get flagged as drifted on their
 next check.
