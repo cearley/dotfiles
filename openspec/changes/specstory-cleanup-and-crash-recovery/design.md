@@ -108,6 +108,34 @@ signal, or the crash-recovery hook would misfire on every trivial session.
   user's actual request.** Accepted deliberately — it's bounded (one prior transcript, one
   save-session pass) and paid for by the session's own already-budgeted usage, not a new cost
   center.
+- **[Risk] (2026-11-07) No liveness check: a session still genuinely running concurrently in the
+  same project directory can be misidentified as the "latest prior" session and incorrectly
+  flagged as crashed**, because the hook only compares *identity* (did the latest-by-mtime prior
+  transcript's session ever save), never *is that session still alive*. A real liveness check is
+  buildable — `$CLAUDE_PID` is confirmed exported to hook subprocesses and could back a
+  `kill -0`-based check against a small session_id→PID registry — but was deliberately not built:
+  it only matters when two sessions run in the exact same project directory at the exact same
+  time (not just concurrently anywhere), and the failure mode is a spurious, harmless catch-up
+  instruction (the next session re-reads a transcript that turns out to have nothing new to add),
+  never data loss. Accepted as a known limitation, same posture as the double-crash gap above.
+
+## Post-Implementation Finding (2026-11-06)
+
+Task 1.3's real-world run against this repo's own `.specstory/history/` (173 sessions, 41 UUID
+groups with 2+ files) found only **~382KB** safely reclaimable (5 pairs), not the ~9.7MB the
+`/research` pass estimated — contradicting that pass's claim of having "confirmed by diffing
+pairs" that the common case is a clean byte-prefix relationship. Root cause: SpecStory's own
+`# <timestamp>` header line reflects the time of *that sync*, not session start, so it changes on
+every resync — breaking a literal whole-file byte-prefix match even for genuine append-only
+growth. Stripping the header and re-comparing recovers only 10 more pairs, all degenerate
+empty-session stubs (~1.6KB total, not worth a tool change). The remaining 26 of 36 "conflict"
+pairs in this repo have **genuinely reordered message content** between syncs (verified by direct
+diff — e.g. `<local-command-stdout>` and `<local-command-caveat>` swap relative order), not pure
+append growth. The byte-prefix safety check (Decision 2) is implemented correctly and is not a
+defect; the `/research` session note's duplicate-count/size estimate for this repo was simply
+too optimistic, extrapolated from a small sample. The dedupe tool is still worth keeping
+machine-wide, since other projects' backlogs (observed: ~20.5MB safely reclaimable across all of
+`$HOME`) are real even though this repo's own backlog is small.
 
 ## Migration Plan
 
@@ -117,8 +145,51 @@ signal, or the crash-recovery hook would misfire on every trivial session.
    for new duplicates before considering the fix validated.
 3. Ship the `sync-memory` removal and `crash-recovery-hook` addition together (both are
    `setup-memory-workflow` piece-registry changes, naturally bundled in one `SMW_VERSION` bump).
-4. Run `chezmoi apply` on the Mac Studio; re-run `specstory-dedupe-history --apply` there for its
-   own backlog.
+4. **Mac Studio checklist (2026-11-07)** — `chezmoi apply`/`update` alone does not fully roll this
+   change out; everything below was found by actually exercising each piece on this Mac during
+   implementation, not assumed. Do these in order:
+   1. `chezmoi update` (or `git pull` + `chezmoi apply -v`) to pull this change and deploy it.
+      Expect no destructive prompts; a `.zshrc has changed since chezmoi last wrote it?`-style
+      warning (if any) is non-fatal and was already seen harmlessly on this Mac.
+   2. **Restart every already-open `claude` pane/session on the Mac Studio** (exit and relaunch).
+      An already-running session — especially one launched through `hcom`, which snapshots a
+      merged settings file per launch (`~/.hcom/integrations/claude/<hash>/settings.json`) — will
+      keep using its pre-apply hook config until relaunched fresh. This was the actual root cause
+      of two apparently-failed verification attempts on this Mac; a fresh pane picked up the fix
+      immediately both times.
+   3. For **every project on the Mac Studio that has `setup-memory-workflow` installed**
+      (anywhere with a `.claude/skills/save-session/` directory), run
+      `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh
+      update` inside that project. `chezmoi apply` only refreshes the *global* canonical
+      templates/scripts under `~/.claude/skills/setup-memory-workflow/` — it does not touch any
+      individual project's already-installed copy. This per-project `update` is what actually:
+      - fires `migrate_sync_memory()`, removing that project's installed `.claude/skills/sync-memory/`
+        and `.specstory/.sync-memory-state.json` if present (silent no-op if already clean)
+      - creates the new `crash-recovery-hook` `SessionStart` entry in that project's
+        `.claude/settings.local.json`, alongside the existing reminder entry (never replacing it)
+      - refreshes `save-session`'s installed `SKILL.md` to `SMW_VERSION 16` (the reordered
+        anchor-before-Step-0 fix, and the identity-based marker write)
+      This can be skipped for now and left to the existing `drift-warn` nag (the `SessionStart`
+      reminder hook already prints a one-line staleness warning once a project's installed
+      `save-session` version falls behind) — but don't assume it already happened just because
+      `chezmoi apply` ran.
+   4. Run `specstory-dedupe-history` (dry-run, no flags) from `$HOME` on the Mac Studio and
+      inspect the manifest before applying — this machine's backlog is independent of this one's
+      and was never touched by this Mac's cleanup. Then run `specstory-dedupe-history --apply`
+      for real once satisfied with the manifest.
+   5. Task 5.2: check whether
+      `~/.claude-personal/skills/setup-memory-workflow/scripts/session-start-maintenance-check.sh.template`
+      and `.../session-end-save-hook.sh.template` exist on the Mac Studio at all (they may be
+      specific to this Mac's abandoned `autonomous-save-session` branch history). If present,
+      delete them directly — **not** via an agent/subagent: the `claude-tooling-write-guard` hook
+      blocks a Claude Code session from writing/deleting inside a chezmoi-tracked skill directory
+      by design, even for a file (like these) that was never actually chezmoi-managed. This was
+      hit on this Mac and had to be done by hand for exactly that reason.
+   6. Optional sanity check, mirroring how this Mac's fix was verified: start a fresh session in
+      any project with the pieces installed, ask it "What system-reminder(s), if any, did you
+      receive at the start of this session?", and confirm the reminder text matches what's
+      expected (no stray crash-recovery catch-up unless a prior session on that Mac genuinely
+      never evaluated).
 5. Rollback, if needed: revert the `Stop`/`SessionStart` hook command strings to their prior
    values (recoverable from git history) and restore the deleted `sync-memory` templates from git
    history — no destructive migration step here has no revert path.

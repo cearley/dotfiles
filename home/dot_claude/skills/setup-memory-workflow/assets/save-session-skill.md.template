@@ -4,32 +4,15 @@ description: Save today's session to basic-memory — fast, append-only (session
 ---
 <!-- setup-memory-workflow-version:__SMW_VERSION__ -->
 
-## Step 0 — Decide whether to run this automatically, without asking
-
-Before invoking this skill on your own initiative (not an explicit `/save-session` from the
-user), apply a cheap mechanical pre-filter first, then judgment:
-
-1. **Mechanical pre-filter.** Has this session made a non-trivial number of tool calls, or
-   spanned more than a couple of exchanges? A single trivial lookup (e.g. one factual
-   question, one tool call, done) fails this filter — stop here, nothing to save. This filter
-   is deliberately **not** based on whether any file was edited — a purely exploratory
-   session (research, design discussion, `/opsx:explore`) can pass it and be entirely
-   save-worthy despite touching no files, while a session that only fixes one typo touches a
-   file but may not be.
-2. **Judgment.** If the pre-filter passes, decide whether the session actually produced
-   something worth persisting: a decision, a resolved open item, a finding, a convention
-   established or corrected. If yes, run the steps below directly — do **not** ask the user
-   "should I save this session?" and wait for a yes. If no, stop here.
-
-When invoked explicitly (`/save-session`, or the user says they're done), skip straight to
-Step 1 — this gate is only for the model's own unprompted initiative.
-
 ## Anchor to the project root
 
-Before touching any `.claude/...` path below, confirm you're actually at this project's
-root. Claude Code's own working directory can drift over a long session — an earlier `cd`
-for an unrelated task, or entering a git worktree — and every relative path in this skill
-assumes the project root, not wherever the shell currently happens to be:
+Before touching any `.claude/...` path below — including Step 0's own marker touch —
+confirm you're actually at this project's root. Claude Code's own working directory can
+drift over a long session — an earlier `cd` for an unrelated task, or entering a git
+worktree — and every relative path in this skill assumes the project root, not wherever
+the shell currently happens to be. This runs first, before Step 0, so every `.claude/...`
+path used anywhere below it — including the crash-recovery marker — is always anchored
+correctly, regardless of which branch Step 0 takes:
 
 ```bash
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
@@ -50,6 +33,34 @@ project, and the mistake can go unnoticed because the call still succeeds. After
 write call (edit_note, write_note), check the result's own `project` field matches
 `__PROJECT__` before issuing the next tool call — catch a misroute immediately, not on a
 later re-read.
+
+## Step 0 — Decide whether to run this automatically, without asking
+
+Before invoking this skill on your own initiative (not an explicit `/save-session` from the
+user), apply a cheap mechanical pre-filter first, then judgment:
+
+1. **Mechanical pre-filter.** Has this session made a non-trivial number of tool calls, or
+   spanned more than a couple of exchanges? A single trivial lookup (e.g. one factual
+   question, one tool call, done) fails this filter — stop here, nothing to save (but first
+   record this session as evaluated, so the crash-recovery hook knows this session was evaluated):
+   ```bash
+   echo "$CLAUDE_CODE_SESSION_ID" > .claude/.last-saved-session
+   ```
+   This filter is deliberately **not** based on whether any file was edited — a purely
+   exploratory session (research, design discussion, `/opsx:explore`) can pass it and be
+   entirely save-worthy despite touching no files, while a session that only fixes one typo
+   touches a file but may not be.
+2. **Judgment.** If the pre-filter passes, decide whether the session actually produced
+   something worth persisting: a decision, a resolved open item, a finding, a convention
+   established or corrected. If yes, run the steps below directly — do **not** ask the user
+   "should I save this session?" and wait for a yes. If no, stop here (but first record this
+   session as evaluated, same as above):
+   ```bash
+   echo "$CLAUDE_CODE_SESSION_ID" > .claude/.last-saved-session
+   ```
+
+When invoked explicitly (`/save-session`, or the user says they're done), skip straight to
+Step 1 — this gate is only for the model's own unprompted initiative.
 
 ## Step 1 — Read the current status note, and resolve the active session-log note from it
 
@@ -111,6 +122,11 @@ don't check the note's size or restructure it here; that requires deliberate jud
 single append shouldn't attempt.
 
 ## On success
+
+Record this session as evaluated so the crash-recovery hook knows this session was saved:
+```bash
+echo "$CLAUDE_CODE_SESSION_ID" > .claude/.last-saved-session
+```
 
 Confirm both note titles and permalinks to the user.
 

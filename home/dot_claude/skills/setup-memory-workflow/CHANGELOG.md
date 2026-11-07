@@ -4,6 +4,26 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v16 (2026-11-06)
+Retires `sync-memory` (the skill + script that distilled SpecStory session logs into a
+separate basic-memory note via `--standalone` or cursor-tracked default mode) as a
+capability entirely. Confirmed dormant for 3 months, it wrote to a note nobody read —
+separate from the one `save-session` actually maintains — and never solved the real
+"missed save" problem it was meant to mitigate; that's now addressed directly by the new
+`crash-recovery-hook` piece (SessionStart-based, no external API calls) added separately.
+`SMW_VERSION` moves to 16 since canonical content changed (one fewer rendered piece).
+
+`check-drift.sh` no longer checks for, creates, repairs, or accepts `apply` for
+`sync-memory-skill`/`sync-memory-script` in `cmd_check`/`cmd_update`/`cmd_apply`.
+`assets/sync-memory-skill.md.template` and `scripts/executable_sync-memory.py.template`
+are deleted outright.
+
+For already-installed projects, no manual step is needed: a new `migrate_sync_memory()`
+function in `migrations.sh`, wired in unconditionally alongside the existing
+`migrate_hook_config()` call, removes `.claude/skills/sync-memory/` and
+`.specstory/.sync-memory-state.json` automatically the next time `check-drift.sh`
+runs `check`, `update`, or `apply` in that project.
+
 ## v15 (2026-11-02)
 `save-session`'s Step 1 (now Step 2) used to find "the most recent session note" with a
 fuzzy `search_notes` query. On a real project this just failed: several stale

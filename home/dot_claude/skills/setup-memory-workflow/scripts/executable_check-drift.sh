@@ -20,7 +20,7 @@
 #     means "this should already look like canonical." Never touches a piece
 #     reporting NAME-MISMATCH, even if that piece is also version-stale.
 #
-#   check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|write-guard-hook|sync-memory-skill|sync-memory-script>
+#   check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|write-guard-hook|crash-recovery-hook>
 #     Overwrites the named piece with the canonical version, regardless of
 #     its current status. This is the only path that repairs NAME-MISMATCH —
 #     only run it after the user has confirmed the identity change shown by
@@ -43,17 +43,17 @@
 #      basic-memory identity needs to diverge from its directory name)
 #   2. basename of `git rev-parse --show-toplevel`
 #
-# Bump SMW_VERSION whenever any canonical asset changes — the three
-# __PROJECT__/__SMW_VERSION__-templated assets (assets/*.template) plus
-# scripts/executable_sync-memory.py.template — so existing installs get flagged as
-# drifted on their next check. When a change also leaves behind a legacy
+# Bump SMW_VERSION whenever any canonical asset changes — the two
+# __PROJECT__/__SMW_VERSION__-templated assets (assets/*.template) — so
+# existing installs get flagged as drifted on their next check. When a
+# change also leaves behind a legacy
 # artifact from a prior version (not just new canonical content), add a
 # migrate_<piece> cleanup function to migrations.sh and a CHANGELOG.md
 # entry — see migrations.sh's header for the contract.
 
 set -euo pipefail
 
-SMW_VERSION=15
+SMW_VERSION=16
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS_DIR="$SKILL_DIR/assets"
 
@@ -101,6 +101,14 @@ canonical_write_guard_cmd() {
   echo "\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/skills/setup-memory-workflow/scripts/basic-memory-write-guard.sh"
 }
 
+# The canonical crash-recovery-hook SessionStart command: same shape as
+# canonical_write_guard_cmd() above — a fixed, non-templated global script path, no
+# $PROJECT substitution, since the script only reads session_id/transcript_path/cwd
+# from hook stdin and compares local file mtimes.
+canonical_crash_recovery_cmd() {
+  echo "\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}/skills/setup-memory-workflow/scripts/crash-recovery-hook.sh"
+}
+
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/migrations.sh
 source "$SKILL_DIR/scripts/migrations.sh"
 
@@ -108,8 +116,9 @@ source "$SKILL_DIR/scripts/migrations.sh"
 # before any check/update/apply logic runs — see migrations.sh's header for the
 # contract.
 migrate_hook_config
+migrate_sync_memory
 
-# ---- templated-file pieces (save-session skill, sync-memory skill+script) ----
+# ---- templated-file pieces (save-session skill) ----
 
 # Returns exactly one of CREATED, UP-TO-DATE, DRIFT, NAME-MISMATCH on stdout.
 # Performs the CREATE side effect directly when the file is missing (always
@@ -220,16 +229,6 @@ cmd_check() {
   echo "== save-session-maintenance skill =="
   report_templated_piece ".claude/skills/save-session-maintenance/SKILL.md" "$ASSETS_DIR/save-session-maintenance-skill.md.template"
 
-  mkdir -p .claude/skills/sync-memory/scripts
-
-  echo
-  echo "== sync-memory skill =="
-  report_templated_piece ".claude/skills/sync-memory/SKILL.md" "$ASSETS_DIR/sync-memory-skill.md.template"
-
-  echo
-  echo "== sync-memory script =="
-  report_templated_piece ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/executable_sync-memory.py.template" yes
-
   echo
   echo "== .mcp.json =="
   local mcp_global_skip=no
@@ -304,6 +303,26 @@ cmd_check() {
   fi
 
   echo
+  echo "== crash-recovery hook =="
+  local existing_crash_cmd canonical_crash_cmd
+  existing_crash_cmd=$(jq -r '[.hooks.SessionStart[]?.hooks[]?.command // empty] | map(select(contains("crash-recovery-hook.sh")))[0] // empty' .claude/settings.local.json)
+  canonical_crash_cmd=$(canonical_crash_recovery_cmd)
+  if [ -z "$existing_crash_cmd" ]; then
+    jq --arg cmd "$canonical_crash_cmd" \
+      '.hooks.SessionStart += [{"matcher": "", "hooks": [{"type": "command", "command": $cmd}]}]' \
+      .claude/settings.local.json > .claude/settings.local.json.tmp \
+      && mv .claude/settings.local.json.tmp .claude/settings.local.json
+    echo "CREATED: crash-recovery hook in .claude/settings.local.json"
+  elif [ "$existing_crash_cmd" = "$canonical_crash_cmd" ]; then
+    echo "UP-TO-DATE: crash-recovery hook"
+  else
+    echo "DRIFT: crash-recovery hook"
+    echo "  fix with: check-drift.sh update"
+    echo "  current:   $existing_crash_cmd"
+    echo "  canonical: $canonical_crash_cmd"
+  fi
+
+  echo
   echo "== verification =="
   if [ "$mcp_global_skip" = "yes" ]; then
     echo "SKIP: .mcp.json (basic-memory registered globally, see above)"
@@ -314,7 +333,7 @@ cmd_check() {
 }
 
 cmd_update() {
-  mkdir -p .claude/skills/save-session .claude/skills/save-session-maintenance .claude/skills/sync-memory/scripts
+  mkdir -p .claude/skills/save-session .claude/skills/save-session-maintenance
 
   echo "== save-session skill =="
   update_templated_piece "save-session-skill" ".claude/skills/save-session/SKILL.md" "$ASSETS_DIR/save-session-skill.md.template"
@@ -322,14 +341,6 @@ cmd_update() {
   echo
   echo "== save-session-maintenance skill =="
   update_templated_piece "save-session-maintenance-skill" ".claude/skills/save-session-maintenance/SKILL.md" "$ASSETS_DIR/save-session-maintenance-skill.md.template"
-
-  echo
-  echo "== sync-memory skill =="
-  update_templated_piece "sync-memory-skill" ".claude/skills/sync-memory/SKILL.md" "$ASSETS_DIR/sync-memory-skill.md.template"
-
-  echo
-  echo "== sync-memory script =="
-  update_templated_piece "sync-memory-script" ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/executable_sync-memory.py.template" yes
 
   echo
   echo "== .mcp.json =="
@@ -401,6 +412,29 @@ cmd_update() {
       && mv .claude/settings.local.json.tmp .claude/settings.local.json
     echo "APPLIED: write-guard hook in .claude/settings.local.json"
   fi
+
+  echo
+  echo "== crash-recovery hook =="
+  local existing_crash_cmd canonical_crash_cmd
+  existing_crash_cmd=$(jq -r '[.hooks.SessionStart[]?.hooks[]?.command // empty] | map(select(contains("crash-recovery-hook.sh")))[0] // empty' .claude/settings.local.json)
+  canonical_crash_cmd=$(canonical_crash_recovery_cmd)
+  if [ -z "$existing_crash_cmd" ]; then
+    jq --arg cmd "$canonical_crash_cmd" \
+      '.hooks.SessionStart += [{"matcher": "", "hooks": [{"type": "command", "command": $cmd}]}]' \
+      .claude/settings.local.json > .claude/settings.local.json.tmp \
+      && mv .claude/settings.local.json.tmp .claude/settings.local.json
+    echo "CREATED: crash-recovery hook in .claude/settings.local.json"
+  elif [ "$existing_crash_cmd" != "$canonical_crash_cmd" ]; then
+    jq --arg cmd "$canonical_crash_cmd" '
+      .hooks.SessionStart |= map(
+        .hooks |= map(
+          if (.command // "" | contains("crash-recovery-hook.sh")) then .command = $cmd else . end
+        )
+      )
+    ' .claude/settings.local.json > .claude/settings.local.json.tmp \
+      && mv .claude/settings.local.json.tmp .claude/settings.local.json
+    echo "APPLIED: crash-recovery hook in .claude/settings.local.json"
+  fi
 }
 
 cmd_apply() {
@@ -412,14 +446,6 @@ cmd_apply() {
     save-session-maintenance-skill)
       mkdir -p .claude/skills/save-session-maintenance
       apply_templated_file ".claude/skills/save-session-maintenance/SKILL.md" "$ASSETS_DIR/save-session-maintenance-skill.md.template"
-      ;;
-    sync-memory-skill)
-      mkdir -p .claude/skills/sync-memory
-      apply_templated_file ".claude/skills/sync-memory/SKILL.md" "$ASSETS_DIR/sync-memory-skill.md.template"
-      ;;
-    sync-memory-script)
-      mkdir -p .claude/skills/sync-memory/scripts
-      apply_templated_file ".claude/skills/sync-memory/scripts/sync-memory.py" "$SKILL_DIR/scripts/executable_sync-memory.py.template" yes
       ;;
     mcp-config)
       [ -f .mcp.json ] || echo '{}' > .mcp.json
@@ -461,8 +487,29 @@ cmd_apply() {
       fi
       echo "APPLIED: write-guard hook in .claude/settings.local.json"
       ;;
+    crash-recovery-hook)
+      local canonical_crash_cmd
+      canonical_crash_cmd=$(canonical_crash_recovery_cmd)
+      [ -f .claude/settings.local.json ] || echo '{}' > .claude/settings.local.json
+      if jq -e '[.hooks.SessionStart[]?.hooks[]?.command // empty] | map(select(contains("crash-recovery-hook.sh"))) | length > 0' .claude/settings.local.json >/dev/null 2>&1; then
+        jq --arg cmd "$canonical_crash_cmd" '
+          .hooks.SessionStart |= map(
+            .hooks |= map(
+              if (.command // "" | contains("crash-recovery-hook.sh")) then .command = $cmd else . end
+            )
+          )
+        ' .claude/settings.local.json > .claude/settings.local.json.tmp \
+          && mv .claude/settings.local.json.tmp .claude/settings.local.json
+      else
+        jq --arg cmd "$canonical_crash_cmd" \
+          '.hooks.SessionStart += [{"matcher": "", "hooks": [{"type": "command", "command": $cmd}]}]' \
+          .claude/settings.local.json > .claude/settings.local.json.tmp \
+          && mv .claude/settings.local.json.tmp .claude/settings.local.json
+      fi
+      echo "APPLIED: crash-recovery hook in .claude/settings.local.json"
+      ;;
     *)
-      echo "Unknown piece: $piece (expected save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|write-guard-hook|sync-memory-skill|sync-memory-script)" >&2
+      echo "Unknown piece: $piece (expected save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|write-guard-hook|crash-recovery-hook)" >&2
       exit 1
       ;;
   esac
@@ -481,7 +528,7 @@ cmd_drift_warn() {
 case "${1:-}" in
   check) cmd_check ;;
   update) cmd_update ;;
-  apply) cmd_apply "${2:?Usage: check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|write-guard-hook|sync-memory-skill|sync-memory-script>}" ;;
+  apply) cmd_apply "${2:?Usage: check-drift.sh apply <save-session-skill|save-session-maintenance-skill|mcp-config|hook-config|write-guard-hook|crash-recovery-hook>}" ;;
   drift-warn) cmd_drift_warn ;;
   *) echo "Usage: check-drift.sh <check|update|apply PIECE|drift-warn>" >&2; exit 1 ;;
 esac

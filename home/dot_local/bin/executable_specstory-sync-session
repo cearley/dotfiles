@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# specstory-sync-session — Stop hook. Scopes SpecStory's sync to just the session that
+# ended, via the documented `specstory sync <provider> -s/--session <id>` form, instead
+# of the undocumented backlog-wide `specstory sync --providers claude` the Stop hook used
+# before. Reads the hook's stdin JSON payload for session_id; a hook must never fail or
+# block the session's Stop event, so a missing session_id is a silent no-op, not an error.
+set -euo pipefail
+
+payload=$(cat)
+jq -e . >/dev/null 2>&1 <<<"$payload" || exit 0
+
+session_id=$(jq -r '.session_id // empty' <<<"$payload")
+
+if [[ -z "$session_id" ]]; then
+  exit 0
+fi
+
+specstory sync claude -s "$session_id" || true
+exit 0

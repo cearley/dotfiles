@@ -107,7 +107,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "specstory sync --providers claude"
+            "command": "specstory-sync-session"
           }
         ]
       }

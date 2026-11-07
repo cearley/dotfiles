@@ -61,8 +61,6 @@ repaired (user approved), or drift found and left as-is (user declined):
 ✓ .mcp.json — <configured | already registered globally | up to date | repaired | left as-is>
 ✓ .claude/settings.local.json — <SessionStart reminder added | up to date | repaired (was vN) | left as-is>
 ✓ .claude/settings.local.json (write-guard hook) — <created | up to date | repaired | left as-is>
-✓ .claude/skills/sync-memory/SKILL.md — <created | up to date | repaired (was vN) | left as-is (user declined update)>
-✓ .claude/skills/sync-memory/scripts/sync-memory.py — <created | up to date | drift found (left as-is unless user confirms overwrite)>
 ```
 
 Remind the user that:
@@ -82,9 +80,6 @@ Remind the user that:
   `bm_edit`'s checksum-based concurrency guard. It points the model at `bm_write`/`bm_edit`
   instead. The guard script itself is global (deployed once by chezmoi, not per-project); only
   the hook *entry* pointing at it lives in this project's `.claude/settings.local.json`.
-- `sync-memory` is still installed by the current script for compatibility, but is legacy. The
-  `memory-distiller` worker is the planned replacement for unattended transcript capture; this
-  setup skill does not schedule it yet.
 - Notes are stored outside the repo at `~/.local/share/basic-memory/<project-name>/`
 - This skill is safe to re-run any time to check the setup is still healthy — nothing gets
   overwritten without asking first
@@ -93,8 +88,7 @@ Remind the user that:
 
 The canonical save-session and save-session-maintenance skill bodies live in
 `assets/save-session-skill.md.template` and `assets/save-session-maintenance-skill.md.template`;
-the canonical SessionStart message lives in `assets/hook-message.txt.template`. The script also
-currently carries legacy `sync-memory` templates. All rendered pieces use `__PROJECT__` and
+the canonical SessionStart message lives in `assets/hook-message.txt.template`. All rendered pieces use `__PROJECT__` and
 `__SMW_VERSION__` placeholders substituted at render time via the shared
 `check_templated_file()`/`apply_templated_file()` helpers in `scripts/check-drift.sh`.
 Whenever you edit a canonical rendered asset, bump the `SMW_VERSION` constant at

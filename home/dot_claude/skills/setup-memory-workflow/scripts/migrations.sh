@@ -39,3 +39,21 @@ migrate_hook_config() {
     && mv .claude/settings.local.json.tmp .claude/settings.local.json
   echo "MIGRATED: removed legacy basic-memory hook from UserPromptSubmit"
 }
+
+# Removes the retired sync-memory skill directory and its cursor-state file,
+# left behind by versions prior to v16 (see CHANGELOG.md v16). sync-memory
+# itself is gone from canonical distribution; this only cleans up what an
+# earlier check-drift.sh run may have already installed.
+migrate_sync_memory() {
+  local removed=no
+  if [ -d .claude/skills/sync-memory ]; then
+    rm -rf .claude/skills/sync-memory
+    removed=yes
+  fi
+  if [ -f .specstory/.sync-memory-state.json ]; then
+    rm -f .specstory/.sync-memory-state.json
+    removed=yes
+  fi
+  [ "$removed" = yes ] && echo "MIGRATED: removed legacy sync-memory skill and state file"
+  return 0
+}

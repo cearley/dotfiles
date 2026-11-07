@@ -1,0 +1,10 @@
+# Files chezmoi should actively delete from the target that are no longer managed.
+# chezmoi does not auto-delete a deployed file just because its source entry was
+# removed — entries here are the explicit, declarative fix for that gap.
+
+# specstory-cleanup-and-crash-recovery (2026-11-07): sync-memory retired entirely.
+# These two global template files were deployed by earlier chezmoi applies and would
+# otherwise linger forever as orphaned, unreferenced leftovers on any machine that had
+# this skill installed before the removal.
+.claude/skills/setup-memory-workflow/scripts/sync-memory.py.template
+.claude/skills/setup-memory-workflow/assets/sync-memory-skill.md.template
