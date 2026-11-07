@@ -38,19 +38,19 @@ The `save-session` skill and the `SessionStart` hook configuration SHALL each be
 ## ADDED Requirements
 
 ### Requirement: Crash-recovery hook detects a session that ended without a completed save
-A `SessionStart` hook piece (`crash-recovery-hook`) SHALL detect, without spawning any new process, when the most recent prior session's transcript postdates the last time `save-session` completed its own evaluation for this project, and SHALL surface a catch-up instruction to the current session via hook stdout rather than performing the save itself.
+A `SessionStart` hook piece (`crash-recovery-hook`) SHALL detect, without spawning any new process, when the most recent prior session's transcript was not the session that last completed `save-session`'s own evaluation for this project (by session-ID identity, not transcript mtime — an earlier mtime-based design was proven unsound), and SHALL surface a catch-up instruction to the current session via hook stdout rather than performing the save itself.
 
 #### Scenario: Prior session has no completed save
-- **WHEN** a new session starts and the most recent prior session transcript (excluding the session now starting) has a modification time later than `.claude/.last-saved-session`'s modification time
+- **WHEN** a new session starts and the most recent prior session transcript's (excluding the session now starting) own session ID does not match the session ID recorded in `.claude/.last-saved-session`
 - **THEN** the hook prints a catch-up instruction to stdout naming that prior transcript's path, which Claude Code injects as a system-reminder into the current, already-running session — no `claude -p` or any other new process is spawned
 
 #### Scenario: Prior session was already saved
-- **WHEN** a new session starts and every prior session transcript predates `.claude/.last-saved-session`'s modification time
+- **WHEN** a new session starts and the most recent prior session transcript's session ID matches the session ID recorded in `.claude/.last-saved-session`
 - **THEN** the hook prints nothing and exits zero
 
 #### Scenario: save-session marks its own completion
 - **WHEN** `save-session` reaches either its "On success" step or its Step 0 no-op/skip outcome
-- **THEN** it touches `.claude/.last-saved-session`, so a normal completed evaluation (saved or legitimately skipped) always advances the signal the crash-recovery hook reads
+- **THEN** it writes its own `$CLAUDE_CODE_SESSION_ID` into `.claude/.last-saved-session` (content, not just mtime), so a normal completed evaluation (saved or legitimately skipped) always advances the identity the crash-recovery hook compares against
 
 #### Scenario: Currently-starting session is excluded
 - **WHEN** the crash-recovery hook scans prior transcripts in the same directory as the session now starting
