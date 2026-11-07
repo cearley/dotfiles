@@ -52,9 +52,9 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -n "$SESSION_ID" ]; then
     [ -n "$LATEST_PRIOR" ] && PRIOR_SESSION_ID=$(basename "$LATEST_PRIOR" .jsonl)
 
     if [ -n "$LATEST_PRIOR" ] && [ "$PRIOR_SESSION_ID" != "$MARKER_SESSION_ID" ]; then
-      echo "Run the save-session skill (Step 1 through Step 2, then \"On success\"/\"On failure\") for the Claude Code session whose full transcript is at: ${LATEST_PRIOR}
+      echo "SYSTEM REMINDER: A prior Claude Code session (${PRIOR_SESSION_ID}) ended without SessionEnd ever firing (killed, crashed, or terminal closed), so no in-session or SessionEnd save happened for it. Mention this to the user somewhere in your response rather than holding onto it silently, and ask whether they want you to run a crash-recovery catch-up pass for it now — do not run it without asking first.
 
-This is NOT your own conversation and you have no other context — read that transcript file first (JSONL, one message/tool-call per line) to reconstruct what was changed or decided, then follow save-session's steps exactly using that reconstructed content. This is a crash-recovery catch-up: session ${PRIOR_SESSION_ID} ended without SessionEnd ever firing (killed, crashed, or terminal closed), so no in-session or SessionEnd save happened for it. If nothing decision-worthy happened in that session, stop without saving and log a no-op instead of forcing an entry."
+If they agree: read ${LATEST_PRIOR} first (JSONL, one message/tool-call per line) — this is NOT your own conversation and you have no other context, so reconstruct what was changed or decided from that transcript before doing anything else — then follow the save-session skill's Step 1 through Step 2, then \"On success\"/\"On failure\", using that reconstructed content. If nothing decision-worthy happened in that session, stop without saving and log a no-op instead of forcing an entry."
     fi
   fi
 fi

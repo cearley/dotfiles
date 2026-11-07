@@ -112,7 +112,23 @@
       accepted):** still no liveness check — a session still genuinely running concurrently in
       the same project directory can be misidentified as crashed. See design.md's Risks section
       for why this was deliberately not built (same-project-same-instant concurrency only;
-      failure mode is a harmless spurious catch-up, not data loss).
+      failure mode is a harmless spurious catch-up, not data loss). **Fix applied (2026-11-07):**
+      a real-world sanity check on the Mac Studio found the catch-up instruction fired correctly
+      but the model never surfaced it unprompted — it silently sat on the instruction and kept
+      answering normal requests, only revealing it when explicitly asked what system-reminders it
+      received. The existing `SYSTEM REMINDER` project-context reminder earns its reliability from
+      explicit "before responding to the user... do not skip this" framing; the catch-up text
+      never had that. First pass over-corrected: forcing the model to interrupt the user's actual
+      first request every time, "even if that message is about something else entirely," turned
+      out risky in a way not apparent until a later finding (see 4.5's note on first-install
+      false positives) — with the marker freshly deployed across ~30 projects on two machines,
+      forced interruption would fire on essentially every project's next session, almost always a
+      false positive from the rollout itself, not a real crash. Settled on a middle ground: keep
+      "don't silently hold onto it, mention it somewhere in your response" and the explicit
+      ask-first gate, but drop the forced-interruption framing — surfacing stays required, timing
+      stays the model's judgment call. (No per-project redeployment needed either way — this
+      script is the single global static file per Decision 5, so editing it and running
+      `chezmoi apply` once per machine updates every project's hook immediately.)
 - [x] 4.2 Wire `crash-recovery-hook` into `check-drift.sh` as a new piece, mirroring the existing
       `write-guard-hook` piece exactly: a `== crash-recovery hook ==` section in `cmd_check`/
       `cmd_update`, a case in `cmd_apply`, and a second `SessionStart` hook entry (alongside the
@@ -153,7 +169,17 @@
       catch-up for session B. Both halves of the acceptance criterion confirmed on real,
       unmodified `SessionStart` hook behavior — note the criterion's literal "mtime" framing is
       superseded by the identity-based redesign noted in 4.1/4.3; what was actually verified is
-      the content-match mechanism that replaced it.
+      the content-match mechanism that replaced it. **Real-world confirmation (2026-11-07):** on
+      the Mac Studio, the hook fired for session `4d337cc5-...` in the chezmoi project, which had
+      genuinely saved correctly — via the *old* save-session template, 5 days before the marker
+      mechanism was deployed there at all. This is the known "first install sees pre-existing
+      history as a crash" limitation (see design.md's Risks section) occurring exactly as
+      predicted: a one-time, self-correcting false positive. The model's own behavior confirmed
+      the design worked as intended — it investigated, found nothing new to save, declined to
+      create a duplicate entry, and proactively flagged the apparent discrepancy rather than
+      silently acting on it. No code change needed for this; it motivated the wording-softening
+      in 4.1's note instead (forced interruption would have fired this same false positive on
+      every one of the ~30 projects just updated, on their next session).
 
 ## 5. Clean up dead leftover files
 
@@ -163,12 +189,15 @@
       — confirmed unreferenced by `check-drift.sh` or any live hook config, and fully superseded
       by task 4's `crash-recovery-hook`. Verify: `grep -rl "session-start-maintenance-check\|session-end-save-hook"`
       across `~/.claude-personal/`, `~/.claude/`, and this repo's `home/` returns nothing.
-- [ ] 5.2 (Mac Studio) Same deletion as 5.1, run on the Mac Studio: delete
+- [x] 5.2 (Mac Studio) Same deletion as 5.1, run on the Mac Studio: delete
       `~/.claude-personal/skills/setup-memory-workflow/scripts/session-start-maintenance-check.sh.template`
       and `~/.claude-personal/skills/setup-memory-workflow/scripts/session-end-save-hook.sh.template`
       on that machine (confirm first whether they exist there at all — they may be specific to
       this Mac's abandoned `autonomous-save-session` branch work). Verify: same grep as 5.1, run
-      on the Mac Studio.
+      on the Mac Studio. Verified (2026-11-07): neither file exists on the Mac Studio (confirmed
+      via `ls` returning "No such file or directory" for both) — they really were specific to
+      this Mac's abandoned branch history, not something that ever existed there. Nothing to
+      delete; task satisfied trivially.
 
 ## Workflow follow-up
 
