@@ -66,6 +66,20 @@ deployed machine-wide, not per-project templated content tracked by a version ma
 `save-session-skill.md.template`'s marker-writing change is canonical rendered content, and
 that change rides along with this entry's shared v18 bump.
 
+Follow-up the same day (2026-11-08), also no `SMW_VERSION` bump for the same reason:
+`executable_crash-recovery-hook.sh`'s reminder message hardcoded "killed, crashed, or terminal
+closed" as the cause whenever a prior session's SessionEnd never got logged — confirmed false
+for session `189b846d-18c7-4836-9504-bbe23373c1f8`, which ended via a plain `/clear` with no
+crash at all. The hook now reads the new session's own `source` field (Claude Code's
+`SessionStart` hook input: `"startup"|"resume"|"clear"|"compact"|"fork"`) and, when it's
+`"clear"`, says so plainly ("ended via /clear, not a crash — but its SessionEnd was never
+logged") instead of asserting a crash. Every other `source` value (including absent, for
+forward/backward compatibility) falls back to a hedged generic phrasing — "most often ...
+killed, crashed, or had its terminal closed, but it could also have been a clean exit that
+simply wasn't recorded" — since that path still can't distinguish real crashes from an
+unlogged `/exit` (already an open item from two 2026-11-07 false positives, `4d337cc5` and
+`e7bbabe9`; still unresolved — only the `/clear` case is now disambiguated).
+
 ## v17 (2026-11-07)
 Two independent additions, both responding to the same root cause: the `SessionStart`
 reminder and `drift-warn` nudge were both purely instructional/mechanical with no visibility
