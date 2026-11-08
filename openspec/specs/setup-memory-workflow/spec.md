@@ -43,7 +43,7 @@ Installing this workflow into a given project SHALL always be an explicit, indiv
 - **THEN** the same opt-in guarantee holds under the new mechanism, just via a different action — see "Installed in one project only" above, where running `check-drift.sh check` in a project is what opts it in, instead of an `enabledPlugins` entry
 
 ### Requirement: Skill is distributed as per-project rendered copies, not a shared reference
-The `save-session` skill and the `SessionStart` hook configuration SHALL each be rendered from a canonical template into the target project's own `.claude/` directory (or `.claude/settings.local.json`, for the hook), with a version marker (`setup-memory-workflow-version:N`) embedded in each rendered piece. The `crash-recovery-hook` and `PreToolUse` write-guard hook are deliberate exceptions to the version-marker part of this guarantee — see their own scenario below.
+The `save-session` skill and the `SessionStart` write-guard and crash-recovery hook *entries* SHALL each be rendered from a canonical template into the target project's own `.claude/` directory (or `.claude/settings.local.json`, for hook entries), with a version marker (`setup-memory-workflow-version:N`) embedded in each rendered piece. The `crash-recovery-hook`, `PreToolUse` write-guard hook, and `SessionStart` reminder hook are deliberate exceptions to the version-marker part of this guarantee — see their own scenarios below.
 
 #### Scenario: Missing piece is created unconditionally
 - **WHEN** `check-drift.sh check` finds a piece (skill file, script, hook entry, or `.mcp.json` entry) missing from the current project
@@ -68,6 +68,14 @@ The `save-session` skill and the `SessionStart` hook configuration SHALL each be
 #### Scenario: Crash-recovery hook is a deliberate exception
 - **WHEN** this requirement's version-marker guarantee is considered against the `crash-recovery-hook` `SessionStart` entry
 - **THEN** it does not apply to that piece either, for the same reason as the `PreToolUse` write-guard hook: the script itself is static and deployed machine-wide, with no project-specific substitution needed, and only the fixed hook *entry* pointing at it is tracked per project
+
+#### Scenario: SessionStart reminder hook is a deliberate exception
+- **WHEN** this requirement's version-marker guarantee is considered against the `SessionStart` reminder hook entry
+- **THEN** it does not apply to that piece either: the reminder hook's script is a single, static, non-templated file deployed machine-wide, resolving `$PROJECT` and the status note path itself at runtime (see the "Project identity" requirement's exception above) — only the fixed hook entry pointing at it is tracked per project, by literal command-string comparison, the same as the write-guard and crash-recovery-hook entries
+
+#### Scenario: Upgrading from a prior version replaces the legacy reminder hook without duplicating it
+- **WHEN** a project's installed `SessionStart` hooks include a legacy reminder entry from before this version (a per-project-rendered `echo` command containing baked note content) and `check-drift.sh update` runs
+- **THEN** the legacy entry is removed and the new canonical static reminder-hook entry is present exactly once — never both, and never a second copy of the canonical entry
 
 ### Requirement: Crash-recovery hook detects a session that ended without a completed save
 A `SessionStart` hook piece (`crash-recovery-hook`) SHALL detect, without spawning any new process, when the most recent prior session's transcript has more unsaved real user turns than a fixed threshold since the session that last completed `save-session`'s own evaluation for this project (by session-ID identity combined with a recorded turn-count checkpoint, not transcript mtime — an earlier mtime-based design was proven unsound), and SHALL surface a catch-up instruction to the current session via hook stdout rather than performing the save itself.
@@ -154,7 +162,7 @@ The workflow SHALL install a `PreToolUse` hook (matcher `Bash|Edit|Write`) into 
 - **THEN** `check-drift.sh check` reports `DRIFT`, and `check-drift.sh update` (or `apply write-guard-hook`) overwrites it with the canonical command — there is no `NAME-MISMATCH` concept for this piece, since the command string carries no project identity to mismatch
 
 ### Requirement: Project identity is resolved once, at apply-time
-`check-drift.sh` SHALL resolve the current project's basic-memory identity once per invocation, at the top of the script, and use that single resolved value for every piece it renders or checks in that invocation. No installed piece SHALL contain a runtime identity-resolution script or instruction.
+`check-drift.sh` SHALL resolve the current project's basic-memory identity once per invocation, at the top of the script, and use that single resolved value for every piece it renders or checks in that invocation. No per-project-templated installed piece SHALL contain a runtime identity-resolution script or instruction. The `SessionStart` reminder hook's own script is a deliberate exception — see its scenario below — because its whole purpose is reading live content that cannot be pre-rendered.
 
 #### Scenario: Default resolution
 - **WHEN** `check-drift.sh` runs inside a git repository with no override file present
@@ -171,6 +179,10 @@ The workflow SHALL install a `PreToolUse` hook (matcher `Bash|Edit|Write`) into 
 #### Scenario: Not inside a git repository
 - **WHEN** `check-drift.sh` runs outside any git repository
 - **THEN** it resolves `$PROJECT_ROOT` as the current working directory rather than exiting — this matches `git rev-parse --show-toplevel`'s own fallback behavior in the script, so the workflow degrades to treating the current directory as the project root rather than failing outright
+
+#### Scenario: SessionStart reminder script resolves identity at runtime, by design
+- **WHEN** the `SessionStart` reminder hook's script runs at session start
+- **THEN** it resolves `$PROJECT` itself, at that moment, using the same override-file-then-git-basename logic — this is a deliberate exception to the apply-time-only rule, required because the script reads live note content that no apply-time rendering step could have produced
 
 ### Requirement: Version drift is unconditionally repairable via `update`
 `check-drift.sh update` SHALL unconditionally re-render and overwrite every installed piece whose version marker is stale, with no per-piece confirmation, as long as that piece's project identity still matches current resolution.
@@ -198,80 +210,96 @@ If an installed piece's embedded project name does not match the project's curre
 - **WHEN** the user confirms a reported `NAME-MISMATCH` is an intentional identity change
 - **THEN** `check-drift.sh apply <piece>` overwrites that piece with canonical content rendered against current identity resolution
 
-### Requirement: SessionStart reminder hook includes a bounded status-note excerpt
-The `SessionStart` reminder hook SHALL include a size-bounded excerpt of the current-status note's Open items directly in its injected message, derived from a cheap local file read with no MCP call and no new process spawned beyond ordinary local utilities, and SHALL fall back to today's instruction-only message whenever that excerpt cannot be produced. When the excerpt is non-empty, the injected message SHALL also state the date the excerpt was captured. `check-drift.sh check` SHALL report a change limited to the excerpt's own content — the rendered hook command's embedded `setup-memory-workflow-version:N` marker unchanged — as a distinct `STALE-EXCERPT` state, separate from `DRIFT`. The injected message, including the excerpt, SHALL be framed as background context that current user or tool input takes precedence over, not as a directive that must be completed before anything else. The message SHALL condition its instruction to call `search_notes`/`recent_activity` on the excerpt being insufficient, rather than commanding that call unconditionally, and SHALL name user phrasing that indicates a direct resume or status request as overriding that default.
+### Requirement: SessionStart reminder hook reads the status-note excerpt live
+The `SessionStart` reminder hook SHALL produce its status-note Open-items excerpt by reading the note's file directly when the session starts, never from a value stored in `.claude/settings.local.json`, and SHALL fall back to an instruction-only message when no excerpt can be produced.
 
 #### Scenario: Status note readable and under the excerpt size cap
-- **WHEN** a session starts and the project's current-status note file is present and its Open-items excerpt is at or under the fixed size cap
-- **THEN** the injected reminder includes that excerpt in addition to the existing instruction to call `search_notes`/`recent_activity`
+- **WHEN** a session starts and the resolved status note's Open-items excerpt is at or under the fixed size cap
+- **THEN** the injected reminder includes that excerpt, captured as of the current session's start
 
 #### Scenario: Excerpt exceeds the size cap
 - **WHEN** the Open-items section is larger than the fixed excerpt size cap
-- **THEN** the hook truncates the excerpt to the cap with a visible truncation indicator, rather than growing the injected message unbounded or failing
+- **THEN** the hook truncates the excerpt to the cap with a visible truncation indicator
 
 #### Scenario: Status note missing or unreadable
-- **WHEN** the current-status note file cannot be found or read at the expected local path
-- **THEN** the hook emits today's instruction-only reminder message, unchanged, with no error surfaced beyond that — this is purely additive and never regresses the existing behavior
+- **WHEN** no status note can be resolved, or the resolved file cannot be read
+- **THEN** the hook emits an instruction-only reminder message, with no error surfaced beyond that
 
-#### Scenario: Excerpt reflects only local file state, never a live query
+#### Scenario: Excerpt is never read from settings.local.json or an MCP call
 - **WHEN** the excerpt is produced
-- **THEN** it is read directly from the note's file on disk under `~/.local/share/basic-memory/`, not retrieved via any MCP tool call or other query that could block or spawn a process
+- **THEN** it comes from a direct read of the note's file on disk, not from any value written into `.claude/settings.local.json` and not from any MCP tool call
 
-#### Scenario: Excerpt includes its capture date
-- **WHEN** the excerpt is non-empty
-- **THEN** the injected message states the date the excerpt was captured, so a reader can judge how fresh it might be without the excerpt itself being recomputed live
+#### Scenario: The hook command itself never varies with note content
+- **WHEN** `check-drift.sh check` or `update` compares the installed reminder hook entry against canonical
+- **THEN** it compares a single fixed command string, unaffected by the current-status note's size or content
 
-#### Scenario: check distinguishes an excerpt-only change from real template drift
-- **WHEN** `check-drift.sh check` finds the installed hook command's embedded version marker matches the current `SMW_VERSION`, but the full command string still differs from canonical because only the baked excerpt text (or its capture date) changed
-- **THEN** it reports `STALE-EXCERPT`, not `DRIFT`, for that piece — `check-drift.sh update` still repairs it the same unconditional way `DRIFT` is repaired
+### Requirement: SessionStart reminder hook frames itself as deferential background context
+The `SessionStart` reminder, including any excerpt, SHALL be framed as background context the user's current input takes precedence over, and SHALL condition a `search_notes`/`recent_activity` call on the excerpt being insufficient rather than commanding it unconditionally.
 
-#### Scenario: Real version or template drift still reports DRIFT
-- **WHEN** the installed hook command's embedded version marker differs from the current `SMW_VERSION`, regardless of what the excerpt contains
-- **THEN** `check-drift.sh check` reports `DRIFT`, not `STALE-EXCERPT`, consistent with every other templated piece
-
-#### Scenario: Reminder is framed as background context, not a directive that overrides current input
-- **WHEN** the `SessionStart` reminder (including any excerpt) would otherwise conflict with the user's current request or the model's in-progress task
-- **THEN** the reminder's wording explicitly defers to current user and tool input, rather than commanding an action that must be completed first
-
-#### Scenario: Real memory retrieval is conditional on the excerpt's sufficiency
-- **WHEN** the injected excerpt (with its capture date) already covers what the current turn needs
-- **THEN** the reminder's wording does not command an unconditional `search_notes`/`recent_activity` call — it names that call as something to make only if the excerpt turns out to be insufficient, stale, or missing
+#### Scenario: Reminder defers to current user input
+- **WHEN** the reminder would otherwise conflict with the user's current request or the model's in-progress task
+- **THEN** its wording explicitly defers to that current input rather than commanding an action that must complete first
 
 #### Scenario: Direct resume or status-request phrasing overrides the default
 - **WHEN** the user's message uses direct resume or status-request language (for example, "what's the current status," "where did we leave off," "let's resume/continue")
-- **THEN** the reminder's own wording names this kind of phrasing as a signal that should override the "only if insufficient" default, prompting the real `search_notes`/`recent_activity` call regardless of how fresh the excerpt looks — detected by the model reading the user's message in the same turn, with no additional hook or runtime mechanism
+- **THEN** the reminder's own wording names this phrasing as overriding the "only if insufficient" default for calling `search_notes`/`recent_activity`
 
-### Requirement: drift-warn surfaces current-status note bloat, not just version drift
-The `drift-warn` subcommand SHALL check both the current-status note's size and the active session-log note's size, using the `$PROJECT` value it already resolves on every invocation, and SHALL print a suggestion to run `/save-session-maintenance` when either is oversized — in addition to its existing save-session-skill version-drift check. It SHALL NOT invoke `/save-session-maintenance` or any repair itself under any condition.
+### Requirement: SessionStart reminder hook surfaces current-status note bloat
+The `SessionStart` reminder hook SHALL print a suggestion to run `/save-session-maintenance` when the resolved current-status note is at or over `save-session-maintenance`'s own size thresholds, and SHALL NOT perform any repair itself.
 
 #### Scenario: Current-status note is bloated
-- **WHEN** `drift-warn` runs and the current-status note's total size or any single entry is at or over the same thresholds `save-session-maintenance` already defines (total size roughly 8,000 characters or 200 lines, or any single entry roughly 800 characters)
-- **THEN** it prints a line suggesting `/save-session-maintenance`, in addition to (not instead of) its existing version-drift line if that also applies
+- **WHEN** the resolved current-status note's total size or any single entry is at or over its threshold
+- **THEN** the hook prints a line suggesting `/save-session-maintenance`, in addition to the Open-items excerpt
 
 #### Scenario: Current-status note is not bloated
-- **WHEN** `drift-warn` runs and none of the note-bloat thresholds are crossed
-- **THEN** it prints nothing for this signal (independent of whatever the version-drift check prints)
+- **WHEN** the threshold is not crossed
+- **THEN** the hook prints nothing for this signal
 
-#### Scenario: drift-warn never performs the maintenance itself
-- **WHEN** `drift-warn` detects bloat
-- **THEN** it only prints a suggestion — it never invokes `/save-session-maintenance`, `check-drift.sh update`, or any other remediation on its own
+#### Scenario: Hook never performs the maintenance itself
+- **WHEN** the hook detects the note is bloated
+- **THEN** it only prints a suggestion — it never invokes `/save-session-maintenance` or any other remediation on its own
 
-#### Scenario: No new identity resolution is introduced
-- **WHEN** `drift-warn` evaluates the note-bloat signal
-- **THEN** it uses the same `$PROJECT` value `resolve_project()` already computes at the top of every `check-drift.sh` invocation — no new or additional identity resolution path is added for this signal
+### Requirement: SessionStart reminder hook surfaces session-log note bloat
+The `SessionStart` reminder hook SHALL print a suggestion to run `/save-session-maintenance` when the active session-log note (the most recently modified note under the project's `sessions/` directory) is at or over `save-session-maintenance`'s rollover threshold, independent of the current-status-note-bloat signal.
 
 #### Scenario: Active session-log note is bloated
-- **WHEN** `drift-warn` runs and the active session-log note — the most recently modified note under the project's `sessions/` directory — is at or over `save-session-maintenance`'s own session-log rollover threshold (300 lines)
-- **THEN** it prints a line suggesting `/save-session-maintenance`, independent of (and in addition to) whatever the current-status-note-bloat and version-drift lines print
+- **WHEN** the active session-log note is at or over the rollover threshold
+- **THEN** the hook prints a line suggesting `/save-session-maintenance`, independent of whatever the current-status-note-bloat signal prints
 
 #### Scenario: Active session-log note is not bloated
-- **WHEN** `drift-warn` runs and the active session-log note is under the rollover threshold
-- **THEN** it prints nothing for this signal
+- **WHEN** the active session-log note is under the threshold
+- **THEN** the hook prints nothing for this signal
 
 #### Scenario: No session-log note exists yet
-- **WHEN** `drift-warn` runs and the project's `sessions/` directory under basic-memory is missing or contains no notes
-- **THEN** it prints nothing for this signal and exits 0, degrading the same way every other signal in this subcommand does when its input is absent
+- **WHEN** the project's `sessions/` directory is missing or contains no notes
+- **THEN** the hook prints nothing for this signal and does not error
 
-#### Scenario: Active log identified by recency, not by re-parsing note content
-- **WHEN** `drift-warn` evaluates the session-log bloat signal
-- **THEN** it identifies the active session-log note as the most recently modified file under the project's `sessions/` directory, rather than re-deriving it from the current-status note's wikilinks — the resolution mechanism `save-session`'s own Step 1 uses — so this signal does not carry a second, independently fallible reimplementation of that resolution logic into a hook context with no MCP access to verify it
+### Requirement: Status note canonical path is pinned, not freely chosen
+The status note's location SHALL resolve first by an exact path, `status/<project>-current-status.md`, rather than whatever title or location a model chose when the note was first created. A broader fallback glob SHALL be used only when the canonical path does not exist, and a note found only via fallback SHALL be flagged as non-canonical. The workflow SHALL NOT automatically move, rename, or merge any existing note.
+
+#### Scenario: Note already at the canonical path
+- **WHEN** a status note exists at `status/<project>-current-status.md`
+- **THEN** the reminder hook reads it directly, with no fallback glob and no non-canonical notice
+
+#### Scenario: Note found only via fallback
+- **WHEN** no note exists at the canonical path, but one is found via the broader fallback glob under `status/`
+- **THEN** the reminder hook reads that note and appends a one-line notice naming the canonical path it could be moved to
+
+#### Scenario: Note not found by either method
+- **WHEN** neither the canonical path nor the fallback glob matches anything
+- **THEN** the reminder hook prints no excerpt and no non-canonical notice
+
+#### Scenario: Existing note is never auto-moved
+- **WHEN** a non-canonical note is detected
+- **THEN** no file is moved, renamed, merged, or otherwise mutated by the workflow
+
+### Requirement: SessionStart reminder hook never writes to the basic-memory notes tree
+The `SessionStart` reminder hook's script SHALL only read files under the basic-memory notes tree, never create, write, or modify any file there, under any condition, and SHALL exit 0 regardless of what it finds.
+
+#### Scenario: No status note exists anywhere
+- **WHEN** the reminder hook finds no status note at the canonical path or via fallback
+- **THEN** it does not create one — it degrades to printing no excerpt
+
+#### Scenario: Hook exits zero regardless of what it finds
+- **WHEN** the reminder hook runs under any outcome — note found canonically, found via fallback, or not found at all
+- **THEN** it exits 0 in every case
