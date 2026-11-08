@@ -4,6 +4,76 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v19 (2026-11-08)
+Fixes a bake-at-update-time problem in the `SessionStart` reminder hook, splits
+`check-drift.sh` into a thin orchestrator plus two generic sourced libraries, pins the
+status note to a canonical path, and adds a session-index consultation step to
+`save-session-skill` — four changes bundled under one version bump because all four touch
+canonical rendered content or `check-drift.sh` itself and shipped together.
+
+`canonical_hook_cmd()` used to bake a live snapshot of the status note's Open-items excerpt
+into a literal `echo '...'` `SessionStart` hook command, written into
+`.claude/settings.local.json` on every `check-drift.sh update` — frozen, stale content that
+regrows on every run. Measured on chezmoi's own real install: 6,344 bytes baked, vs. 894
+bytes with no excerpt. The hook's command is now a single, fixed, non-templated string
+pointing at a new static script,
+`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/session-reminder.sh`,
+which reads the status note's Open section live, at session start, every time — never baked
+into `settings.local.json` again. The `STALE-EXCERPT` check-drift state (introduced in v18
+for exactly this baked-excerpt problem) is removed entirely — there's no more excerpt that
+can go stale.
+
+`check-drift.sh` itself was split: 581 lines down to a ~99-line orchestrator. Two new
+sourced libraries replace the old 6x-repeated `jq` check/update/apply blocks: `lib-project.sh`
+(`resolve_project()` only) and `lib-pieces.sh` (a generic templated-file piece engine plus a
+generic hook-command piece engine, parameterized by match-substring/canonical-command/
+settings-path/event). `check-drift.sh` and its libraries now contain zero memory-content
+logic (status note, session log, Open/Resolved, bloat thresholds) — `drift-warn` narrows back
+to the save-session-skill version-staleness check only, same as pre-v17. It keeps firing
+automatically on every `SessionStart`, same as before this change: the reminder hook's
+canonical command is now a compound `session-reminder.sh; check-drift.sh drift-warn` chain
+(mirroring the shape of the old baked-excerpt-era `canonical_hook_cmd()`), not just
+`session-reminder.sh` alone — matching the historical v13 precedent of chaining `drift-warn`
+onto the hook command, and scoped correctly against this change's "never writes to the
+basic-memory notes tree" requirement (D2/D3), since `check-drift.sh`'s own migration
+side effects touch only `.claude/settings.local.json` and `.claude/skills/`, never the notes
+tree itself. `scripts/memory.sh` (154 lines,
+extracted from `check-drift.sh` in v17/v18) is deleted outright: its status-note/session-log
+reading logic moves into two new files, `lib-status-note.sh` and `lib-session-log.sh`, owned
+exclusively by the new `session-reminder.sh` script — never sourced by `check-drift.sh`.
+`assets/hook-message.txt.template` is also deleted — the reminder's static preamble is now a
+literal string inside `session-reminder.sh` itself, so there's no more rendering step for hook
+text.
+
+The status note's canonical location is now pinned mechanically: `status/<project>-current-
+status.md`, matching `$PROJECT` exactly. A note found only via the old broader fallback glob
+is flagged in the reminder output as non-canonical (never auto-moved).
+`save-session-skill.md.template` documents this convention explicitly now, so a model
+creating a project's first-ever status note creates it at the canonical path.
+
+`save-session-skill.md.template` also gains a new step: consult `claude-session-index`
+(`sessions recent` / `sessions context <id>`) as an input before writing the session-log
+entry, narrowing it to curated decisions/facts/problems rather than a transcript recap.
+`save-session-skill.md.template` and `save-session-maintenance-skill.md.template` were both
+trimmed of verbosity (143→129 and 116→109 lines respectively), no behavior change.
+
+Migration: a new `migrate_legacy_reminder_hook()` in `migrations.sh` removes any pre-v19
+`SessionStart` hook entry whose command contains `basic-memory` and does not contain
+`session-reminder.sh`, before the generic piece engine's CREATE path runs — so upgrading an
+existing v18 install via `check-drift.sh update` replaces the old baked-excerpt entry cleanly,
+with no duplicate.
+
+Separately, a `set -e`/exit-code bug was found and fixed in `hook_piece_handle()`'s
+`UP-TO-DATE` case arm: a bare `test && echo` whose false branch, under `set -e`, called as a
+bare for-loop statement, aborted the whole script on a second `update` run once a hook piece
+was already current. One-line fix — `; true` appended so the arm's exit status is always 0
+regardless of mode.
+
+`SMW_VERSION` moves to 19 to ship all of the above — `check-drift.sh` and its libraries, the
+new `session-reminder.sh` and its libraries, the deleted `memory.sh`/
+`hook-message.txt.template`, and the trimmed templates (including the new canonical-path
+convention and session-index step) — to existing v18 installs via `check-drift.sh update`.
+
 ## v18 (2026-11-07)
 Five independent changes, bundled under one version bump because all five touch
 canonical rendered content or `check-drift.sh` itself and shipped together.

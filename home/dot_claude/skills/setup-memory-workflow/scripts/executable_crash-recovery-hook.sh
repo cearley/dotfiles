@@ -1,26 +1,20 @@
 #!/usr/bin/env bash
 # crash-recovery-hook.sh — SessionStart hook: detects a prior session that ended
-# without save-session ever completing its own evaluation for this project, and
-# surfaces a catch-up instruction via stdout — no process is ever spawned.
+# without save-session completing its evaluation for this project, and surfaces a
+# catch-up instruction via stdout — no process is ever spawned.
 #
-# Deployed once, machine-wide, by chezmoi (like basic-memory-write-guard.sh) — this
-# script takes no __PROJECT__ substitution; only session_id/transcript_path/cwd from
-# hook stdin and local file mtimes matter. See check-drift.sh's crash-recovery-hook
-# piece for the per-project SessionStart entry pointing at this fixed global path.
+# Deployed once, machine-wide by chezmoi (like basic-memory-write-guard.sh); takes no
+# __PROJECT__ substitution. See check-drift.sh's crash-recovery-hook piece for the
+# per-project SessionStart entry pointing at this fixed global path.
 #
-# SessionEnd cannot fire on SIGKILL/crash/closed-terminal by construction — this is
-# the best-effort, next-session fallback (see design.md Decision 4). But a missing
-# SessionEnd record is NOT proof of a crash: confirmed 2026-11-08 that a `/clear`
-# transition can also leave no SessionEnd logged on the old session, even though it
-# was an intentional, clean end. This script's own SessionStart invocation carries a
-# `source` field ("startup"|"resume"|"clear"|"compact"|"fork" per Claude Code's hook
-# schema) that tells us whether THIS session was itself born from a `/clear` — when it
-# was, the predecessor's missing SessionEnd is known to be benign, so the reminder
-# below says so instead of asserting "killed, crashed, or terminal closed" as fact.
-# Kept non-blocking by exiting 0 unconditionally: every branch here is a cheap local
-# file check, never a spawned process (that's the whole point — see design.md
-# Decision 4's "the better answer is usually to make the worker something that isn't
-# a Claude Code session").
+# SessionEnd can't fire on SIGKILL/crash/closed-terminal, so this is a best-effort,
+# next-session fallback (design.md Decision 4) — but a missing SessionEnd is NOT proof
+# of a crash: a `/clear` transition can also leave none logged on the old session even
+# though it was a clean, intentional end. This session's own `source` field
+# ("startup"|"resume"|"clear"|"compact"|"fork") tells us whether THIS session was born
+# from a `/clear`, so the reminder below says so instead of asserting a crash as fact.
+# Exits 0 unconditionally — every branch is a cheap local file check, never a spawned
+# process (design.md Decision 4).
 set -euo pipefail
 
 # Minimum number of real user turns unsaved since the last completed save-session
@@ -33,9 +27,8 @@ jq -e . >/dev/null 2>&1 <<<"$INPUT" || exit 0
 SESSION_ID=$(printf '%s' "$INPUT" | jq -r '.session_id // empty')
 TRANSCRIPT_PATH=$(printf '%s' "$INPUT" | jq -r '.transcript_path // empty')
 HOOK_CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty')
-# Why THIS session started — see the header comment above. Absent/unrecognized values
-# fall through to the generic (unasserted-cause) message branch below, unchanged from
-# this script's prior behavior.
+# Why THIS session started (see header); absent/unrecognized values fall through to
+# the generic message branch below, unchanged.
 SOURCE=$(printf '%s' "$INPUT" | jq -r '.source // empty')
 
 if [ -n "$HOOK_CWD" ]; then

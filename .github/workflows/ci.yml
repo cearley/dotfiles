@@ -59,6 +59,70 @@ jobs:
           fi
           exit "$status"
 
+  shell_lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+
+      - name: Check script line counts (max 100 lines)
+        shell: bash
+        run: |
+          # setup-memory-workflow scripts are kept small and single-purpose;
+          # a file creeping past 100 lines is a signal it should be split.
+          status=0
+          for f in home/dot_claude/skills/setup-memory-workflow/scripts/*.sh; do
+            lines="$(wc -l < "$f")"
+            if [ "$lines" -gt 100 ]; then
+              echo "❌ $f is $lines lines (max 100)"
+              status=1
+            fi
+          done
+          if [ "$status" -eq 0 ]; then
+            echo "✅ All setup-memory-workflow scripts are within the 100-line budget"
+          fi
+          exit "$status"
+
+      - name: shellcheck setup-memory-workflow scripts
+        shell: bash
+        run: |
+          shellcheck home/dot_claude/skills/setup-memory-workflow/scripts/*.sh \
+            && echo "✅ shellcheck passed" \
+            || { echo "❌ shellcheck found issues"; exit 1; }
+
+      - name: shellmetrics complexity check (CCN <= 15 per function)
+        shell: bash
+        run: |
+          # shellmetrics (https://github.com/shellspec/shellmetrics) has no
+          # tagged releases, so it's pinned to a specific commit rather than
+          # master/latest. Fetched ephemeral: CI-only, not added to
+          # packages.yaml (see design.md D6 in
+          # redesign-setup-memory-workflow-session-reminder) since no
+          # workstation script depends on it at runtime.
+          SHELLMETRICS_COMMIT="b3bfff2af6880443112cdbf2ea449440b30ab9b0"
+          curl -fsSL "https://raw.githubusercontent.com/shellspec/shellmetrics/${SHELLMETRICS_COMMIT}/shellmetrics" -o /usr/local/bin/shellmetrics
+          chmod +x /usr/local/bin/shellmetrics
+
+          # McCabe-style cyclomatic complexity ceiling per function. 15 (vs.
+          # the classic 10) to allow for shell's heavier reliance on
+          # case/if branching for argument and option parsing.
+          CCN_THRESHOLD=15
+
+          shellmetrics --csv home/dot_claude/skills/setup-memory-workflow/scripts/*.sh > /tmp/shellmetrics.csv
+          status=0
+          while IFS=',' read -r file func lineno lloc ccn lines comment blank; do
+            [ "$file" = '"file"' ] && continue
+            file="${file#\"}" file="${file%\"}"
+            func="${func#\"}" func="${func%\"}"
+            if [ "$ccn" -gt "$CCN_THRESHOLD" ]; then
+              echo "❌ $file: $func has CCN=$ccn (max $CCN_THRESHOLD)"
+              status=1
+            fi
+          done < /tmp/shellmetrics.csv
+          if [ "$status" -eq 0 ]; then
+            echo "✅ All functions are within the CCN $CCN_THRESHOLD complexity ceiling"
+          fi
+          exit "$status"
+
   test_remote_install:
     runs-on: macos-latest
     steps:

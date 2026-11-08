@@ -40,6 +40,26 @@ migrate_hook_config() {
   echo "MIGRATED: removed legacy basic-memory hook from UserPromptSubmit"
 }
 
+# Removes any legacy SessionStart reminder hook entry installed before the
+# session-reminder.sh script existed (the old baked-note "echo" command
+# always mentioned basic-memory but never session-reminder.sh). Without this,
+# hook_piece_status's session-reminder.sh substring match wouldn't recognize
+# the old entry as the same piece and would append a second one instead of
+# replacing it. Knows nothing about the new canonical shape — that's
+# hook_piece_status/hook_piece_apply's job in lib-pieces.sh.
+migrate_legacy_reminder_hook() {
+  [ -f .claude/settings.local.json ] || return 0
+  jq -e '[.hooks.SessionStart[]?.hooks[]?.command // ""] | any(contains("basic-memory") and (contains("session-reminder.sh") | not))' \
+    .claude/settings.local.json >/dev/null 2>&1 || return 0
+  jq '
+    .hooks.SessionStart |= map(.hooks |= map(select((.command // "" | contains("basic-memory") and (contains("session-reminder.sh") | not)) | not)))
+    | .hooks.SessionStart |= map(select((.hooks | length) > 0))
+    | (if (.hooks.SessionStart | length) == 0 then del(.hooks.SessionStart) else . end)
+  ' .claude/settings.local.json > .claude/settings.local.json.tmp \
+    && mv .claude/settings.local.json.tmp .claude/settings.local.json
+  echo "MIGRATED: removed legacy basic-memory reminder hook from SessionStart"
+}
+
 # Removes the retired sync-memory skill directory and its cursor-state file,
 # left behind by versions prior to v16 (see CHANGELOG.md v16). sync-memory
 # itself is gone from canonical distribution; this only cleans up what an
