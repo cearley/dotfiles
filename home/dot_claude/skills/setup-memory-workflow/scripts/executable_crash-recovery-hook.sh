@@ -16,6 +16,10 @@
 # session").
 set -euo pipefail
 
+# Minimum number of real user turns unsaved since the last completed save-session
+# evaluation before the catch-up reminder fires. See design.md Decision 6.
+UNSAVED_TURN_THRESHOLD=5
+
 INPUT=$(cat)
 jq -e . >/dev/null 2>&1 <<<"$INPUT" || exit 0
 
@@ -32,8 +36,20 @@ MARKER=".claude/.last-saved-session"
 if [ -n "$TRANSCRIPT_PATH" ] && [ -n "$SESSION_ID" ]; then
   TRANSCRIPT_DIR=$(dirname "$TRANSCRIPT_PATH")
   if [ -d "$TRANSCRIPT_DIR" ]; then
-    MARKER_SESSION_ID=""
-    [ -f "$MARKER" ] && MARKER_SESSION_ID=$(cat "$MARKER")
+    MARKER_CONTENT=""
+    [ -f "$MARKER" ] && MARKER_CONTENT=$(cat "$MARKER")
+    # New format is "SESSION_ID:TURN_COUNT"; an older bare-session-ID marker has no
+    # ":" and degrades to turn-count 0 rather than erroring (self-heals on next save).
+    MARKER_SESSION_ID="${MARKER_CONTENT%%:*}"
+    if [ "$MARKER_CONTENT" = "$MARKER_SESSION_ID" ]; then
+      MARKER_TURN_COUNT=0
+    else
+      MARKER_TURN_COUNT="${MARKER_CONTENT#*:}"
+    fi
+    # A marker truncated or corrupted by the very crash this hook detects can leave a
+    # non-numeric tail; degrade to 0 (same as the old-bare-marker-format case above)
+    # rather than letting the arithmetic below abort under set -e.
+    [[ "$MARKER_TURN_COUNT" =~ ^[0-9]+$ ]] || MARKER_TURN_COUNT=0
 
     LATEST_PRIOR=""
     LATEST_PRIOR_MTIME=0
@@ -51,7 +67,17 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -n "$SESSION_ID" ]; then
     PRIOR_SESSION_ID=""
     [ -n "$LATEST_PRIOR" ] && PRIOR_SESSION_ID=$(basename "$LATEST_PRIOR" .jsonl)
 
-    if [ -n "$LATEST_PRIOR" ] && [ "$PRIOR_SESSION_ID" != "$MARKER_SESSION_ID" ]; then
+    UNSAVED_TURNS=0
+    if [ -n "$LATEST_PRIOR" ]; then
+      PRIOR_TOTAL_TURNS=$(jq -c 'select(.type=="user" and (.toolUseResult // null)==null and (.isMeta // false)==false)' "$LATEST_PRIOR" | wc -l | tr -d ' ')
+      if [ "$PRIOR_SESSION_ID" = "$MARKER_SESSION_ID" ]; then
+        UNSAVED_TURNS=$((PRIOR_TOTAL_TURNS - MARKER_TURN_COUNT))
+      else
+        UNSAVED_TURNS=$PRIOR_TOTAL_TURNS
+      fi
+    fi
+
+    if [ -n "$LATEST_PRIOR" ] && [ "$UNSAVED_TURNS" -gt "$UNSAVED_TURN_THRESHOLD" ]; then
       echo "SYSTEM REMINDER: A prior Claude Code session (${PRIOR_SESSION_ID}) ended without SessionEnd ever firing (killed, crashed, or terminal closed), so no in-session or SessionEnd save happened for it. Mention this to the user somewhere in your response rather than holding onto it silently, and ask whether they want you to run a crash-recovery catch-up pass for it now — do not run it without asking first.
 
 If they agree: read ${LATEST_PRIOR} first (JSONL, one message/tool-call per line) — this is NOT your own conversation and you have no other context, so reconstruct what was changed or decided from that transcript before doing anything else — then follow the save-session skill's Step 1 through Step 2, then \"On success\"/\"On failure\", using that reconstructed content. If nothing decision-worthy happened in that session, stop without saving and log a no-op instead of forcing an entry."

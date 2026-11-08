@@ -53,7 +53,7 @@
 
 set -euo pipefail
 
-SMW_VERSION=17
+SMW_VERSION=18
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ASSETS_DIR="$SKILL_DIR/assets"
 OPEN_EXCERPT_MAX_LINES=15
@@ -79,77 +79,6 @@ resolve_project() {
 }
 PROJECT=$(resolve_project)
 
-# Resolves the on-disk current-status note path for $PROJECT by globbing the
-# status/ directory, since the literal filename is whatever Title Case the
-# note's title happened to be when created (e.g. "Chezmoi Current Status.md",
-# "herdr Current Status.md") — basic-memory's MCP permalink convention
-# ($PROJECT/status/$PROJECT-current-status) resolves server-side and gives no
-# guarantee about the on-disk filename, which this script has no MCP access
-# to resolve any other way. Excludes "...Archive...md" siblings. Degrades to
-# empty (no error) when the status directory is missing or nothing matches,
-# consistent with every other fallback in this script.
-resolve_status_note_path() {
-  local status_dir="$HOME/.local/share/basic-memory/$PROJECT/status"
-  [ -d "$status_dir" ] || return 0
-  find "$status_dir" -maxdepth 1 -iname '*current*status*.md' ! -iname '*archive*' 2>/dev/null | head -n1
-}
-
-# Bounded, best-effort excerpt of the current-status note's Open section, for
-# baking into the SessionStart reminder at render time (see canonical_hook_cmd()
-# below). A cheap local file read, not an MCP call — never fails loudly: any
-# missing file, unreadable file, or absent "## Open" section just means no
-# excerpt (empty stdout), so callers always get a usable render() either way.
-extract_open_excerpt() {
-  local note
-  note=$(resolve_status_note_path)
-  [ -n "$note" ] && [ -r "$note" ] || return 0
-
-  local lines
-  lines=$(awk '
-    /^## Open[[:space:]]*$/ { found=1; next }
-    found && /^##/ { exit }
-    found && NF { print }
-  ' "$note" 2>/dev/null) || true
-  [ -n "$lines" ] || return 0
-
-  local total_lines
-  total_lines=$(printf '%s\n' "$lines" | wc -l | tr -d ' ')
-  if [ "$total_lines" -gt "$OPEN_EXCERPT_MAX_LINES" ]; then
-    # Real Open-section bullets routinely wrap across indented continuation
-    # lines, so a plain physical-line cut can land mid-entry. Prefer cutting
-    # at the end of the last top-level bullet ("- ..." at column 0) that
-    # fully fits within the cap, and report remaining *bullets*, not
-    # remaining physical lines. Falls back to the old physical-line cut when
-    # the content has no detectable bullet markers, or when even the first
-    # bullet alone overruns the cap (nothing to cut at).
-    local bullet_starts=()
-    while IFS= read -r ln; do
-      bullet_starts+=("$ln")
-    done < <(printf '%s\n' "$lines" | grep -n '^- ' | cut -d: -f1 || true)
-
-    local cut_line=0 i boundary
-    for ((i = 1; i < ${#bullet_starts[@]}; i++)); do
-      boundary=$((bullet_starts[i] - 1))
-      [ "$boundary" -le "$OPEN_EXCERPT_MAX_LINES" ] && cut_line=$boundary
-    done
-
-    local shown remaining
-    if [ "$cut_line" -gt 0 ]; then
-      shown=$(printf '%s\n' "$lines" | head -n "$cut_line")
-      remaining=0
-      for ln in "${bullet_starts[@]}"; do
-        [ "$ln" -gt "$cut_line" ] && remaining=$((remaining + 1))
-      done
-    else
-      shown=$(printf '%s\n' "$lines" | head -n "$OPEN_EXCERPT_MAX_LINES")
-      remaining=$((total_lines - OPEN_EXCERPT_MAX_LINES))
-    fi
-    printf '%s\n... (%d more open items — see the status note)\n' "$shown" "$remaining"
-  else
-    printf '%s\n' "$lines"
-  fi
-}
-
 # Bash-native substring substitution, not sed: __OPEN_EXCERPT__ can expand to
 # multi-line content, and sed's s///g has no clean way to splice a replacement
 # string containing literal newlines.
@@ -161,12 +90,13 @@ extract_open_excerpt() {
 # something, the leading "\n" below is what makes the excerpt its own line(s)
 # rather than text glued onto the end of the reminder sentence.
 render() {
-  local content open_excerpt open_excerpt_block
+  local content open_excerpt open_excerpt_block capture_date
   content=$(cat "$1")
   open_excerpt=$(extract_open_excerpt)
   open_excerpt_block=""
   if [ -n "$open_excerpt" ]; then
-    open_excerpt_block=$(printf '\nOpen items from the status note (may be stale — call search_notes/recent_activity for the latest):\n%s' "$open_excerpt")
+    capture_date=$(date '+%Y-%m-%d')
+    open_excerpt_block=$(printf '\nOpen items from the status note as of %s (may be stale — call search_notes/recent_activity for the latest):\n%s' "$capture_date" "$open_excerpt")
   fi
   content=${content//__PROJECT__/$PROJECT}
   content=${content//__SMW_VERSION__/$SMW_VERSION}
@@ -209,6 +139,8 @@ canonical_crash_recovery_cmd() {
 
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/migrations.sh
 source "$SKILL_DIR/scripts/migrations.sh"
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/memory.sh
+source "$SKILL_DIR/scripts/memory.sh"
 
 # Cleans up legacy artifacts from prior versions of this skill, unconditionally,
 # before any check/update/apply logic runs — see migrations.sh's header for the
@@ -373,7 +305,13 @@ cmd_check() {
     elif [ "$existing_cmd" = "$canonical_cmd" ]; then
       echo "UP-TO-DATE: hook"
     else
-      echo "DRIFT: hook"
+      local hook_marker
+      hook_marker=$(echo "$existing_cmd" | grep -o 'setup-memory-workflow-version:[0-9]*' | grep -o '[0-9]*$' || true)
+      if [ "$hook_marker" = "$SMW_VERSION" ]; then
+        echo "STALE-EXCERPT: hook"
+      else
+        echo "DRIFT: hook"
+      fi
       echo "  fix with: check-drift.sh update"
       echo "  current:   $existing_cmd"
       echo "  canonical: $canonical_cmd"
@@ -622,21 +560,14 @@ cmd_drift_warn() {
     fi
   fi
 
-  # Independent signal: current-status note bloat (same thresholds as
-  # save-session-maintenance's own triage, reusing the already-resolved
-  # $PROJECT — see resolve_project() above, not re-derived here).
-  local status_note
-  status_note=$(resolve_status_note_path)
-  if [ -n "$status_note" ] && [ -f "$status_note" ]; then
-    local total_chars total_lines max_line
-    total_chars=$(wc -c <"$status_note" 2>/dev/null | tr -d ' ')
-    total_lines=$(wc -l <"$status_note" 2>/dev/null | tr -d ' ')
-    max_line=$(awk '{ print length }' "$status_note" 2>/dev/null | sort -rn | head -n1)
-    [ -n "$max_line" ] || max_line=0
-    if [ "${total_chars:-0}" -ge 8000 ] || [ "${total_lines:-0}" -ge 200 ] || [ "${max_line:-0}" -ge 800 ] 2>/dev/null; then
-      echo "[setup-memory-workflow] current-status note looks oversized — run /save-session-maintenance to triage it."
-    fi
-  fi
+  # Independent signal: current-status note bloat — see memory.sh's
+  # check_status_note_bloat() (reuses the already-resolved $PROJECT, see
+  # resolve_project() above, not re-derived here).
+  check_status_note_bloat
+
+  # Independent signal: active session-log bloat — see memory.sh's
+  # check_session_log_bloat() (same $PROJECT reuse as above).
+  check_session_log_bloat
 
   return 0
 }

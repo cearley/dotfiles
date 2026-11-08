@@ -325,6 +325,39 @@ authoritative account, subject to drift the same way this document is.
 
 See `openspec/changes/` for the change spun up to implement items 1 and 5.
 
+### Follow-up: `memory-workflow-cross-project-hardening` (2026-11-07)
+
+A second change, `memory-workflow-cross-project-hardening`, closed the remaining gaps from
+the 2026-11-07 comparison above: it added the session-log bloat nudge item 5 above didn't
+yet cover (`check_session_log_bloat()` in `memory.sh`, mirroring the status-note signal),
+split `cmd_check()`'s SessionStart-hook reporting into `STALE-EXCERPT: hook` vs `DRIFT: hook`
+so a version-marker-only mismatch (baked excerpt/date content changed) is no longer
+indistinguishable from an actual stale version marker, and reworded
+`hook-message.txt.template`'s instruction text from an imperative "do this first" directive
+to background-context framing — the half of that reminder-wording gap addressable without a
+runtime capability change, conditioning the `search_notes`/`recent_activity` call on the
+baked-in snapshot actually being insufficient/stale/missing rather than commanding it
+unconditionally, while still forcing the real call on direct resume/status-request phrasing.
+It also incorporates a newly observed version-drift instance from the `oh-my-pi` repo,
+confirming the same staleness risk item 5 already flagged occurs in practice, not just in
+theory.
+
+Separately — found during this change's own design review, not from the cross-project
+comparison — it corrected a scope conflation between note-content reading (live,
+evolving basic-memory note data) and template-content drift (this skill's own versioned
+canonical assets): the two had been mixed together inside `check-drift.sh` since v17;
+`extract_open_excerpt()` and its status-note-path resolution were pulled out into a new
+sourced file, `scripts/memory.sh`, with its own narrower, read-only contract, mirroring
+`migrations.sh`'s precedent of a single-purpose sourced helper with no shebang and no
+execute bit.
+
+Separately again, it fixed two correctness gaps in `executable_crash-recovery-hook.sh`'s
+identity-only comparison: a false positive after `/clear` (a new session ID in the same
+project, with nothing actually unsaved) and a false negative when a session saved and then
+kept going (same session ID as the marker, but real work happened afterward) — both fixed
+by replacing the session-ID-equality check with a turns-since-last-save magnitude check
+against a new `UNSAVED_TURN_THRESHOLD`.
+
 See `docs/formal-models/memory-workflow.als` for an Alloy model of the invariants behind both
 the current spec's piece drift/lifecycle state machine and the proposed delta's SessionStart
 additions, verified with the `alloy-analyzer` CLI (Homebrew `alloy-analyzer` formula).

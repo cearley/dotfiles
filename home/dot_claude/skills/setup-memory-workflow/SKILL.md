@@ -97,6 +97,18 @@ Whenever you edit a canonical rendered asset, bump the `SMW_VERSION` constant at
 the top of `scripts/check-drift.sh` so existing installs get flagged as drifted on their
 next check.
 
+`check-drift.sh` sources two helper files at startup, each with a narrow, single-purpose
+contract: `scripts/migrations.sh` (mutates only this skill's own prior-version
+artifacts — e.g. `migrate_hook_config`/`migrate_sync_memory`, run unconditionally on every
+invocation to clean up leftovers from an older install) and `scripts/memory.sh`
+(read-only — resolves the current-status note's on-disk path and extracts its `## Open`
+section as a bounded excerpt, degrading to empty on any missing file/section/read
+failure; never creates, writes, or deletes anything). `render()` calls `memory.sh`'s
+`extract_open_excerpt()` to fill `__OPEN_EXCERPT__`, and — only when that excerpt is
+non-empty — also stamps a capture date (`date '+%Y-%m-%d'`, computed fresh on every
+`render()` call) into the excerpt block's header line, so a project with no Open items
+still renders byte-identical to the no-excerpt message with no date added.
+
 The PreToolUse write-guard hook is the one piece that is *not* `__PROJECT__`-templated:
 `scripts/executable_basic-memory-write-guard.sh` is a plain static script, deployed
 machine-wide by chezmoi exactly like `check-drift.sh` itself (not rendered per project).

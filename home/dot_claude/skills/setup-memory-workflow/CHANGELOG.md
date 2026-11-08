@@ -4,6 +4,68 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v18 (2026-11-07)
+Five independent changes, bundled under one version bump because all five touch
+canonical rendered content or `check-drift.sh` itself and shipped together.
+
+Extracts `resolve_status_note_path()` and `extract_open_excerpt()` (added in v17) out of
+`check-drift.sh` into a new sourced file, `scripts/memory.sh` — mirrors the existing
+`migrations.sh` precedent: no shebang, not executable, sourced only, degrades to
+empty/no-op on any missing file or directory, never errors. Pure extraction, zero behavior
+change, regression-verified against v17's rendered output.
+
+Adds a session-log bloat signal to `drift-warn`, alongside the existing version-drift and
+status-note-bloat lines: `resolve_active_session_log_path()` (identifies the active log as
+the most recently modified `.md` file under `sessions/`, by mtime) and
+`check_session_log_bloat()` (same 300-line rollover threshold
+`save-session-maintenance-skill.md.template` already documents), both in `memory.sh`,
+printing `[setup-memory-workflow] active session log looks oversized — run
+/save-session-maintenance to roll it over.` when crossed. Closes the same "nothing nudges
+a session to check" gap v17 closed for the status note, now for the session log too.
+
+Splits `cmd_check()`'s SessionStart-hook reporting into three states instead of two:
+`UP-TO-DATE` (unchanged), `STALE-EXCERPT: hook` (the version marker still matches
+`SMW_VERSION`, but the rendered command string differs — i.e. only the baked
+`__OPEN_EXCERPT__`/capture-date content changed since the note was last read), and
+`DRIFT: hook` (the version marker itself is behind). `cmd_update()` repairs both
+identically — an unconditional overwrite via the same `jq` patch — so no change was needed
+there. `NAME-MISMATCH` still takes precedence over both, exactly as before.
+
+Adds a capture-date stamp to the `SessionStart` reminder: `render()` now computes
+`date '+%Y-%m-%d'` once per call and folds it into the excerpt block's header line
+("Open items from the status note as of `<date>`...") — but only when the excerpt is
+non-empty, so a project with no Open items still renders byte-identical to the no-excerpt
+message.
+
+Rewords `assets/hook-message.txt.template`'s instruction text from an imperative
+"do this first" directive to background-context framing: the `search_notes`/
+`recent_activity` call is now conditioned on the baked-in snapshot being
+insufficient/stale/missing, rather than commanded unconditionally regardless of what the
+excerpt already shows — while direct resume/status-request phrasing ("what's the current
+status," "where did we leave off," "let's resume/continue") still forces the real call
+regardless of snapshot freshness.
+
+`SMW_VERSION` moves to 18 to ship the hook-message rewording and capture-date stamp (both
+rendered-content changes) to existing installs via `check-drift.sh update`.
+
+Separately, `executable_crash-recovery-hook.sh` replaces its pure session-ID-identity
+comparison with a turns-since-last-save magnitude check: a new
+`UNSAVED_TURN_THRESHOLD=5` constant, and `.claude/.last-saved-session` now stores
+`SESSION_ID:TURN_COUNT` instead of a bare session ID (an old bare-ID marker has no `:` and
+degrades to turn-count `0` rather than erroring, self-healing on the next save). The hook
+now fires only when real user turns unsaved since the marker — computed via a `jq` filter
+over the prior transcript (`select(.type=="user" and (.toolUseResult // null)==null and
+(.isMeta // false)==false)`) — exceed the threshold, fixing both the `/clear` false-positive
+(new session ID, same project, nothing actually lost) and the save-then-keep-going
+false-negative (session ID matches the marker, but real work happened after the last save)
+that the old identity-only comparison couldn't distinguish. `save-session-skill.md.template`'s
+three marker-writing spots (Step 0's no-op path, Step 0's proactive-save path, and the
+explicit "On success" path) all updated to write the new `SESSION_ID:TURN_COUNT` format.
+The crash-recovery hook's own logic needed no `SMW_VERSION` bump — the script is static and
+deployed machine-wide, not per-project templated content tracked by a version marker; only
+`save-session-skill.md.template`'s marker-writing change is canonical rendered content, and
+that change rides along with this entry's shared v18 bump.
+
 ## v17 (2026-11-07)
 Two independent additions, both responding to the same root cause: the `SessionStart`
 reminder and `drift-warn` nudge were both purely instructional/mechanical with no visibility
