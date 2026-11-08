@@ -18,7 +18,7 @@ The system SHALL declare Cloudflare Tunnels per-machine as a `cloudflare_tunnels
 - **AND** SHALL exit successfully without error
 
 ### Requirement: Secret Restoration Before System Config
-The system SHALL restore each tunnel's `cert.pem` and credentials JSON file to `~/.cloudflared/` (via chezmoi `private_` template files reading a KeePassXC attachment) before the setup script writes any system-level configuration.
+The system SHALL restore each tunnel's `cert.pem` and credentials JSON file to `~/.cloudflared/` (via chezmoi `private_` template files that decrypt a SOPS+age-encrypted source file committed in the repository) before the setup script writes any system-level configuration.
 
 #### Scenario: Secrets present
 - **WHEN** `~/.cloudflared/cert.pem` and `~/.cloudflared/<tunnel-id>.json` both exist after chezmoi applies template files
@@ -26,7 +26,7 @@ The system SHALL restore each tunnel's `cert.pem` and credentials JSON file to `
 
 #### Scenario: Secrets missing
 - **WHEN** either `~/.cloudflared/cert.pem` or `~/.cloudflared/<tunnel-id>.json` is missing for a declared tunnel
-- **THEN** the setup script SHALL print a message identifying the required KeePassXC entry name
+- **THEN** the setup script SHALL print a message identifying that the age private key (sourced from KeePassXC) is required to decrypt the tunnel's SOPS-encrypted secret files
 - **AND** SHALL skip system configuration for that tunnel only
 - **AND** SHALL continue processing any other declared tunnels
 - **AND** SHALL NOT fail the overall `chezmoi apply`
