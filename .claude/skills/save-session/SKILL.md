@@ -2,7 +2,7 @@
 name: save-session
 description: Save today's session to basic-memory — fast, append-only (session log entry + status-note Open/Resolved edit), no size checks or triage. Invoke proactively, without asking for confirmation, whenever the session has produced decision-worthy content (an architectural decision, a resolved open item, a persistable finding) — gate this on substantial tool-call/conversation activity, not on whether any file was edited. Also run at explicit user request (/save-session) or when the user signals they're wrapping up.
 ---
-<!-- setup-memory-workflow-version:16 -->
+<!-- setup-memory-workflow-version:18 -->
 
 ## Anchor to the project root
 
@@ -44,7 +44,9 @@ user), apply a cheap mechanical pre-filter first, then judgment:
    question, one tool call, done) fails this filter — stop here, nothing to save (but first
    record this session as evaluated, so the crash-recovery hook knows this session was evaluated):
    ```bash
-   echo "$CLAUDE_CODE_SESSION_ID" > .claude/.last-saved-session
+   TRANSCRIPT=$(find "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" -name "$CLAUDE_CODE_SESSION_ID.jsonl")
+   TURN_COUNT=$(jq -c 'select(.type=="user" and (.toolUseResult // null)==null and (.isMeta // false)==false)' "$TRANSCRIPT" | wc -l)
+   echo "$CLAUDE_CODE_SESSION_ID:$TURN_COUNT" > .claude/.last-saved-session
    ```
    This filter is deliberately **not** based on whether any file was edited — a purely
    exploratory session (research, design discussion, `/opsx:explore`) can pass it and be
@@ -56,7 +58,9 @@ user), apply a cheap mechanical pre-filter first, then judgment:
    "should I save this session?" and wait for a yes. If no, stop here (but first record this
    session as evaluated, same as above):
    ```bash
-   echo "$CLAUDE_CODE_SESSION_ID" > .claude/.last-saved-session
+   TRANSCRIPT=$(find "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" -name "$CLAUDE_CODE_SESSION_ID.jsonl")
+   TURN_COUNT=$(jq -c 'select(.type=="user" and (.toolUseResult // null)==null and (.isMeta // false)==false)' "$TRANSCRIPT" | wc -l)
+   echo "$CLAUDE_CODE_SESSION_ID:$TURN_COUNT" > .claude/.last-saved-session
    ```
 
 When invoked explicitly (`/save-session`, or the user says they're done), skip straight to
@@ -125,7 +129,9 @@ single append shouldn't attempt.
 
 Record this session as evaluated so the crash-recovery hook knows this session was saved:
 ```bash
-echo "$CLAUDE_CODE_SESSION_ID" > .claude/.last-saved-session
+TRANSCRIPT=$(find "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" -name "$CLAUDE_CODE_SESSION_ID.jsonl")
+TURN_COUNT=$(jq -c 'select(.type=="user" and (.toolUseResult // null)==null and (.isMeta // false)==false)' "$TRANSCRIPT" | wc -l)
+echo "$CLAUDE_CODE_SESSION_ID:$TURN_COUNT" > .claude/.last-saved-session
 ```
 
 Confirm both note titles and permalinks to the user.
