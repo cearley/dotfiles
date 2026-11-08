@@ -1,7 +1,7 @@
 # SOPS+age Encryption Specification
 
 ## Purpose
-TBD - Update Purpose after archive
+Encrypts repo-scoped secrets with SOPS and age so they can be committed to the repository and decrypted at chezmoi template-execution time, as the alternative tier to KeePassXC for secrets that exist solely to render chezmoi-managed files.
 
 ## Requirements
 
