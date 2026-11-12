@@ -106,6 +106,7 @@ packages:
       - 'alloy-analyzer'               # Open-source language and analyzer for software modeling
       - 'aws-cdk'                      # AWS Cloud Development Kit for defining cloud infrastructure in code
       - 'aws-sam-cli'
+      - 'bash'
       - 'bats-core'
       - 'cfn-lint'
       - 'checkmake'
@@ -178,13 +179,15 @@ packages:
       bun:
       - '@fission-ai/openspec@latest'  # AI-native system for spec-driven development
       - 'oh-my-claude-sisyphus'        # omc: oh-my-claudecode CLI (HUD, teleport, team helpers)
+      - '@oh-my-pi/pi-coding-agent'    # omp: oh-my-pi AI coding agent
       - 'ralph-tui'                    # AI agent loop orchestrator TUI
       casks:
+      - 'antigravity'                  # Antigravity AI agent desktop app
+      - 'antigravity-cli'              # Command-line interface for the Antigravity AI agent
       - 'block-goose'                  # Open source, extensible AI agent that goes beyond code suggestions
       - 'chatgpt'                      # OpenAI's ChatGPT desktop app
       - 'claude'                       # Anthropic's official Claude AI desktop app
       - 'manaflow-ai/cmux/cmux'        # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
-      - 'codex'                        # OpenAI's coding agent that runs in your terminal
       #- 'copilot-cli'
       - 'copilot-cli@prerelease'       # Brings the power of Copilot coding agent directly to your terminal
       - 'github-copilot-app'           # GitHub Copilot desktop app
@@ -194,7 +197,7 @@ packages:
       uv:
       - "basic-memory"
       - "claude-monitor"
-      - "hcom"
+      #- "hcom"
       - "sniffly@latest"
       - 'git+https://github.com/cearley/claude-session-index'
       - "git+https://github.com/cearley/zsh-llm-suggestions"
