@@ -1,0 +1,38 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+#!/bin/bash
+
+# run_onchange trigger - Every 5 days:  {{ includeTemplate "time-bucket" (dict "days" 5) }}
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools curl; then
+    exit 1
+fi
+
+if command_exists codex; then
+    print_message "info" "codex is already installed. Updating..."
+    command codex update
+    exit 0
+fi
+
+print_message "info" "Installing Codex CLI (native method)..."
+
+# Install codex using the official installation script from OpenAI
+if curl -fsSL https://chatgpt.com/codex/install.sh | sh; then
+    if ! command_exists codex; then
+        print_message "error" "Installation completed but 'codex' command not found in PATH"
+        print_message "info" "You may need to restart your terminal or add ~/.local/bin to your PATH"
+        exit 1
+    fi
+else
+    print_message "error" "Failed to install Codex CLI"
+    print_message "info" "Visit https://chatgpt.com/codex/docs/en/setup for troubleshooting"
+    exit 1
+fi
+
+print_message "success" "Codex CLI installed successfully!"
+print_message "info" "You may need to restart your terminal or source your shell profile"
+
+{{ end -}}

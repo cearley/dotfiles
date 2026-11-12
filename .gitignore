@@ -42,3 +42,6 @@ openspec/.cache/
 
 # Dir Env
 .claude-profile
+
+# spectralint cache
+.spectralint-cache.json

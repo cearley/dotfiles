@@ -1,0 +1,38 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+#!/bin/bash
+
+# run_onchange trigger - Every 5 days:  {{ includeTemplate "time-bucket" (dict "days" 5) }}
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools curl; then
+    exit 1
+fi
+
+if command_exists claude; then
+    print_message "info" "claude is already installed. Updating..."
+    command claude update
+    exit 0
+fi
+
+print_message "info" "Installing Claude Code (native method)..."
+
+# Install claude using the official installation script from Anthropic
+if curl -fsSL https://claude.ai/install.sh | bash; then
+    if ! command_exists claude; then
+        print_message "error" "Installation completed but 'claude' command not found in PATH"
+        print_message "info" "You may need to restart your terminal or add ~/.local/bin to your PATH"
+        exit 1
+    fi
+else
+    print_message "error" "Failed to install Claude Code"
+    print_message "info" "Visit https://code.claude.com/docs/en/setup for troubleshooting"
+    exit 1
+fi
+
+print_message "success" "Claude Code installed successfully!"
+print_message "info" "You may need to restart your terminal or source your shell profile"
+
+{{ end -}}
