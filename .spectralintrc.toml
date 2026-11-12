@@ -1,0 +1,266 @@
+# spectralint configuration
+
+# Output format: text, json, github, sarif
+# format = "text"
+
+# Lowest severity shown: error, warning, or info. Info findings (style and size
+# notes) are hidden by default; --min-severity info, --rule, or --fail-on info show them.
+# min_severity = "warning"
+
+# Which files to scan (glob patterns, case-insensitive).
+# Default: the instruction-file locations of every supported tool.
+# Set to ["**/*.md"] to scan all markdown files instead.
+include = [
+  "CLAUDE.md", "CLAUDE.local.md", "AGENTS.md", "GEMINI.md", "SKILL.md",
+  "**/.claude/**",
+  "**/.github/copilot-instructions.md", "**/.github/instructions/**", "**/.github/agents/**", "**/.github/prompts/**", "**/.github/skills/**",
+  "**/.agents/skills/**",
+  "**/.cursor/rules/**", ".cursorrules",
+  ".clinerules", "**/.clinerules/**",
+  ".windsurfrules", "**/.windsurf/rules/**", "**/.devin/rules/**",
+  "**/.kiro/steering/**", "**/.roo/**", "**/.junie/**",
+]
+
+# Directories to ignore when scanning
+ignore = ["node_modules", ".git", "target"]
+
+# Individual files to skip entirely (supports glob patterns)
+# ignore_files = ["changelog.md", "docs/history.md"]
+
+# Files treated as historical (dead refs and enum drift are skipped)
+# Patterns are matched case-insensitively.
+# historical_files = ["changelog*", "retro*", "history*", "archive*", "restart*"]
+
+# Strict mode enables opinionated checks that go beyond documented best practices.
+# These checks are off by default because they enforce opinions rather than catch bugs.
+# strict = true
+
+# Per-checker severity override example:
+# [checkers.vague_directive]
+# severity = "error"
+
+[checkers.dead_reference]
+enabled = true
+
+# [checkers.vague_directive]
+# enabled = true
+# strict = true  # also flag "when possible", "when needed", "as needed", "consider"
+# extra_patterns = ["(?i)\\bmaybe\\b", "(?i)\\bprobably\\b"]
+# scope = ["CLAUDE.md", "AGENTS.md", ".claude/**"]
+
+[checkers.naming_inconsistency]
+enabled = true
+# scope = ["CLAUDE.md", "AGENTS.md", ".claude/**"]
+
+[checkers.placeholder_text]
+enabled = true
+
+[checkers.file_size]
+enabled = true
+max_lines = 750
+warn_lines = 500
+
+[checkers.credential_exposure]
+enabled = true
+
+[checkers.dangerous_command]
+enabled = true
+
+[checkers.stale_reference]
+enabled = true
+
+[checkers.session_journal]
+enabled = true
+
+[checkers.missing_essential_sections]
+enabled = true
+min_lines = 10
+
+[checkers.prompt_injection_vector]
+enabled = true
+
+# ── Strict-only checks (disabled by default, enabled by strict = true) ──
+# These are opinionated or noisy checks disabled by default.
+
+# [checkers.enum_drift]
+# enabled = true
+# scope = ["CLAUDE.md", "AGENTS.md", ".claude/**"]
+
+# [checkers.agent_guidelines]
+# enabled = true
+# scope = ["CLAUDE.md", "AGENTS.md", ".claude/**"]
+
+# [checkers.heading_hierarchy]
+# enabled = true
+
+# [checkers.emoji_density]
+# enabled = true
+# max_emoji = 20
+
+# [checkers.missing_verification]
+# enabled = true
+# min_action_verbs = 4
+
+# [checkers.negative_only_framing]
+# enabled = true
+# threshold = 0.65
+# min_negative_count = 3
+
+# ── Prompt-quality checks ──
+
+[checkers.conflicting_directives]
+enabled = true
+
+# [checkers.missing_role_definition]
+# enabled = true
+
+# [checkers.redundant_directive]
+# enabled = true
+# similarity_threshold = 0.95
+# min_line_length = 15
+
+# [checkers.instruction_density]
+# enabled = true
+# max_consecutive_bullets = 15
+
+# [checkers.missing_examples]
+# enabled = true
+
+# [checkers.unbounded_scope]
+# enabled = true
+
+[checkers.circular_reference]
+enabled = true
+
+[checkers.large_code_block]
+enabled = true
+max_lines = 40
+
+[checkers.duplicate_section]
+enabled = true
+
+[checkers.absolute_path]
+enabled = true
+
+[checkers.misordered_steps]
+enabled = true
+
+# ── New strict-only checks ──
+
+# [checkers.generic_instruction]
+# enabled = true
+
+# [checkers.section_length_imbalance]
+# enabled = true
+# min_section_lines = 50
+# imbalance_ratio = 4.0
+
+[checkers.unclosed_fence]
+enabled = true
+
+[checkers.broken_table]
+enabled = true
+
+[checkers.duplicate_instruction_file]
+enabled = true
+
+[checkers.outdated_model_reference]
+enabled = true
+# max_snapshot_age_days = 365  # flag dated model IDs not in the catalog past this age
+# extra_models = ["acme-llm-v1"]  # additional names to flag
+# current_models = ["gpt-4o"]  # never flag these (overrides the built-in catalog)
+
+[checkers.frontmatter_schema]
+enabled = true
+
+[checkers.placeholder_url]
+enabled = true
+
+[checkers.boilerplate_template]
+enabled = true
+
+# [checkers.emphasis_overuse]
+# enabled = true
+# max_emphasis = 10
+
+[checkers.orphaned_section]
+enabled = true
+
+# [checkers.excessive_nesting]
+# enabled = true
+# max_depth = 4
+
+[checkers.context_window_waste]
+enabled = true
+
+[checkers.ambiguous_scope_reference]
+enabled = true
+
+[checkers.instruction_without_context]
+enabled = true
+
+# [checkers.cross_file_contradiction]
+# enabled = true
+
+# [checkers.untagged_code_block]
+# enabled = true
+
+[checkers.stale_style_rule]
+enabled = true
+
+[checkers.hardcoded_file_structure]
+enabled = true
+
+[checkers.stale_file_tree]
+enabled = true
+
+[checkers.command_validation]
+enabled = true
+
+[checkers.token_budget]
+enabled = true
+warn_tokens = 6000
+max_tokens = 8000
+
+# [checkers.unversioned_stack_reference]
+# enabled = true
+
+# [checkers.bare_url]
+# enabled = true
+
+# [checkers.repeated_word]
+# enabled = true
+
+# [checkers.undocumented_env_var]
+# enabled = true
+
+# [checkers.empty_code_block]
+# enabled = true
+
+# [checkers.click_here_link]
+# enabled = true
+
+# [checkers.double_negation]
+# enabled = true
+
+# [checkers.imperative_heading]
+# enabled = true
+
+# [checkers.inconsistent_command_prefix]
+# enabled = true
+
+# [checkers.empty_heading]
+# enabled = true
+
+# [checkers.copied_meta_instructions]
+# enabled = true
+
+# [checkers.xml_document_wrapper]
+# enabled = true
+
+# Custom regex patterns:
+# [[checkers.custom_patterns]]
+# name = "todo-comment"
+# pattern = "(?i)\\bTODO\\b"
+# severity = "warning"
+# message = "TODO comment found"
