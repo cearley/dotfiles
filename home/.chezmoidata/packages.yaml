@@ -177,9 +177,10 @@ packages:
       - 'specstoryai/tap/specstory'    # Claude Code wrapper that saves conversation history to markdown
       - 'supabase/tap/supabase'        # Supabase CLI
       bun:
+      - '--ignore-scripts --min-release-age=0 --no-fund --no-audit @earendil-works/pi-coding-agent'
       - '@fission-ai/openspec@latest'  # AI-native system for spec-driven development
-      - 'oh-my-claude-sisyphus'        # omc: oh-my-claudecode CLI (HUD, teleport, team helpers)
       - '@oh-my-pi/pi-coding-agent'    # omp: oh-my-pi AI coding agent
+      - 'oh-my-claude-sisyphus'        # omc: oh-my-claudecode CLI (HUD, teleport, team helpers)
       - 'ralph-tui'                    # AI agent loop orchestrator TUI
       casks:
       - 'antigravity'                  # Antigravity AI agent desktop app
