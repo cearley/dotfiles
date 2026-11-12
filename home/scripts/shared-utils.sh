@@ -232,8 +232,8 @@ run_claude_in_env() {
     local env_dir="$1"
     shift
     if [[ "$env_dir" == "$HOME/.claude" ]]; then
-        env -u CLAUDE_CONFIG_DIR claude "$@"
+        env -u CLAUDE_CONFIG_DIR command claude "$@"
     else
-        CLAUDE_CONFIG_DIR="$env_dir" claude "$@"
+        CLAUDE_CONFIG_DIR="$env_dir" command claude "$@"
     fi
 }
