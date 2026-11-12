@@ -190,6 +190,13 @@ fi
 
 # Added by LM Studio CLI (lms)
 export PATH="$PATH:{{- .chezmoi.homeDir -}}/.lmstudio/bin"
+
+# oMLX: CLI shim path begin
+case ":$PATH:" in
+  *":$HOME/.omlx/bin:"*) ;;
+  *) export PATH="$HOME/.omlx/bin:$PATH" ;;
+esac
+# oMLX: CLI shim path end
 {{- end }}
 
 # ------------------------------------------------------------------------------
