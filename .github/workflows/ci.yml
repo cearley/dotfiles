@@ -87,6 +87,8 @@ jobs:
       - name: shellcheck setup-memory-workflow scripts
         shell: bash
         run: |
+          # .shellcheckrc's external-sources needs shellcheck >= 0.8.
+          shellcheck --version | grep '^version:'
           shellcheck home/dot_claude/skills/setup-memory-workflow/scripts/*.sh \
             && echo "✅ shellcheck passed" \
             || { echo "❌ shellcheck found issues"; exit 1; }
