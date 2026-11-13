@@ -1,6 +1,6 @@
 {{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
 {{- $modFile := dict "type" "file" "refreshPeriod" "168h" -}}
-{{- $modBase := "https://raw.githubusercontent.com/davila7/claude-code-templates/c3a74d3ef9ed8076eeb1e3370cc0fc0cc398bdfa/cli-tool/components/mods/productivity/jev-model-router" -}}
+{{- $modBase := "https://raw.githubusercontent.com/davila7/claude-code-templates/9b6d5eb86b62f91ef6498227b127d091f2a3b712/cli-tool/components/mods/productivity/jev-model-router" -}}
 
 # jev-model-router: chezmoi vendors these files and the non-secret
 # pluginConfigs["jev-model-router@skills-dir"].options in each profile's
