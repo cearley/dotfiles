@@ -46,6 +46,7 @@ Catalog and usage examples moved to `home/.chezmoitemplates/CLAUDE.md` (loads au
 - **Package management** → `openspec/specs/package-management/`
 - **Machine config** → `openspec/specs/machine-config/`
 - **Secret management** → `openspec/specs/secret-management/` (tiering) and `openspec/specs/sops-age-encryption/` (SOPS+age mechanism for repo-scoped secrets)
+- **Shell linting** → `openspec/specs/shell-lint/`
 - **Major changes** → See archived proposals in `openspec/changes/archive/`
 
 > `openspec archive <name> --yes` — note: positional arg, not `--change` (that flag errors)

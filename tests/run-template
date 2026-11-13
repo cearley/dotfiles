@@ -14,6 +14,11 @@
 #   tests/run-template --inline '{{ keepassxcAttribute "GitHub" "Access Token" }}'
 #   tests/run-template --inline '{{ includeTemplate "sopsDecrypt" (merge (dict "file" "private_dot_cloudflared/cert.pem.sops") .) }}'
 #
+# Both keepassxcAttribute and the whole-entry `keepassxc "<entry>"` function
+# are supported (e.g. `{{ (keepassxc "atuin").UserName }}`): the mock prints
+# Title/UserName/Password/URL/Notes as `Key: value` lines when no attribute
+# is requested.
+#
 # Templates calling the sopsDecrypt partial are rendered against a mock
 # `sops` binary (tests/bin/sops) put ahead of PATH — no real age key needed.
 #

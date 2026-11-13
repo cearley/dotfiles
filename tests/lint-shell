@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+# Layered static checks (syntax, shellcheck, shfmt) for shell scripts and
+# chezmoi shell templates. Never rewrites anything.
+#
+# Usage:
+#   tests/lint-shell --all        every shell file under home/ except those
+#                                 listed in tests/lint-shell-exclude.txt
+#   tests/lint-shell <file>...    the given files (excluded ones included);
+#                                 non-shell paths are skipped
+#
+# Shell files: *.sh, *.sh.tmpl, and other *.tmpl whose source has a sh/bash
+# shebang line (home/.chezmoitemplates/ is skipped). Templates are rendered
+# through tests/run-template (mock secrets) and every layer checks the exact
+# rendered bytes, so line numbers refer to the rendered output.
+#
+# Layers: [syntax] sh -n / bash -n, [lint] shellcheck (.shellcheckrc),
+# [format] shfmt -d (.editorconfig). A syntax failure skips the other two.
+# Run from the repo root. Exit 0 only when no checked file failed.
+
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd -P)"
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/lint-shell-XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+
+# Files to check: *.sh and *.sh.tmpl, or other *.tmpl with a sh/bash shebang.
+is_shell() { # <path>
+    case "$1" in
+        home/.chezmoitemplates/*) return 1 ;;
+        *.sh | *.sh.tmpl) return 0 ;;
+        *.tmpl) grep -Eq '^#!.*\b(ba)?sh\b' "$1" ;;
+        *) return 1 ;;
+    esac
+}
+
+# Print each output line labelled with its layer; $1 is the layer name.
+label() { sed "s|^|  [$1] |"; }
+
+lint_file() { # <source path>; returns 1 on failure
+    local src="$1" shell=bash rc=0 out file name
+    file="$src" name="$src"
+    if [[ "$src" == *.tmpl ]]; then
+        file="$TMP/rendered"
+        if ! "$ROOT/tests/run-template" "$src" >"$file" 2>"$TMP/err"; then
+            echo "FAIL $src"
+            label render <"$TMP/err"
+            return 1
+        fi
+        if [[ -z "$(tr -d '[:space:]' <"$file")" ]]; then
+            echo "SKIP $src (renders empty)"
+            return 0
+        fi
+        [[ "$src" == *.sh.tmpl ]] || name="$src.sh"
+    fi
+    head -n1 "$file" | grep -Eq '^#!(/usr/bin/env )?/?(usr/)?(bin/)?sh$' && shell="sh"
+
+    if ! out="$("$shell" -n "$file" 2>&1)"; then
+        echo "FAIL $src"
+        label syntax <<<"${out//$file/$src}"
+        return 1
+    fi
+    out="$(shellcheck --rcfile="$ROOT/.shellcheckrc" -f gcc "$file" 2>&1)" || {
+        rc=1
+        echo "FAIL $src"
+        label lint <<<"${out//$file/$src}"
+    }
+    out="$(shfmt -d --filename "$name" <"$file" 2>&1)" || {
+        [[ $rc -eq 0 ]] && echo "FAIL $src"
+        rc=1
+        label format <<<"$out"
+    }
+    [[ $rc -eq 0 ]] && echo "ok   $src"
+    return "$rc"
+}
+
+cd "$ROOT" || exit 1
+files=()
+if [[ "${1:-}" == --all ]]; then
+    while IFS= read -r f; do
+        grep -Fxq -- "$f" tests/lint-shell-exclude.txt && continue
+        files+=("$f")
+    done < <(find home \( -name '*.sh' -o -name '*.tmpl' \) -type f | LC_ALL=C sort)
+elif [[ $# -eq 0 || "$1" == -* ]]; then
+    sed -n '2,/^$/p' "$0" | grep '^#' | sed 's/^# \{0,1\}//'
+    exit 2
+else
+    files=("$@")
+fi
+
+status=0
+for f in "${files[@]}"; do
+    is_shell "$f" || continue
+    lint_file "$f" || status=1
+done
+exit "$status"

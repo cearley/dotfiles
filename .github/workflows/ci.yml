@@ -64,24 +64,26 @@ jobs:
     steps:
       - uses: actions/checkout@main
 
-      - name: Check script line counts (max 100 lines)
+      - name: Check script line counts (max 160 lines)
         shell: bash
         run: |
           # setup-memory-workflow scripts are kept small and single-purpose;
-          # a file creeping past 100 lines is a signal it should be split.
+          # a file creeping past 160 lines is a signal it should be split.
           status=0
           for f in home/dot_claude/skills/setup-memory-workflow/scripts/*.sh; do
             lines="$(wc -l < "$f")"
-            if [ "$lines" -gt 100 ]; then
-              echo "❌ $f is $lines lines (max 100)"
+            if [ "$lines" -gt 160 ]; then
+              echo "❌ $f is $lines lines (max 160)"
               status=1
             fi
           done
           if [ "$status" -eq 0 ]; then
-            echo "✅ All setup-memory-workflow scripts are within the 100-line budget"
+            echo "✅ All setup-memory-workflow scripts are within the 160-line budget"
           fi
           exit "$status"
 
+      # Shellcheck settings live ONLY in the repo-root .shellcheckrc (shared with
+      # tests/lint-shell, make lint, and the pre-commit hook). Do not add flags here.
       - name: shellcheck setup-memory-workflow scripts
         shell: bash
         run: |

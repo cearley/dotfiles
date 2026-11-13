@@ -97,6 +97,18 @@ chezmoi add ~/.config/newfile
 
 See the [chezmoi documentation](https://www.chezmoi.io/user-guide/daily-operations/) for more details.
 
+**Shell linting:**
+```sh
+# One-time setup per clone: enable the pre-commit hook (core.hooksPath -> .githooks)
+make hooks
+
+make lint   # syntax, shellcheck, and shfmt checks on shell scripts and templates
+make check  # lint plus the isolated shell test suites
+make fmt    # rewrite plain home/**/*.sh with shfmt (templates are never touched)
+```
+
+The pre-commit hook runs `tests/lint-shell` on the staged files under `home/` (their working-tree contents) and blocks the commit on any failure; bypass it with `git commit --no-verify`. `make lint` skips the known-failing files listed in `tests/lint-shell-exclude.txt`, but the hook and `tests/lint-shell <file>` always check a file in full, so fix a file when you touch it and remove it from the list. The list only shrinks. `make fmt` only rewrites plain `*.sh` files, so fix `*.sh.tmpl` format differences by hand with whitespace control (`{{-` / `-}}`).
+
 ## Before Forking
 
 This is a personal configuration reflecting specific workflows and preferences. Consider it a **reference implementation** rather than something to use directly.

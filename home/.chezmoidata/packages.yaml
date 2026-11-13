@@ -130,6 +130,7 @@ packages:
       - 'pkgconf'
       - 'qltysh/tap/qlty'              # Code quality CLI: linting, formatting, security (successor to Code Climate)
       - 'shellcheck'                   # Static analysis tool for shell scripts
+      - 'shfmt'                        # Shell script formatter (used by shell-template-lint)
       - 'snyk-cli'
       - 'sops'                         # Encrypts/decrypts structured and binary secrets using age/PGP/KMS backends
       - 'sqlite'

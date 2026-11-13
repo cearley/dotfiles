@@ -42,6 +42,7 @@ handle_attachment_export_args() {
 handle_show_args() {
     # Parses show flags and returns the looked-up value.
     # Supports both direct mode (database path as first positional) and open-session mode.
+    # Without --attributes, prints the whole entry as `Key: value` lines.
     # Chezmoi sends: show "<entry>" --attributes <attr> --quiet --show-protected
     local attr="" entry="" skip_next=""
     for arg in "$@"; do
@@ -62,6 +63,19 @@ handle_show_args() {
                 ;;
         esac
     done
+    if [[ -z "$attr" ]]; then
+        # Whole-entry show (chezmoi's `keepassxc "<entry>"` function): emit
+        # `Key: value` lines. Title defaults to the entry name.
+        local key
+        for key in Title UserName Password URL Notes; do
+            if [[ "$key" == Title ]] && ! jq -e --arg e "$entry" '.[$e].Title' "$FIXTURES" >/dev/null 2>&1; then
+                echo "Title: $entry"
+            else
+                echo "$key: $(lookup "$entry" "$key")"
+            fi
+        done
+        return 0
+    fi
     lookup "$entry" "$attr"
 }
 

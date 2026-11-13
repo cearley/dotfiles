@@ -12,6 +12,10 @@ bd close <id>         # Complete work
 bd dolt push          # Push beads data to remote
 ```
 
+## Shell Linting
+
+Run `make lint` (or `tests/lint-shell <file>`) on shell files and templates you change; see `.claude/rules/home-scripts.md`.
+
 ## Non-Interactive Shell Commands
 
 **ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.

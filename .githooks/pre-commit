@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Pre-commit hook: lint staged shell files and templates under home/.
+# Enable once per clone with `make hooks`. Bypass with --no-verify.
+
+set -euo pipefail
+
+cd "$(git rev-parse --show-toplevel)"
+files=()
+while IFS= read -r f; do files+=("$f"); done < <(git diff --cached --name-only --diff-filter=ACMR -- home/)
+[[ ${#files[@]} -eq 0 ]] || exec tests/lint-shell "${files[@]}"

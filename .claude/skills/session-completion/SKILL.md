@@ -7,7 +7,7 @@ description: Checklist for wrapping up a chezmoi dotfiles work session — quali
 
 **When ending a work session**, complete these steps. Committing and pushing each still require explicit user confirmation per the global Git Workflow gates — this checklist does not override that.
 
-1. **Run quality gates** (if code changed) - Tests, linters, builds
+1. **Run quality gates** (if code changed) - `make check` (shell lint + tests), plus any builds
 2. **Offer to push to remote** (only after the user confirms):
    ```bash
    git pull --rebase

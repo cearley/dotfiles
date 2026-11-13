@@ -30,6 +30,15 @@ tests/run-template --inline '{{ keepassxcAttribute "GitHub" "Access Token" }}'
 chezmoi execute-template < filename.tmpl
 ```
 
+### Shell Linting
+Run `tests/lint-shell <file>` on every shell file or template you create or modify, and fix all failures before reporting done.
+- Three layers run in order: syntax (`bash -n`), lint (shellcheck), format (shfmt). A syntax failure stops the later layers.
+- Templates are rendered first (via `tests/run-template`, using this machine's tags), so results reflect this machine only. Line numbers refer to the **rendered** output; run `tests/run-template <file>` to see it.
+- Fix template format diffs (e.g. stray blank lines from `{{ if }}`/`{{ end }}`) with whitespace control (`{{-` / `-}}`). **Never** run shfmt on a template — it corrupts the template syntax.
+- `make fmt` (shfmt -w) is for plain `*.sh` files only.
+- `tests/lint-shell-exclude.txt` lists known-failing files that `make lint` (`--all`) skips; files you name are always checked in full. Remove a file from the list once it is fixed; never add files to it.
+- The pre-commit hook (`make hooks` to enable) runs `tests/lint-shell` on staged `home/` files and enforces this on commit.
+
 ### Template Best Practices
 
 The `prompt_claude_env` p10k segment is defined by the external `zsh-claude-env` oh-my-zsh plugin (https://github.com/cearley/zsh-claude-env), pulled via `.chezmoiexternal.toml.tmpl`. Its registration in `dot_p10k.zsh` is wrapped in `# === BEGIN/END claude-env segment registration ===` markers — preserve these if regenerating p10k config. The plugin's own `CLAUDE_ENV_COLORS`/`CLAUDE_ENV_SHOW_DEFAULT` settings live as plain hand-edited `typeset` lines just below that array, not chezmoi-templated.
