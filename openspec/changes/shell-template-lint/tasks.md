@@ -42,7 +42,7 @@
 ## 6. CI
 
 - [x] 6.1 Confirm the `shell_lint` job's `shellcheck home/dot_claude/skills/setup-memory-workflow/scripts/*.sh` picks up the root `.shellcheckrc` (D14): locally, from the repo root, a temporary `disable=` line in `.shellcheckrc` silences a matching finding in one of those scripts (revert afterwards); add a comment in `ci.yml` above the step naming `.shellcheckrc` as the only place for shellcheck settings; verify `shellcheck` still exits 0 on those scripts with the final `.shellcheckrc`
-- [ ] 6.2 After pushing (only with the user's approval), check the `shell_lint` job log for a shellcheck version ≥ 0.8 and a passing step; if the version is older, add an install step for a pinned version and verify it passes
+- [x] 6.2 After pushing (only with the user's approval), check the `shell_lint` job log for a shellcheck version ≥ 0.8 and a passing step; if the version is older, add an install step for a pinned version and verify it passes
 
 ## 7. Agent awareness
 
