@@ -19,10 +19,6 @@ export CLAUDE_CONFIG_DIR="$HOME/.{{ $claudeDefault }}"
 export PATH="{{ .chezmoi.homeDir }}/.oh-my-zsh/custom/plugins/zsh-claude-env/bin:$PATH"
 command -v ccenv >/dev/null 2>&1 && eval "$(ccenv init -)"
 
-{{- if has "ai" .tags }}
-export CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1
-{{- end }}
-
 {{ if has "ai" .tags -}}
 alias openspecui='npx openspecui@latest'
 # Added by LM Studio CLI (lms)

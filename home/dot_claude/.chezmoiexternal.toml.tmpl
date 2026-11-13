@@ -22,6 +22,9 @@
 # update procedure (resolve the new HEAD SHA with `git ls-remote
 # https://github.com/davila7/claude-code-templates.git main`, then replace
 # the SHA segment in $modBase above).
+# The pinned commit requires Claude Code >= 2.1.287 (mods load by default;
+# no CLAUDE_CODE_ENABLE_FUNCTION_HOOKS needed) — re-check the upstream
+# README's requirements line whenever the SHA moves.
 
 ["skills/jev-model-router/.claude-plugin/plugin.json"]
     {{- toToml $modFile | nindent 4 }}
