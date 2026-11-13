@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 # basic-memory-write-guard — PreToolUse hook (Bash|Edit|Write matcher). Denies any
 # write-shaped Bash command, or any Edit/Write call, that targets a path under
-# basic-memory's notes store (~/.local/share/basic-memory/). Those files are indexed by
-# the basic-memory MCP server (SQLite index, plus per-note checksums that bm_edit uses
-# for optimistic concurrency) — a write that bypasses the server leaves that index stale
-# and can make a later bm_edit silently fail its checksum guard, or leave
-# bm_search/recent_activity out of sync with what's actually on disk. Use
-# mcp__basic-memory__bm_write / bm_edit instead.
+# basic-memory's notes store. Prefer indexed MCP agent writes to avoid stale
+# revisions and indexing delay. Human Markdown edits are supported by Basic Memory;
+# this heuristic guard expresses agent policy, not a security sandbox.
 #
 # Deployed once, machine-wide, by chezmoi (like check-drift.sh itself) — this script
 # takes no __PROJECT__ substitution, since the guard applies to the whole
@@ -29,10 +26,10 @@ BASE="$HOME/.local/share/basic-memory"
 payload=$(cat)
 tool_name=$(jq -r '.tool_name // ""' <<<"$payload")
 
-MESSAGE="This path is inside basic-memory's notes store ($BASE), which the basic-memory MCP server indexes (SQLite + per-note checksums). A direct filesystem write bypasses that index and can make a later bm_edit silently fail its checksum guard, or leave bm_search/recent_activity stale. Use the mcp__basic-memory__bm_write or mcp__basic-memory__bm_edit tools instead."
+MESSAGE="This path is inside basic-memory's notes store ($BASE). Use indexed agent writes through bm_write or bm_edit with an explicit project and a fresh expected_checksum for edits; direct writes can cause stale revisions or indexing delay. Human Markdown editing is supported. This heuristic guard is agent policy, not a security sandbox."
 
 emit_deny() {
-  jq -n --arg reason "$MESSAGE" '{
+    jq -n --arg reason "$MESSAGE" '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       permissionDecision: "deny",
@@ -45,40 +42,40 @@ emit_deny() {
 # raw path) before checking whether it sits under $BASE — same approach as
 # claude-tooling-write-guard's check_path().
 under_base() {
-  local path="$1" resolved="$1" real real_parent
-  if real=$(realpath "$path" 2>/dev/null); then
-    resolved="$real"
-  elif real_parent=$(realpath "$(dirname -- "$path")" 2>/dev/null); then
-    resolved="${real_parent}/$(basename -- "$path")"
-  fi
-  [[ "$resolved" == "$BASE"/* ]]
+    local path="$1" resolved="$1" real real_parent
+    if real=$(realpath "$path" 2>/dev/null); then
+        resolved="$real"
+    elif real_parent=$(realpath "$(dirname -- "$path")" 2>/dev/null); then
+        resolved="${real_parent}/$(basename -- "$path")"
+    fi
+    [[ "$resolved" == "$BASE"/* ]]
 }
 
 case "$tool_name" in
-Edit|Write)
-  file_path=$(jq -r '.tool_input.file_path // ""' <<<"$payload")
-  [[ -z "$file_path" ]] && exit 0
-  if under_base "$file_path"; then
-    emit_deny
-  fi
-  ;;
-Bash)
-  command=$(jq -r '.tool_input.command // ""' <<<"$payload")
-  [[ -z "$command" ]] && exit 0
+    Edit | Write)
+        file_path=$(jq -r '.tool_input.file_path // ""' <<<"$payload")
+        [[ -z "$file_path" ]] && exit 0
+        if under_base "$file_path"; then
+            emit_deny
+        fi
+        ;;
+    Bash)
+        command=$(jq -r '.tool_input.command // ""' <<<"$payload")
+        [[ -z "$command" ]] && exit 0
 
-  # Raw command text, not shell-evaluated — expand ~ and a literal $HOME manually.
-  expanded="${command/#\~/$HOME}"
-  expanded="${expanded//\$HOME/$HOME}"
-  expanded="${expanded//\~\//$HOME/}"
+        # Raw command text, not shell-evaluated — expand ~ and a literal $HOME manually.
+        expanded="${command/#\~/$HOME}"
+        expanded="${expanded//\$HOME/$HOME}"
+        expanded="${expanded//\~\//$HOME/}"
 
-  [[ "$expanded" == *"$BASE"* ]] || exit 0
+        [[ "$expanded" == *"$BASE"* ]] || exit 0
 
-  redirect_pattern='>{1,2}'
-  word_pattern='(^|[;&|[:space:]])(rm|mv|cp|touch|mkdir|truncate|dd|install|tee)([[:space:]]|$)'
-  sed_pattern='(^|[;&|[:space:]])sed[[:space:]]+-i'
+        redirect_pattern='>{1,2}'
+        word_pattern='(^|[;&|[:space:]])(rm|mv|cp|touch|mkdir|truncate|dd|install|tee)([[:space:]]|$)'
+        sed_pattern='(^|[;&|[:space:]])sed[[:space:]]+-i'
 
-  if [[ "$expanded" =~ $redirect_pattern ]] || [[ "$expanded" =~ $word_pattern ]] || [[ "$expanded" =~ $sed_pattern ]]; then
-    emit_deny
-  fi
-  ;;
+        if [[ "$expanded" =~ $redirect_pattern ]] || [[ "$expanded" =~ $word_pattern ]] || [[ "$expanded" =~ $sed_pattern ]]; then
+            emit_deny
+        fi
+        ;;
 esac

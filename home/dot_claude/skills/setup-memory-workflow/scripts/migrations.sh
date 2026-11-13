@@ -1,79 +1,87 @@
 # shellcheck shell=bash
-# migrations.sh — cleans up this skill's own prior-version artifacts.
-#
-# Sourced by check-drift.sh; never run standalone (no shebang, not chmod +x).
-#
-# Contract for every migrate_<piece> function:
-#   - No arguments. Operates on the relevant file under $PROJECT_ROOT.
-#   - Only ever removes or transforms known legacy state left by a prior
-#     version of this skill. Never creates or manages the *current*
-#     canonical shape of anything — that's check-drift.sh's job (directly,
-#     or via check_templated_file()/apply_templated_file() for whole-file
-#     pieces). A migration function has zero knowledge of what canonical
-#     looks like today.
-#   - MUST be idempotent: safe to call unconditionally, every time, forever.
-#     No-ops silently once the legacy state it targets no longer exists.
-#   - Called unconditionally, once, near the top of check-drift.sh — on
-#     every invocation, both `check` and `apply`, regardless of which piece
-#     is being checked or applied. Migrations are not gated behind a
-#     specific `apply <piece>` confirmation step: they only ever touch this
-#     skill's own previously-installed artifacts (matched by a literal
-#     "basic-memory" substring or similarly unambiguous marker), never
-#     anything a user might have added by hand.
-#
-# Add a CHANGELOG.md entry alongside any new or changed function here.
-
-# Removes any legacy basic-memory hook left under UserPromptSubmit from
-# before the v8 SessionStart migration (see CHANGELOG.md v8). Knows nothing
-# about SessionStart — that's plain canonical-shape hook management living
-# in check-drift.sh, not a migration concern.
-migrate_hook_config() {
-  [ -f .claude/settings.local.json ] || return 0
-  jq -e '[.hooks.UserPromptSubmit[]?.hooks[]?.command // ""] | any(contains("basic-memory"))' \
-    .claude/settings.local.json >/dev/null 2>&1 || return 0
-  jq '
-    .hooks.UserPromptSubmit |= map(.hooks |= map(select((.command // "" | contains("basic-memory")) | not)))
-    | .hooks.UserPromptSubmit |= map(select((.hooks | length) > 0))
-    | (if (.hooks.UserPromptSubmit | length) == 0 then del(.hooks.UserPromptSubmit) else . end)
-  ' .claude/settings.local.json > .claude/settings.local.json.tmp \
-    && mv .claude/settings.local.json.tmp .claude/settings.local.json
-  echo "MIGRATED: removed legacy basic-memory hook from UserPromptSubmit"
+# Literal shell expressions below are hook command data, never evaluated here.
+# shellcheck disable=SC2016
+# Exact owned legacy shapes, invoked only inside explicit mutation dispatch.
+# v1-v18 used echo of a SYSTEM REMINDER, with the workflow version marker.
+# Single/double quote delimiters and the v17-v18 exact drift-warn tail are accepted.
+legacy_reminder_owned() {
+    local cmd="$1" body quote tail=""
+    case "$cmd" in
+        "echo '"*)
+            quote="'"
+            body=${cmd#"echo '"}
+            ;;
+        'echo "'*)
+            quote='"'
+            body=${cmd#'echo "'}
+            ;;
+        *) return 1 ;;
+    esac
+    case "$body" in
+        *"$quote"';&'*) return 1 ;;
+    esac
+    # Split only at the known trailing shell wrapper, never execute the command.
+    case "$body" in
+        *"$quote"'; "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh" drift-warn 2>/dev/null || true')
+            tail='; "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh" drift-warn 2>/dev/null || true'
+            body=${body%"$tail"}
+            ;;
+    esac
+    [ "${body%"$quote"}" != "$body" ] || return 1
+    body=${body%"$quote"}
+    case "$body" in
+        'SYSTEM REMINDER: This is the '*" project."* | \
+            'SYSTEM REMINDER (background context for the '*" project, tracked in basic-memory"*) ;;
+        *) return 1 ;;
+    esac
+    [[ "$body" =~ \[setup-memory-workflow-version:[0-9]+\] ]] || return 1
+    # Echo content is single quoted in actual legacy installs (escaped apostrophes
+    # use the shell '\'' sequence). Refuse unrecognized executable suffixes.
+    if [ "$quote" = "'" ]; then
+        body=${body//"'\\''"/}
+        [[ "$body" != *"'"* ]] || return 1
+    else
+        [[ "$body" != *'"'* ]] || return 1
+    fi
 }
 
-# Removes any legacy SessionStart reminder hook entry installed before the
-# session-reminder.sh script existed (the old baked-note "echo" command
-# always mentioned basic-memory but never session-reminder.sh). Without this,
-# hook_piece_status's session-reminder.sh substring match wouldn't recognize
-# the old entry as the same piece and would append a second one instead of
-# replacing it. Knows nothing about the new canonical shape — that's
-# hook_piece_status/hook_piece_apply's job in lib-pieces.sh.
-migrate_legacy_reminder_hook() {
-  [ -f .claude/settings.local.json ] || return 0
-  jq -e '[.hooks.SessionStart[]?.hooks[]?.command // ""] | any(contains("basic-memory") and (contains("session-reminder.sh") | not))' \
-    .claude/settings.local.json >/dev/null 2>&1 || return 0
-  jq '
-    .hooks.SessionStart |= map(.hooks |= map(select((.command // "" | contains("basic-memory") and (contains("session-reminder.sh") | not)) | not)))
-    | .hooks.SessionStart |= map(select((.hooks | length) > 0))
-    | (if (.hooks.SessionStart | length) == 0 then del(.hooks.SessionStart) else . end)
-  ' .claude/settings.local.json > .claude/settings.local.json.tmp \
-    && mv .claude/settings.local.json.tmp .claude/settings.local.json
-  echo "MIGRATED: removed legacy basic-memory reminder hook from SessionStart"
+migrate_reminder_hooks() {
+    local file=.claude/settings.local.json commands encoded cmd owned='[]' tmp
+    [ -f "$file" ] || return 0
+    settings_valid "$file" || return 1
+    commands=$(jq -c '[.hooks.SessionStart[]?.hooks[]?.command, .hooks.UserPromptSubmit[]?.hooks[]?.command] | map(select(type == "string"))' "$file")
+    while IFS= read -r encoded; do
+        cmd=$(jq -r . <<<"$encoded")
+        if legacy_reminder_owned "$cmd"; then
+            owned=$(jq --arg cmd "$cmd" '. + [$cmd]' <<<"$owned")
+        fi
+    done < <(jq -c '.[]' <<<"$commands")
+    [ "$owned" != '[]' ] || return 0
+    tmp=$(mktemp "$file.tmp.XXXXXX") || return 1
+    if jq --argjson owned "$owned" '
+        def ours: .command as $c | ($owned | index($c)) != null;
+        .hooks |= with_entries(if (.key == "SessionStart" or .key == "UserPromptSubmit") then
+          .value |= map(. as $before | .hooks |= map(select(ours | not)) |
+            select((.hooks | length) > 0 or ($before.hooks | any(ours) | not)))
+          else . end)' "$file" >"$tmp" && mv -f "$tmp" "$file"; then
+        echo 'MIGRATED: recognized owned legacy reminder'
+    else
+        rm -f "$tmp"
+        return 1
+    fi
 }
 
-# Removes the retired sync-memory skill directory and its cursor-state file,
-# left behind by versions prior to v16 (see CHANGELOG.md v16). sync-memory
-# itself is gone from canonical distribution; this only cleans up what an
-# earlier check-drift.sh run may have already installed.
 migrate_sync_memory() {
-  local removed=no
-  if [ -d .claude/skills/sync-memory ]; then
-    rm -rf .claude/skills/sync-memory
-    removed=yes
-  fi
-  if [ -f .specstory/.sync-memory-state.json ]; then
-    rm -f .specstory/.sync-memory-state.json
-    removed=yes
-  fi
-  [ "$removed" = yes ] && echo "MIGRATED: removed legacy sync-memory skill and state file"
-  return 0
+    local skill=.claude/skills/sync-memory/SKILL.md
+    [ -e .claude/skills/sync-memory ] || return 0
+    # A path alone is not ownership. Marker plus actual old skill name is required.
+    if [ -f "$skill" ] && [ ! -L .claude/skills/sync-memory ] &&
+        grep -qx 'name: sync-memory' "$skill" &&
+        grep -Eq '^<!-- setup-memory-workflow-version:[0-9]+ -->$' "$skill"; then
+        rm -rf .claude/skills/sync-memory
+        rm -f .specstory/.sync-memory-state.json
+        echo 'MIGRATED: owned retired sync-memory artifacts'
+    else
+        print_message warning 'Preserved ambiguous retired sync-memory content; review manually.'
+    fi
 }

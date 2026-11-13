@@ -1,7 +1,7 @@
 # setup-memory-workflow Specification
 
 ## Purpose
-Bootstraps and runs the basic-memory session workflow (`save-session`, `sync-memory`, a `SessionStart` reminder hook, and a `PreToolUse` write-guard hook) by copying rendered templates into each target project via `check-drift.sh`. Project identity resolves once, at apply-time, and is baked into every per-project-templated piece — there is no runtime resolution script. A version marker embedded in each templated piece lets `check-drift.sh check` report drift and `check-drift.sh update` unconditionally repair version-only drift; an identity mismatch (`NAME-MISMATCH`) is never auto-repaired and always requires an explicit `apply <piece>` after confirmation. The write-guard hook is the one piece that is not per-project-templated — see the dedicated requirement below.
+Installs and runs the Basic Memory 1.x session workflow: `save-session`, manual `save-session-maintenance`, startup reminders, recovery detection and a direct-write guard. `check` and startup `drift-warn` observe existing state; explicit `install`, `update` and targeted `apply` perform setup and repair. Rendered skills bake the resolved project identity, while shared hook scripts read current checkout state at runtime. Version-only drift can be updated; identity mismatches require explicit targeted repair. Automatic recording additionally requires a valid checkout-bound `.basic-memory-workflow.json` grant; installation never grants consent. One-time saves, recovery of a named prior transcript and maintenance retain their own authorization boundaries. Host tool approvals remain independent.
 
 ## Requirements
 

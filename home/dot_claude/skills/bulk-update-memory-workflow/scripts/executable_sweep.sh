@@ -12,23 +12,23 @@ set -euo pipefail
 
 MODE="${1:-}"
 case "$MODE" in
-  check|update) ;;
-  *)
-    echo "Usage: sweep.sh <check|update>" >&2
-    exit 1
-    ;;
+    check | update) ;;
+    *)
+        echo "Usage: sweep.sh <check|update>" >&2
+        exit 1
+        ;;
 esac
 
-CHECK_DRIFT="$HOME/.claude/skills/setup-memory-workflow/scripts/check-drift.sh"
+CHECK_DRIFT="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh"
 if [ ! -x "$CHECK_DRIFT" ]; then
-  echo "MISSING: $CHECK_DRIFT not found or not executable — is setup-memory-workflow installed?" >&2
-  exit 1
+    echo "MISSING: $CHECK_DRIFT not found or not executable — is setup-memory-workflow installed?" >&2
+    exit 1
 fi
 
-fd --hidden --no-ignore-vcs --type d --full-path '\.claude/skills/save-session$' "$HOME" \
-  | grep -v '\.stversions\|_Archived Items' \
-  | sed 's#/\.claude/skills/save-session/\?$##' \
-  | while IFS= read -r p; do
-      echo "=== $p ==="
-      ( cd "$p" 2>/dev/null && "$CHECK_DRIFT" "$MODE" ) || echo "  FAILED: $p"
+fd --hidden --no-ignore-vcs --type d --full-path '\.claude/skills/save-session$' "$HOME" |
+    grep -v '\.stversions\|_Archived Items' |
+    sed -E 's#/\.claude/skills/save-session/?$##' |
+    while IFS= read -r p; do
+        echo "=== $p ==="
+        (cd "$p" 2>/dev/null && "$CHECK_DRIFT" "$MODE") || echo "  FAILED: $p"
     done

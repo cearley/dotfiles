@@ -40,7 +40,9 @@ When executing a named skill workflow, mandatory steps must not be silently skip
 {{- end }}
 
 ## Basic Memory
-- At conversation start and before creating any note, search_notes()/recent_activity() first — check for prior context and avoid duplicates.
-- At conversation end, offer to save key decisions, insights, or action items.
-- Always ask before recording a conversation to Basic Memory, and confirm the note title/location after saving.
+- At conversation start and before creating any note, use `bm_search` or `bm_project(command="recent")` with an explicit project — check prior context and avoid duplicates. A startup snapshot can avoid redundant additional reads, but does not replace this required lookup. Reads require no recording consent.
+- Automatic curated findings, decisions and session checkpoints require valid standing consent in this checkout's `.basic-memory-workflow.json`, matching its physical root and resolved BM project, and a current installed save-session skill. Verify through `check-drift.sh authorize <project> auto` before activity filtering, note writes or saved-session marker updates. Missing, revoked, invalid, unsupported or mismatched consent denies automatic recording; never infer a grant from an old install or host permissions.
+- A direct save request authorizes that save only, without another confirmation or a standing grant. Generic wrap-up language triggers an offer. On projects without standing consent, offer to save key decisions, insights or action items at conversation end and wait for approval.
+- Recovery from another named transcript requires a separate explicit request covering reading it and saving recovered knowledge. Maintenance (restructuring, archiving or deleting) requires an explicit request for that scope; standing consent does not cover either action. Respect host tool approvals; never bypass them through shell writes or broader permissions.
+- Use BM 1.x `bm_read`, `bm_search`, `bm_project`, `bm_write`, `bm_edit(command=...)` and `bm_move` with explicit project; consult installed `bm_man` for details, including when an upstream skill uses retired calls. Fresh-read checksums guard mutable edits. Verify structured write receipts; failed, refused or uncertain writes leave the saved-session marker unchanged. Confirm saved note titles and returned locations.
 {{ end -}}

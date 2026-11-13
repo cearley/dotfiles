@@ -4,6 +4,27 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v20 (2026-11-13)
+**Breaking:** `check` is read-only and `drift-warn` is local-only. Use explicit
+`install` to register a missing project/create missing pieces, `update` for existing
+version drift, and `apply <piece>` for targeted repair. Migration recognizes owned
+legacy signatures and preserves unfamiliar/native hooks and mixed-group siblings.
+
+Require Basic Memory `>=1,<2`, launch the installed `basic-memory mcp`, and use the
+BM 1.x tool contract with explicit project scope, structured receipts and fresh-read
+checksums for mutable edits. Saves handle first-log creation and uncertain/partial
+writes without claiming completion or blindly replaying appends.
+
+Automatic curated recording requires explicit per-checkout consent in
+`.basic-memory-workflow.json`; existing installations receive no inferred grant.
+Direct save requests authorize one save, while prior-transcript recovery and knowledge
+maintenance require separate explicit requests. Denied authorization never advances
+the evaluated-session marker. Host `bm_write` and `bm_edit` approvals remain separate.
+
+Update the setup/bulk-update instructions and architecture with staged deployment,
+project update, re-enrollment and rollback guidance. This release changes source only;
+it does not enroll projects, enable native plugins or cloud features, or deploy profiles.
+
 ## v19 (2026-11-08)
 Fixes a bake-at-update-time problem in the `SessionStart` reminder hook, splits
 `check-drift.sh` into a thin orchestrator plus two generic sourced libraries, pins the

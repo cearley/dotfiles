@@ -197,7 +197,7 @@ packages:
       - 'jan'                          # Offline AI chat tool
       - 'ollama-app'                   # Get up and running with large language models locally
       uv:
-      - "basic-memory"
+      - "'basic-memory>=1,<2'"  # Quotes are shell syntax for the existing uv installer.
       - "claude-monitor"
       #- "hcom"
       - "sniffly@latest"
@@ -208,8 +208,10 @@ packages:
           mcp_servers: # Registered via `claude mcp add --scope user <name> -- <command...>`
           - name: basic-memory
             scope: user
-            command: uvx --python 3.12 basic-memory mcp
+            command: basic-memory mcp
           skills: # Installed via `npx skills add <args> -g`
+          # Retain these four capabilities; BM 1.x contract guidance lives in
+          # docs/architecture/setup-memory-workflow.md (upstream examples may be stale).
           - 'basicmachines-co/basic-memory-skills --skill memory-defrag'
           - 'basicmachines-co/basic-memory-skills --skill memory-lifecycle'
           - 'basicmachines-co/basic-memory-skills --skill memory-notes'

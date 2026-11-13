@@ -9,6 +9,7 @@
 # scratch dir, runs a repo script directly (not mock-rendered), and sets HOME to
 # the scratch dir.
 TEST_SUITES := tests/test-basic-memory-write-guard.sh
+PYTHON_TEST_SUITES := tests/test_memory_workflow.py tests/test_memory_workflow_hook_messages.py
 
 # Excluded from `test` (not confirmed isolated):
 #   tests/test-claude-settings-ledger.sh      executes mock-rendered scripts (run-template
@@ -16,7 +17,7 @@ TEST_SUITES := tests/test-basic-memory-write-guard.sh
 #   tests/test-claude-tooling-write-guard.sh  executes a mock-rendered guard that calls the
 #                                             real `chezmoi managed` and reads the real
 #                                             $HOME/.claude; HOME is not sandboxed
-#   tests/test_*.py                           Python tests; runner not yet confirmed
+#   other tests/test_*.py                     Python tests; runner not yet confirmed
 #                                             isolated, so they stay out of `check`
 
 help:
@@ -38,6 +39,7 @@ fmt:
 
 test:
 	@set -e; for t in $(TEST_SUITES); do echo "== $$t"; bash $$t; done
+	@set -e; for t in $(PYTHON_TEST_SUITES); do echo "== $$t"; python3 $$t; done
 
 check:
 	@rc=0; $(MAKE) lint || rc=1; $(MAKE) test || rc=1; exit $$rc

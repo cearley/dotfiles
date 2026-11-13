@@ -1,129 +1,124 @@
 ---
 name: save-session
-description: Save today's session to basic-memory — fast, append-only (session log entry + status-note Open/Resolved edit), no size checks or triage. Invoke proactively, without asking for confirmation, whenever the session has produced decision-worthy content (an architectural decision, a resolved open item, a persistable finding) — gate this on substantial tool-call/conversation activity, not on whether any file was edited. Also run at explicit user request (/save-session) or when the user signals they're wrapping up.
+description: Save curated session findings, decisions and a checkpoint to basic-memory. Run proactively only with valid project-local standing consent and meaningful activity; a direct save request authorizes one save. Generic wrap-up language triggers an offer. No maintenance or transcript recovery without its own explicit request.
 ---
 <!-- setup-memory-workflow-version:__SMW_VERSION__ -->
+<!-- setup-memory-workflow-project:__PROJECT__ -->
 
-## Anchor to the project root
+## Preflight — before activity filtering or any marker write
 
-Before touching any `.claude/...` path below — including Step 0's own marker touch — confirm
-you're at this project's root (the working directory can drift over a long session, e.g. a
-`cd` for an unrelated task or entering a git worktree):
+1. Resolve this checkout's physical root (`git rev-parse --show-toplevel`, then `cd`
+   and `pwd -P`; outside Git use `pwd -P`). Confirm the installed
+   `.claude/skills/save-session/SKILL.md` is this current rendered skill and its baked
+   project is `__PROJECT__`. A directory name or the mere presence of a skill is insufficient.
+2. Run `~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh check`.
+   Require the installed `basic-memory` CLI major version 1 and the connected BM 1.x
+   tools `bm_read`, `bm_search`, `bm_project`, `bm_write`, `bm_edit`. Consult `bm_man`
+   for schemas when uncertain. Missing/incompatible prerequisites stop the save; do
+   not install, upgrade or substitute a shell write. Respect host approval prompts.
+3. For automatic recording, run
+   `~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh authorize __PROJECT__ auto`.
+   This checks the current installed skill identity, resolved project and consent bound
+   to this physical checkout. Missing, revoked, invalid, unsupported or mismatched
+   `.basic-memory-workflow.json` denies automatic recording. Stop before notes AND
+   `.claude/.last-saved-session`; offer a one-time save or scoped enrollment.
+   Only if the user directly requested this save, use `authorize __PROJECT__ once`
+   instead. That explicit request is sufficient; do not ask again or create standing
+   consent. “I'm done” alone is an offer trigger, not permission. Never use `once`
+   merely to get past a denied automatic check.
+
+All note/search/recent calls below pass `project="__PROJECT__"` explicitly. Reads need
+no recording consent. Recovery of another transcript needs an explicit request naming
+that transcript and covering recovery/save; a standing grant is insufficient. Read only
+that transcript for recovery. Maintenance is separate and manual.
+
+## Step 0 — Meaningful activity
+
+After authorization, automatic saves require more than a trivial lookup or a couple of
+exchanges AND a persistable decision, resolved item, finding or convention. File edits
+are not required. If nothing qualifies, report a no-op and record an evaluated checkpoint
+using “On success” below. Direct save requests skip the activity pre-filter, but do not
+invent content. For recovery with no meaningful content report a no-op without changing
+the current-session marker.
+
+## BM 1.x write contract — applies to every step
+
+Use `output_format="json"` for reads whose checksums are consumed and all writes.
+Immediately before each mutable-note edit, obtain a fresh `bm_read` of that identifier
+and pass its checksum as `expected_checksum` to `bm_edit(command=...)`. Use the returned
+path/identifier for subsequent operations. `bm_edit` never creates missing notes.
+Create only confirmed-missing notes with `bm_write(..., overwrite=false)`; valid forms
+include `identifier` or `title` plus `directory` and `note_type`.
+
+Verify each structured receipt against the installed contract: a documented successful
+`action` for the requested operation, the intended returned `file_path`/identifier and a
+nonempty checksum. A missing `project` field is normal when the contract omits it; do
+not invent that requirement. Reject an explicitly conflicting project or qualified path.
+Treat `isError`, typed refusals, missing/malformed receipts and uncertain outcomes as
+failures. On `REVISION_CONFLICT`, stop and report it; never overwrite or blindly retry an
+append. A success-looking text message alone is insufficient.
+
+## Step 1 — Read status and resolve the active log
+
+Read `status/__PROJECT__-current-status.md` with `bm_read`. On confirmed `NOT_FOUND`,
+prepare a new status note at that canonical path; other read failures stop the save.
+A size/token-limit failure needs explicit maintenance, not improvised trimming.
+
+From the most recent dated Status Summary entry, resolve the **last wikilink** to the
+active session log. Use its returned identifier, without searching when the link exists.
+If no link exists, use scoped `bm_search(query="__PROJECT__ session", project="__PROJECT__")`
+and inspect credible session-log candidates. More than one plausible candidate requires
+a user choice; do not guess. Search errors are not an empty result. If successful scoped
+discovery finds no log, create `sessions/__PROJECT__-session-log.md` with `bm_write`,
+`overwrite=false`, a session-log title and initial banner. Retain the receipt's exact
+identifier for the status link and Step 2; do not derive it from the title. If that path
+already exists, stop and resolve it instead of overwriting it.
+
+Update the status using targeted `bm_edit(command="find_replace" or "replace_section")`
+with a fresh checksum, or create the confirmed-missing canonical status via `bm_write`.
+Preserve the existing Open list as the baseline; move only named items actually resolved
+this session, add new open work and changed environment facts, update “Last updated”.
+Keep bd/OpenSpec as task authority and spot-check still-active work. Do not regenerate
+Open from this session alone, resize or restructure the whole note. End the dated Status
+Summary entry with a wikilink to the exact active log resolved above. Verify the receipt
+before continuing.
+
+## Step 2 — Append to the resolved session log
+
+Curate from the current conversation and available current-session context. Do not mine
+other transcripts or broad session-index content without separate recovery authorization.
+Include today's date, decisions/findings/changes and items resolved. Open items and next
+steps belong in status, not this log entry.
+
+Freshly `bm_read` the resolved log and use `bm_edit(command="append", content=...,
+expected_checksum=<fresh checksum>, project="__PROJECT__", output_format="json")`.
+Never overwrite, roll over or triage it during a routine save. Verify the receipt.
+
+## On success — authorized evaluation only
+
+Only after both writes have confirmed receipts (or a legitimate authorized no-content
+Step 0 evaluation), update the current session's checkpoint. Re-run the appropriate
+`authorize __PROJECT__ auto|once` check immediately before the marker write; `once`
+remains restricted to an actual direct save request. If it fails, leave the marker intact.
+From the verified project root, locate exactly one current-session transcript:
 
 ```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-cd "$PROJECT_ROOT"
-[ -f ".claude/skills/save-session/SKILL.md" ] || {
-  echo "STOP: $PROJECT_ROOT doesn't look like this project (missing .claude/skills/save-session/SKILL.md) — the working directory may have drifted to an unrelated repository."
-  exit 1
-}
-```
-
-If that check fails, stop and tell the user rather than continuing against the wrong directory.
-
-Pass `project="__PROJECT__"` explicitly on every basic-memory call in this skill — never omit
-it even though the schema marks it optional (the server doesn't remember a project chosen on
-an earlier call, and silent fallback to a different project can go unnoticed). After each write
-call (edit_note, write_note), check the result's `project` field matches `__PROJECT__` before
-the next call.
-
-## Step 0 — Decide whether to run this automatically, without asking
-
-Before invoking this skill on your own initiative (not an explicit `/save-session`), apply a
-cheap mechanical pre-filter first, then judgment:
-
-1. **Mechanical pre-filter.** Has this session made a non-trivial number of tool calls, or
-   spanned more than a couple of exchanges? A single trivial lookup fails this filter — stop
-   (recording the session as evaluated first, so the crash-recovery hook knows it was
-   considered):
-   ```bash
-   TRANSCRIPT=$(find "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" -name "$CLAUDE_CODE_SESSION_ID.jsonl")
-   TURN_COUNT=$(jq -c 'select(.type=="user" and (.toolUseResult // null)==null and (.isMeta // false)==false)' "$TRANSCRIPT" | wc -l)
-   echo "$CLAUDE_CODE_SESSION_ID:$TURN_COUNT" > .claude/.last-saved-session
-   ```
-   This is deliberately **not** file-edit-gated — a purely exploratory session (research,
-   design discussion, `/opsx:explore`) can pass it despite touching no files, while a
-   one-typo-fix session touches a file but may not be save-worthy.
-2. **Judgment.** If the pre-filter passes, decide whether the session produced something worth
-   persisting: a decision, a resolved open item, a finding, a convention established or
-   corrected. If yes, run the steps below directly — do not ask "should I save this session?"
-   and wait for a yes. If no, stop (recording evaluated, same snippet as above).
-
-When invoked explicitly (`/save-session`, or the user says they're done), skip straight to
-Step 1 — this gate is only for the model's own unprompted initiative.
-
-## Step 1 — Read the current status note, and resolve the active session-log note from it
-
-Read the current status note (project="__PROJECT__" explicitly):
-  identifier: "__PROJECT__/status/__PROJECT__-current-status"
-  project: "__PROJECT__"
-
-Its canonical location is `status/__PROJECT__-current-status` — if this is the project's
-first-ever save and the note doesn't exist yet, create it there, not at a freely-chosen title.
-
-If the read fails with a size/token-limit error, don't work around it (chunked reads, inline
-summarization, trimming) — report the failure (see "On failure") and stop. A note too large to
-read needs deliberate restructuring, not an improvised fix.
-
-Otherwise, before editing, find the active session-log note: take the **last** wikilink
-(`[[...]]`) in the most recent dated entry of its Status Summary section — that's the note
-Step 2 appends to. Don't search for it: a status note kept accurate by this skill's own past
-runs already names the right note, and a fresh `search_notes` query risks ranking a stale,
-similarly-named note above it (this happened once — real content landed on a superseded log
-because a broader search outranked the actually-active one). If the most recent entry has **no**
-wikilink — a brand-new project, or a note predating this convention — fall back to
-`search_notes` with query "__PROJECT__ session"; this is the only case where searching is right.
-
-Update the status note with edit_note (project="__PROJECT__", operation="find_replace" or
-"replace_section") to reflect:
-- Items resolved this session — move from Open to Resolved
-- New open items or next steps discovered
-- Environment facts that changed (new deployments, confirmed config, etc.)
-- The "Last updated" date at the top
-
-Treat the existing Open list as the baseline, not a blank page — preserve every item already
-there, removing or moving one to Resolved only if it was actually addressed this session, by
-name. Never regenerate Open from scratch based only on what this session touched; unrelated
-open work must survive untouched. If the project tracks in-flight work elsewhere (issue
-tracker, OpenSpec changes, TODO file), spot-check that every still-active item there has a
-matching Open entry.
-
-Make a targeted edit only — move items, add new ones, update the date. Don't restructure or
-resize the note as a whole; a full-body rewrite risks colliding with unrelated content. End
-each updated Status Summary entry with a wikilink to today's session-log note — the next
-save's Step 1 depends on that link being accurate.
-
-If the edit fails after a successful read, report the failure (see below) and stop.
-
-## Step 2 — Append to the session log
-
-Before writing the entry, check `sessions recent` / `sessions context <id>` (claude-session-index)
-as an input — use it to curate which decisions/facts/problems actually belong in the entry
-rather than drafting a raw transcript recap.
-
-Append today's update directly with edit_note (project="__PROJECT__", operation="append") to
-the note resolved in Step 1, including:
-- Date (use the currentDate value from context)
-- What was changed or decided today (decisions, findings, discoveries)
-- Items resolved this session
-
-Do NOT include open items or next steps here — those went into Step 1's status-note edit.
-Never overwrite the note — always append, and don't check its size or restructure it here;
-that needs deliberate judgment a single append shouldn't attempt.
-
-## On success
-
-Record this session as evaluated so the crash-recovery hook knows it was saved:
-```bash
+[ -n "${CLAUDE_CODE_SESSION_ID:-}" ] || exit 1
 TRANSCRIPT=$(find "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" -name "$CLAUDE_CODE_SESSION_ID.jsonl")
-TURN_COUNT=$(jq -c 'select(.type=="user" and (.toolUseResult // null)==null and (.isMeta // false)==false)' "$TRANSCRIPT" | wc -l)
-echo "$CLAUDE_CODE_SESSION_ID:$TURN_COUNT" > .claude/.last-saved-session
+[ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && [ -f "$TRANSCRIPT" ] || exit 1
+TURN_COUNT=$(jq -s '[.[] | select(.type=="user" and (.toolUseResult // null)==null and (.isMeta // false)==false)] | length' "$TRANSCRIPT") || exit 1
+printf '%s:%s\n' "$CLAUDE_CODE_SESSION_ID" "$TURN_COUNT" > .claude/.last-saved-session
 ```
 
-Confirm both note titles and permalinks to the user.
+If the transcript cannot be identified/counting fails, report that the notes were saved
+but the checkpoint was not advanced. Recovery of a different transcript leaves this
+marker unchanged; it must not mark the current conversation as covered by recovered work.
+Confirm both saved note titles and returned permalinks/paths, or explicitly report no-op.
 
 ## On failure
 
-Tell the user which step failed and what the error was, then stop. Don't attempt remediation —
-a note too large to read, or an edit that fails after a successful read, needs deliberate
-handling, not an improvised fix squeezed into a routine save.
+Stop and identify the failed step/error and every already-confirmed write. The two notes
+are not a transaction: if status succeeds but append fails or is uncertain, report a
+partial save and leave the marker unchanged. Do not roll back unrelated edits, claim
+coverage, or blindly replay a possibly successful append. Inspect its outcome before any
+separately authorized retry. Do not improvise remediation for oversized notes.
