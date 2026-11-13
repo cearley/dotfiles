@@ -1,7 +1,8 @@
 # template-testing Specification
 
 ## Purpose
-TBD - created by archiving change keepassxc-mock-test-harness. Update Purpose after archive.
+Lets chezmoi templates be rendered and tested without a real KeePassXC database or SOPS secrets: a mock `keepassxc-cli` answers chezmoi's KeePassXC calls with fixture or placeholder values, and `tests/run-template` renders a template through it. Used by template tests and by shell linting of rendered templates.
+
 ## Requirements
 ### Requirement: Mock keepassxc-cli binary
 The test harness SHALL provide an executable `tests/bin/keepassxc-cli` that implements the chezmoi keepassxc `open`-mode interactive protocol without requiring a real database or credentials.
@@ -72,3 +73,17 @@ The harness SHALL provide `tests/run-template` that renders any chezmoi template
 - **WHEN** `tests/run-template` is invoked with a path that does not exist
 - **THEN** the runner exits with a clear error naming the missing file before invoking chezmoi
 
+### Requirement: Mock answers whole-entry show requests
+When `show` is invoked without `--attributes`/`-a`, the mock `keepassxc-cli` SHALL print the standard fields `Title`, `UserName`, `Password`, `URL`, and `Notes` as `Key: value` lines, so the chezmoi `keepassxc` template function returns a usable map. Each value SHALL come from the fixture file when present, otherwise `mock:<entry>:<field>`.
+
+#### Scenario: Template reads a standard field
+- **WHEN** a template evaluates `(keepassxc "atuin").UserName` under `tests/run-template`
+- **THEN** it renders `mock:atuin:UserName` instead of failing with "map has no entry for key"
+
+#### Scenario: Fixture overrides a standard field
+- **WHEN** `tests/fixtures/keepassxc.json` defines `"Password"` for an entry
+- **THEN** whole-entry `show` prints that fixture value on the `Password:` line
+
+#### Scenario: Attribute requests are unchanged
+- **WHEN** `show` is invoked with `--attributes <attr>`
+- **THEN** the mock prints only that attribute's value, as before

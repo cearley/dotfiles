@@ -35,13 +35,13 @@ rules:
     - Identify which tags (core, dev, ai, work, personal, datascience, mobile) are affected
     - Always include a "Non-goals" section
     - Call out security implications (secrets, permissions, SIP restrictions)
-  spec:
+  specs:
     - Follow chezmoi naming conventions for any new files or scripts
     - Use shared-utils.sh functions for all script output
     - Ensure idempotency — all operations safe to re-run
-    - Validate templates with chezmoi execute-template
+    - Validate templates with tests/run-template (mock secrets; not chezmoi execute-template or chezmoi diff, which prompt for KeePassXC)
   tasks:
     - Break tasks into chunks that can be independently tested
-    - Include template testing steps (chezmoi execute-template, chezmoi diff)
+    - Include template testing steps (tests/run-template to render, tests/lint-shell for shell scripts and templates)
     - Order tasks respecting script execution order (00-99 ranges)
     - Specify which files in home/.chezmoidata/ or home/.chezmoitemplates/ are affected
