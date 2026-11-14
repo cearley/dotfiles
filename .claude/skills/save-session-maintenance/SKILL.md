@@ -1,109 +1,95 @@
 ---
 name: save-session-maintenance
-description: Roll over an oversized session log and triage an oversized status note. Never invoked by the model on its own initiative — runs only on explicit manual invocation (/save-session-maintenance).
+description: Manually roll over an oversized session log and triage this project's status note. Explicit invocation authorizes this bounded maintenance; never run automatically from recording consent or bloat reminders.
 disable-model-invocation: true
 ---
-<!-- setup-memory-workflow-version:19 -->
+<!-- setup-memory-workflow-version:20 -->
+<!-- setup-memory-workflow-project:chezmoi -->
 
-This skill owns all size/rollover/triage logic for basic-memory notes in this project. It runs
-decoupled from any particular save — on its own trigger below, never as part of a
-`save-session` invocation.
+## Scope and preflight
 
-## Trigger
+Run only on an explicit `/save-session-maintenance` request. It authorizes maintenance
+of `chezmoi`'s current status note, its active log and directly affected archive-chain
+links, not a corpus-wide cleanup, deletion or recovery of other transcripts. A bloat
+reminder or standing recording grant is not an invocation. Do not grant/revoke recording
+consent or advance `.claude/.last-saved-session` during maintenance.
 
-Manual only, via `/save-session-maintenance`. The thresholds below describe when running it is
-worthwhile, not an automatic trigger — this skill is never invoked by the model's own
-mid-conversation judgment, since its triage work is judgment-heavy and higher-risk than a
-routine note edit.
+Resolve the checkout's physical root (`git rev-parse --show-toplevel`, then `pwd -P`;
+use `pwd -P` outside Git). Verify this installed maintenance skill's current rendered
+version/project and the resolved project identity with read-only `check-drift.sh check`.
+Stop on drift/mismatch or missing/incompatible prerequisites: installed CLI major 1 and
+connected BM 1.x `bm_read`, `bm_search`, `bm_project`, `bm_write`, `bm_edit`, `bm_move`.
+Consult installed `bm_man` if uncertain; do not install/upgrade automatically. Standing
+recording consent is unnecessary for this explicitly requested maintenance; host tool
+approvals still apply.
 
-## Anchor to the project root
+Pass `project="chezmoi"` on every scoped call. Use `output_format="json"` for
+structured reads/receipts. Immediately before every mutation of an existing note, fresh
+`bm_read` it and pass its checksum as `expected_checksum` to `bm_edit(command=...)`,
+`bm_move` or an explicitly required `bm_write(overwrite=true)`. Create confirmed-missing
+notes with `bm_write(overwrite=false)`, retaining returned identifiers.
 
-Before touching any `.claude/...` path below, confirm you're at this project's root (the
-working directory can drift over a long session, e.g. a `cd` for an unrelated task or
-entering a git worktree):
+Verify documented successful action and intended returned path/identifier. For
+`bm_write`/`bm_edit`, require the returned checksum. For note `bm_move`, verify `action="moved"`, `previous_file_path` and the
+actual destination `file_path` (also inspect `requested_file_path` if returned). The
+installed NoteChange receipt includes `checksum`, which may be null; fresh-read the
+destination for a usable checksum before further mutations. Do not apply the distinct
+directory-move receipt schema to a note move. Absence
+of a project field is not failure if the installed contract omits it. Refuse
+explicitly conflicting qualified scope. On `isError`, typed refusal, `REVISION_CONFLICT`,
+malformed receipt or uncertain outcome, stop and report confirmed partial work. Never
+blindly repeat an append/move or overwrite. Do not use filesystem writes to bypass MCP.
 
-```bash
-PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
-cd "$PROJECT_ROOT"
-[ -f ".claude/skills/save-session-maintenance/SKILL.md" ] || {
-  echo "STOP: $PROJECT_ROOT doesn't look like this project (missing .claude/skills/save-session-maintenance/SKILL.md) — the working directory may have drifted to an unrelated repository."
-  exit 1
-}
-```
+## Step 1 — Resolve and roll over the active log
 
-If that check fails, stop and tell the user rather than continuing against the wrong directory.
+Read `status/chezmoi-current-status.md` using `bm_read`. Resolve the last wikilink
+in the most recent dated Status Summary entry to the active session log. Only if there
+is no link, fall back to scoped `bm_search(query="chezmoi session")`; inspect credible
+results and ask the user to choose if ambiguous. Do not select a log by search ranking
+or mtime alone. If none exists, report no log to maintain; this skill does not bootstrap
+a routine save.
 
-## Step 1 — Roll over an oversized session log
+Read the resolved note. At 300 lines or more:
+1. Find its first dated entry (`## YYYY-MM-DD`). Create a note titled
+   `Session Log — <earliest-date>` under `sessions/`, copying the full body and preserving
+   its frontmatter style. Add a banner naming the date range, the prior archived log
+   (if any) and the active note's continuation. Verify the creation receipt and retain
+   its actual identifier. A collision is a stop, not permission to overwrite.
+2. If the directly preceding archived note links forward to the active note, fresh-read
+   and target-edit that link to the newly created archive, using its checksum.
+3. Fresh-read the active log and replace its body with a short “Continues from
+   [[<new archive>]]” banner using checksum-guarded `bm_write(overwrite=true)`; preserve
+   its title/permalink and frontmatter. Verify the receipt. This explicit rollover is
+   the bounded exception to routine saves' append-only policy.
 
-Search basic-memory project "chezmoi" for the most recent session note using search_notes
-with query "chezmoi session".
+Under 300 lines, leave it unchanged. No unrelated archive chain traversal or cleanup.
 
-Check that note's size (read_note, or `wc -l` on its file under
-`~/.local/share/basic-memory/chezmoi/`). If at or over 300 lines, roll it over — large
-session logs get skipped by agents that would otherwise read them:
-1. Find the note's earliest dated entry (its first `## YYYY-MM-DD` header) — that date names
-   the archived copy.
-2. Create a note titled `Session Log — <earliest-date>` in the project's `sessions/`
-   directory, with the same frontmatter style as the project's other session logs
-   (title/type/permalink/tags) and the full body of the note being rolled over. Give it a
-   one-line banner: "Archived, <earliest-date> → <today>. Continues from
-   [[<prior archived log>]]" (only if a prior one exists) "— continuation lives in
-   [[<active note's title>]]."
-3. If a prior archived log already links forward to this note (a "continuation lives in"
-   banner or a `leads_to` relation), repoint it at the new archived note instead — keep the
-   chain unbroken.
-4. Replace the active note's body with just a short banner: "Continues from
-   [[<new archived note>]]." Keep its title and permalink exactly as they were, so
-   `save-session`'s own search keeps finding it as the most recent session note.
+## Step 2 — Triage the current status note
 
-If under 300 lines, nothing to do — move on to Step 2.
+Assess the status note independently for: a size/token-limit read failure, roughly 8,000
+characters or 200 lines, or a single entry over roughly 800 characters. No signals means
+no triage. A limited response is not the whole note: use documented bounded `bm_read`
+sections/line ranges and continuation information. If full content or a fresh checksum
+cannot be obtained safely, stop and report the limitation; do not edit from a truncated
+view. A host-provided full-response temporary file may be inspected read-only.
 
-## Step 2 — Triage an oversized status note
+Extract stable reference facts or still-real known issues to a relevant existing/new
+note under `reference/` or `known-issues/`, leaving a concise `See [[Note Title]]` pointer.
+Preserve Open items and task-tracker authority. Prefer archival to deletion; this skill
+does not authorize outright deletion. Use `bm_move(identifier=..., destination="archive/",
+expected_checksum=...)` for whole-note archival where appropriate, then verify returned
+identity and repair directly affected links. Do not assume a move preserves every link;
+use returned paths and verify resolution. Avoid changing the current status/log identity.
 
-Read the current status note:
-  identifier: "chezmoi/status/chezmoi-current-status"
-  project: "chezmoi"
+If using installed `memory-defrag` or `memory-lifecycle` guidance, restrict it to these
+notes and this scope; adapt retired calls to BM 1.x, fresh checksums and verified receipts.
+Their broader defaults do not expand this request. Reassess after bounded targeted edits;
+if further work would expand scope or lose uncertain material, report it and ask rather
+than repeatedly rewriting until thresholds are met.
 
-Check for all three independent signals — any one means triage:
+## On completion or failure
 
-1. **Read failure.** A size/token-limit error on the read IS the signal — skip straight to
-   triage regardless of the thresholds below. (In Claude Code, a failed read_note/read_content
-   call saves the full content to a local temp file the error points to — inspect/edit via
-   that path with `wc`/`grep`/`jq` instead of retrying the read.) This is also the signal
-   `save-session`'s own "On failure" step reports.
-2. **Total size.** If the read succeeded, treat the note as oversized at or over roughly 8,000
-   characters (`wc -c`, or the length read_note returned). Line count (≥200) is a secondary
-   trigger for the "many distinct items" growth pattern, distinct from #3's "few items growing
-   forever."
-3. **Single-entry length.** Independently, check for any individual line/bullet/paragraph over
-   roughly 800 characters (`awk '{ print length }' | sort -rn` against the temp file, or
-   eyeball read_note's output). One entry that long is the anti-pattern itself, not a symptom
-   of general growth, and needs condensing even if the note as a whole is still small.
-
-If none of the three signals are present, there's nothing to do — go to "On completion" and
-log a no-op.
-
-If the `memory-defrag` skill is installed, invoke it against this note instead of triaging by
-hand — that's exactly its job ("bloated file >300 lines → split into focused files", "stale
-entries → remove or archive"), and its audit → plan → execute → verify → log workflow gives
-repeatable, logged output. Point it at this note specifically; don't let it wander into
-unrelated memory files.
-
-If not installed, triage manually using the same split: stable reference material or a
-still-real known issue moves to an existing or new note under `reference/` or
-`known-issues/`, with a one-line `See [[Note Title]]` pointer left behind; content of
-uncertain future value gets archived rather than deleted.
-
-Either way, for anything leaving this note, prefer the `memory-lifecycle` skill's
-archive-never-delete pattern if installed: `move_note` into an `archive/`-style location
-rather than copy-and-delete — it preserves the permalink, so existing `[[wiki-links]]` into
-that content keep resolving. Reserve outright deletion for content that's flatly wrong or
-superseded, not merely old.
-
-Repeat until all three signals are clear (read succeeds, under ~8,000 characters and 200
-lines, no single entry over ~800 characters).
-
-## On completion
-
-Confirm both note titles and permalinks (and the final status-note size, if triaged) to the
-user.
+Confirm touched note titles and returned permalinks/paths, final status size if triaged,
+and any no-op. On failure identify the step, error and confirmed partial changes. Preserve
+all unknown outcomes for inspection before retry. Maintenance is not a session checkpoint:
+leave the saved-session marker unchanged.
