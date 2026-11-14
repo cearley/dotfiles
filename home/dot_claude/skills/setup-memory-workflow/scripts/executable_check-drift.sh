@@ -8,8 +8,35 @@ LANG=${LANG:-C}
 SMW_VERSION=20
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 ASSETS_DIR="$SKILL_DIR/assets"
-# shellcheck source=home/scripts/shared-utils.sh
-source "$SKILL_DIR/../../../scripts/shared-utils.sh"
+# home/scripts/shared-utils.sh is never deployed (home/.chezmoiignore.tmpl ignores
+# scripts/), so this deployed, non-templated script can't source it; inline the
+# two functions it actually needs instead.
+print_message() {
+    local level="$1"
+    local message="$2"
+    if [ "${LANG}" != "${LANG%UTF-8*}" ]; then
+        case "$level" in
+            "info") echo "🔵 $message" >&2 ;;
+            "success") echo "✅ $message" >&2 ;;
+            "warning") echo "⚠️  $message" >&2 ;;
+            "error") echo "❌ $message" >&2 ;;
+            "skip") echo "⏭️ $message" >&2 ;;
+            "tip") echo "💡 $message" >&2 ;;
+        esac
+    else
+        case "$level" in
+            "info") echo "[INFO] $message" >&2 ;;
+            "success") echo "[SUCCESS] $message" >&2 ;;
+            "warning") echo "[WARNING] $message" >&2 ;;
+            "error") echo "[ERROR] $message" >&2 ;;
+            "skip") echo "[SKIP] $message" >&2 ;;
+            "tip") echo "[TIP] $message" >&2 ;;
+        esac
+    fi
+}
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$PROJECT_ROOT"
 PROJECT_ROOT=$(pwd -P)
