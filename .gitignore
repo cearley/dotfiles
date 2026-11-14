@@ -45,3 +45,6 @@ openspec/.cache/
 
 # spectralint cache
 .spectralint-cache.json
+
+# Basic Memory recording consent (per-checkout, local only)
+.basic-memory-workflow.json
