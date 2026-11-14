@@ -4,6 +4,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import tempfile
 import unittest
@@ -240,7 +241,7 @@ else:
     def test_stale_version_cannot_authorize_until_explicit_update(self):
         self.install()
         p = self.project / ".claude/skills/save-session/SKILL.md"
-        p.write_text(p.read_text().replace("workflow-version:20", "workflow-version:19"))
+        p.write_text(re.sub(r"workflow-version:\d+", "workflow-version:19", p.read_text()))
         self.policy()
         self.assertNotEqual(self.run_script("authorize", "sample", "auto", ok=False).returncode, 0)
         self.run_script("update")
@@ -249,8 +250,8 @@ else:
     def test_identity_mismatch_is_not_repaired_by_update(self):
         self.install()
         p = self.project / ".claude/skills/save-session/SKILL.md"
-        p.write_text(p.read_text().replace("workflow-project:sample", "workflow-project:sam")
-                     .replace("workflow-version:20", "workflow-version:19"))
+        p.write_text(re.sub(r"workflow-version:\d+", "workflow-version:19",
+                             p.read_text().replace("workflow-project:sample", "workflow-project:sam")))
         before = p.read_bytes()
         self.run_script("update")
         self.assertEqual(p.read_bytes(), before)

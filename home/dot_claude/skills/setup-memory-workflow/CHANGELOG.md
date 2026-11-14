@@ -4,6 +4,37 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v22 (2026-11-13)
+Both skill templates were reviewed for trimmable guidance (each rule stated once per
+file, not duplicated across sections) with an explicit instruction not to narrow any
+behavioral guarantee — consent checks, checksum/receipt discipline and scope boundaries
+were left alone even where verbose. No behavior change.
+
+`save-session-skill.md.template`: the recovery-transcript rule, previously stated in
+four places, now lives once in Preflight, with the other three sites either removed or
+shortened to a pointer. The `once`-authorization restriction, the oversized-note rule,
+and the no-blind-retry rule were each deduplicated the same way. Preflight's manual
+identity check now defers to what `check`/`authorize` already verify mechanically. A
+dead reference to a "recent" call, left over from the session-index step v20 removed,
+is gone. 124→122 lines, 1,074→1,018 words.
+
+`save-session-maintenance-skill.md.template`: Step 0's rationale (already in the v21
+CHANGELOG entry) was trimmed from the skill text itself; the completion section keeps
+one line pointing at it. The "don't advance the marker" and link-repair rules were each
+deduplicated. Receipt verification is now a two-row table instead of one dense
+paragraph, trading a couple of lines for readability. 108→104 lines, 968→898 words.
+
+## v21 (2026-11-13)
+`save-session-maintenance-skill.md.template` gains a new Step 0, run unconditionally before
+the existing Step 1/Step 2: a read-only `bm doctor --skip-self-test --json --project
+__PROJECT__` health check, with its findings (or a clean result) folded into the completion
+summary. The step never acts on a finding's suggested fix `command` — per `memory-doctor`'s
+own skill contract, running a fix needs the user's separate, later agreement, which stays
+outside this bounded maintenance scope. Existing Step 1/Step 2 content is unchanged.
+
+`SMW_VERSION` moves to 21 to ship this template change to existing v20 installs via
+`check-drift.sh update`, the same mechanism already used for the v19→v20 bump.
+
 ## v20 (2026-11-13)
 **Breaking:** `check` is read-only and `drift-warn` is local-only. Use explicit
 `install` to register a missing project/create missing pieces, `update` for existing

@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 Run only on an explicit `/save-session-maintenance` request. It authorizes maintenance
 of `__PROJECT__`'s current status note, its active log and directly affected archive-chain
-links, not a corpus-wide cleanup, deletion or recovery of other transcripts. A bloat
+links, not a corpus-wide cleanup or recovery of other transcripts. A bloat
 reminder or standing recording grant is not an invocation. Do not grant/revoke recording
 consent or advance `.claude/.last-saved-session` during maintenance.
 
@@ -29,16 +29,24 @@ structured reads/receipts. Immediately before every mutation of an existing note
 `bm_move` or an explicitly required `bm_write(overwrite=true)`. Create confirmed-missing
 notes with `bm_write(overwrite=false)`, retaining returned identifiers.
 
-Verify documented successful action and intended returned path/identifier. For
-`bm_write`/`bm_edit`, require the returned checksum. For note `bm_move`, verify `action="moved"`, `previous_file_path` and the
-actual destination `file_path` (also inspect `requested_file_path` if returned). The
-installed NoteChange receipt includes `checksum`, which may be null; fresh-read the
-destination for a usable checksum before further mutations. Do not apply the distinct
-directory-move receipt schema to a note move. Absence
-of a project field is not failure if the installed contract omits it. Refuse
+Verify each receipt against the installed contract:
+
+| Operation | Require |
+|---|---|
+| `bm_write` / `bm_edit` | a documented successful `action`, the intended returned path/identifier, and a nonempty `checksum` |
+| note `bm_move` | `action="moved"`, `previous_file_path`, and the actual destination `file_path` (also check `requested_file_path` if returned); `checksum` may be null — fresh-read the destination for a usable one before further mutations; never apply the distinct directory-move receipt schema to a note move |
+
+A missing project field is not failure if the installed contract omits it. Refuse
 explicitly conflicting qualified scope. On `isError`, typed refusal, `REVISION_CONFLICT`,
 malformed receipt or uncertain outcome, stop and report confirmed partial work. Never
 blindly repeat an append/move or overwrite. Do not use filesystem writes to bypass MCP.
+
+## Step 0 — Run a memory-doctor health check
+
+Run `bm doctor --skip-self-test --json --project __PROJECT__` before Step 1. It is
+read-only. Record each finding's `check`, `severity`, `summary` and any suggested
+`command`. Never run a suggested command: fixes need the user's separate, later
+agreement.
 
 ## Step 1 — Resolve and roll over the active log
 
@@ -77,9 +85,10 @@ Extract stable reference facts or still-real known issues to a relevant existing
 note under `reference/` or `known-issues/`, leaving a concise `See [[Note Title]]` pointer.
 Preserve Open items and task-tracker authority. Prefer archival to deletion; this skill
 does not authorize outright deletion. Use `bm_move(identifier=..., destination="archive/",
-expected_checksum=...)` for whole-note archival where appropriate, then verify returned
-identity and repair directly affected links. Do not assume a move preserves every link;
-use returned paths and verify resolution. Avoid changing the current status/log identity.
+expected_checksum=...)` for whole-note archival where appropriate, then verify the
+returned identity, and repair and re-verify directly affected links using returned
+paths; a move does not guarantee links survive. Avoid changing the current status/log
+identity.
 
 If using installed `memory-defrag` or `memory-lifecycle` guidance, restrict it to these
 notes and this scope; adapt retired calls to BM 1.x, fresh checksums and verified receipts.
@@ -90,6 +99,6 @@ than repeatedly rewriting until thresholds are met.
 ## On completion or failure
 
 Confirm touched note titles and returned permalinks/paths, final status size if triaged,
-and any no-op. On failure identify the step, error and confirmed partial changes. Preserve
-all unknown outcomes for inspection before retry. Maintenance is not a session checkpoint:
-leave the saved-session marker unchanged.
+and any no-op. Include Step 0's findings or its clean result, listing any suggested
+commands without running them. On failure identify the step, error and confirmed partial
+changes. Preserve all unknown outcomes for inspection before retry.

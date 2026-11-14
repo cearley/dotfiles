@@ -5,7 +5,7 @@
 set -euo pipefail
 # Shared diagnostics inspect LANG; hooks and isolated clients may omit it.
 LANG=${LANG:-C}
-SMW_VERSION=20
+SMW_VERSION=22
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 ASSETS_DIR="$SKILL_DIR/assets"
 # home/scripts/shared-utils.sh is never deployed (home/.chezmoiignore.tmpl ignores

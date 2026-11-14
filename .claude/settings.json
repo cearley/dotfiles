@@ -29,5 +29,11 @@
   },
   "enabledPlugins": {
     "code-quality@chezmoi-personal": true
+  },
+  "basicMemory": {
+    "primaryProject": "chezmoi",
+    "sessionProfile": "coding",
+    "repository": "cearley/dotfiles",
+    "placementConventions": "Session checkpoints and notes live under sessions/, reference material under reference/, and project status notes under status/."
   }
 }

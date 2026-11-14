@@ -2,15 +2,14 @@
 name: save-session
 description: Save curated session findings, decisions and a checkpoint to basic-memory. Run proactively only with valid project-local standing consent and meaningful activity; a direct save request authorizes one save. Generic wrap-up language triggers an offer. No maintenance or transcript recovery without its own explicit request.
 ---
-<!-- setup-memory-workflow-version:20 -->
+<!-- setup-memory-workflow-version:22 -->
 <!-- setup-memory-workflow-project:chezmoi -->
 
 ## Preflight — before activity filtering or any marker write
 
 1. Resolve this checkout's physical root (`git rev-parse --show-toplevel`, then `cd`
-   and `pwd -P`; outside Git use `pwd -P`). Confirm the installed
-   `.claude/skills/save-session/SKILL.md` is this current rendered skill and its baked
-   project is `chezmoi`. A directory name or the mere presence of a skill is insufficient.
+   and `pwd -P`; outside Git use `pwd -P`). Identity is verified by `check`/`authorize`
+   below; a directory name or the mere presence of a skill is insufficient.
 2. Run `~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh check`.
    Require the installed `basic-memory` CLI major version 1 and the connected BM 1.x
    tools `bm_read`, `bm_search`, `bm_project`, `bm_write`, `bm_edit`. Consult `bm_man`
@@ -27,10 +26,12 @@ description: Save curated session findings, decisions and a checkpoint to basic-
    consent. “I'm done” alone is an offer trigger, not permission. Never use `once`
    merely to get past a denied automatic check.
 
-All note/search/recent calls below pass `project="chezmoi"` explicitly. Reads need
-no recording consent. Recovery of another transcript needs an explicit request naming
-that transcript and covering recovery/save; a standing grant is insufficient. Read only
-that transcript for recovery. Maintenance is separate and manual.
+All note and search calls below pass `project="chezmoi"` explicitly. Reads need no
+recording consent. Recovery of another transcript needs an explicit request naming that
+transcript and covering recovery/save; a standing grant is insufficient. Read and curate
+only that transcript, never mining other transcripts or broad session-index content, and
+never advance `.claude/.last-saved-session` from it — recovered work must not mark the
+current conversation as covered. Maintenance is separate and manual.
 
 ## Step 0 — Meaningful activity
 
@@ -38,8 +39,7 @@ After authorization, automatic saves require more than a trivial lookup or a cou
 exchanges AND a persistable decision, resolved item, finding or convention. File edits
 are not required. If nothing qualifies, report a no-op and record an evaluated checkpoint
 using “On success” below. Direct save requests skip the activity pre-filter, but do not
-invent content. For recovery with no meaningful content report a no-op without changing
-the current-session marker.
+invent content.
 
 ## BM 1.x write contract — applies to every step
 
@@ -52,11 +52,10 @@ include `identifier` or `title` plus `directory` and `note_type`.
 
 Verify each structured receipt against the installed contract: a documented successful
 `action` for the requested operation, the intended returned `file_path`/identifier and a
-nonempty checksum. A missing `project` field is normal when the contract omits it; do
-not invent that requirement. Reject an explicitly conflicting project or qualified path.
-Treat `isError`, typed refusals, missing/malformed receipts and uncertain outcomes as
-failures. On `REVISION_CONFLICT`, stop and report it; never overwrite or blindly retry an
-append. A success-looking text message alone is insufficient.
+nonempty checksum. A missing `project` field is fine; an explicitly conflicting project
+or qualified path is a failure. Treat `isError`, typed refusals, missing/malformed
+receipts and uncertain outcomes as failures. On `REVISION_CONFLICT`, stop and report it
+(see On failure). A success-looking text message alone is insufficient.
 
 ## Step 1 — Read status and resolve the active log
 
@@ -65,8 +64,8 @@ prepare a new status note at that canonical path; other read failures stop the s
 A size/token-limit failure needs explicit maintenance, not improvised trimming.
 
 From the most recent dated Status Summary entry, resolve the **last wikilink** to the
-active session log. Use its returned identifier, without searching when the link exists.
-If no link exists, use scoped `bm_search(query="chezmoi session", project="chezmoi")`
+active session log. Use its returned identifier. If no link exists, use scoped
+`bm_search(query="chezmoi session", project="chezmoi")`
 and inspect credible session-log candidates. More than one plausible candidate requires
 a user choice; do not guess. Search errors are not an empty result. If successful scoped
 discovery finds no log, create `sessions/chezmoi-session-log.md` with `bm_write`,
@@ -85,10 +84,10 @@ before continuing.
 
 ## Step 2 — Append to the resolved session log
 
-Curate from the current conversation and available current-session context. Do not mine
-other transcripts or broad session-index content without separate recovery authorization.
-Include today's date, decisions/findings/changes and items resolved. Open items and next
-steps belong in status, not this log entry.
+Curate only from the current conversation and available current-session context — mining
+other transcripts needs separate recovery authorization (see Preflight). Include today's
+date, decisions/findings/changes and items resolved. Open items and next steps belong in
+status, not this log entry.
 
 Freshly `bm_read` the resolved log and use `bm_edit(command="append", content=...,
 expected_checksum=<fresh checksum>, project="chezmoi", output_format="json")`.
@@ -97,23 +96,22 @@ Never overwrite, roll over or triage it during a routine save. Verify the receip
 ## On success — authorized evaluation only
 
 Only after both writes have confirmed receipts (or a legitimate authorized no-content
-Step 0 evaluation), update the current session's checkpoint. Re-run the appropriate
-`authorize chezmoi auto|once` check immediately before the marker write; `once`
-remains restricted to an actual direct save request. If it fails, leave the marker intact.
-From the verified project root, locate exactly one current-session transcript:
+Step 0 evaluation), update the current session's checkpoint. Re-run the same `authorize`
+mode used in Preflight 3 immediately before the marker write; if it fails, leave the
+marker intact. From the verified project root, locate exactly one current-session
+transcript:
 
 ```bash
 [ -n "${CLAUDE_CODE_SESSION_ID:-}" ] || exit 1
 TRANSCRIPT=$(find "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/projects" -name "$CLAUDE_CODE_SESSION_ID.jsonl")
-[ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && [ -f "$TRANSCRIPT" ] || exit 1
+[ -f "$TRANSCRIPT" ] || exit 1
 TURN_COUNT=$(jq -s '[.[] | select(.type=="user" and (.toolUseResult // null)==null and (.isMeta // false)==false)] | length' "$TRANSCRIPT") || exit 1
 printf '%s:%s\n' "$CLAUDE_CODE_SESSION_ID" "$TURN_COUNT" > .claude/.last-saved-session
 ```
 
 If the transcript cannot be identified/counting fails, report that the notes were saved
-but the checkpoint was not advanced. Recovery of a different transcript leaves this
-marker unchanged; it must not mark the current conversation as covered by recovered work.
-Confirm both saved note titles and returned permalinks/paths, or explicitly report no-op.
+but the checkpoint was not advanced. Confirm both saved note titles and returned
+permalinks/paths, or explicitly report no-op.
 
 ## On failure
 
@@ -121,4 +119,4 @@ Stop and identify the failed step/error and every already-confirmed write. The t
 are not a transaction: if status succeeds but append fails or is uncertain, report a
 partial save and leave the marker unchanged. Do not roll back unrelated edits, claim
 coverage, or blindly replay a possibly successful append. Inspect its outcome before any
-separately authorized retry. Do not improvise remediation for oversized notes.
+separately authorized retry.
