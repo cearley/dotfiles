@@ -216,6 +216,12 @@ packages:
           - 'basicmachines-co/basic-memory-skills --skill memory-lifecycle'
           - 'basicmachines-co/basic-memory-skills --skill memory-notes'
           - 'basicmachines-co/basic-memory-skills --skill memory-schema'
+          # Pilot (openspec/changes/pilot-native-bm-checkpoint-chezmoi): native upstream
+          # checkpoint/orient/diagnostic skills, from the main basic-memory repo (not
+          # -skills) at commit 3e8a519 (confirmed present 2026-11-13).
+          - 'basicmachines-co/basic-memory --skill bm-checkpoint'
+          - 'basicmachines-co/basic-memory --skill bm-orient'
+          - 'basicmachines-co/basic-memory --skill memory-doctor'
           - 'cearley/claude-session-index --skill session-index'
           - 'herdrdev/herdr --skill herdr'
           - 'vercel-labs/skills --skill find-skills'
