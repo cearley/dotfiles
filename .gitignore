@@ -48,3 +48,6 @@ openspec/.cache/
 
 # Basic Memory recording consent (per-checkout, local only)
 .basic-memory-workflow.json
+
+# bashunit --rerun-failed cache
+.bashunit/

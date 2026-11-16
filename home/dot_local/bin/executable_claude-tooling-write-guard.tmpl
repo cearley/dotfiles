@@ -73,12 +73,17 @@ emit_by_tier() {
 }
 
 # Active profile name from $CLAUDE_CONFIG_DIR ("default" for the unnamed profile,
-# empty if $CLAUDE_CONFIG_DIR is set to something unrecognized).
+# empty if $CLAUDE_CONFIG_DIR is set to something unrecognized). Normalizes a
+# trailing slash and resolves symlinks before matching, so "$HOME/.claude/" or a
+# symlinked config dir doesn't fail to match and silently disable the check.
 active_profile() {
     local dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+    dir="${dir%/}"
+    local real
+    real=$(realpath "$dir" 2>/dev/null) && dir="$real"
     if [[ "$dir" == "$HOME/.claude" ]]; then
         echo "default"
-    elif [[ "$dir" =~ ^"$HOME"/\.claude-(.+)$ ]]; then
+    elif [[ "$dir" =~ ^"$HOME"/\.claude-([A-Za-z0-9_-]+)$ ]]; then
         echo "${BASH_REMATCH[1]}"
     fi
 }
@@ -90,19 +95,27 @@ active_profile() {
 # Symlink" in claude-tooling.md) — there is no "wrong profile" for those, so they
 # must never be flagged. Echoes empty string if the path isn't in-scope for this
 # check at all (not under any profile dir, or it's a shared skills/rules path).
+# Anchored to $HOME (live) and the chezmoi source dir (source) rather than matching
+# ".claude"/"dot_claude" anywhere in the path — an unrelated project's own .claude/
+# dir, or a third-party repo's .claude-plugin/ manifest, must never be mistaken for
+# a profile dir.
 path_profile() {
     local p="$1"
-    if [[ "$p" =~ /\.claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]] ||
-        [[ "$p" =~ /dot_claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]]; then
+    if [[ "$p" == "$HOME/.claude.json" ]]; then
+        echo "default"
         return
     fi
-    if [[ "$p" =~ /\.claude-([A-Za-z0-9_-]+)/ ]]; then
+    if [[ "$p" =~ ^"$HOME"/\.claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]] ||
+        [[ "$p" =~ ^"{{ $sourceDir }}"/dot_claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]]; then
+        return
+    fi
+    if [[ "$p" =~ ^"$HOME"/\.claude-([A-Za-z0-9_-]+)/ ]]; then
         echo "${BASH_REMATCH[1]}"
-    elif [[ "$p" =~ /\.claude/ ]]; then
+    elif [[ "$p" =~ ^"$HOME"/\.claude/ ]]; then
         echo "default"
-    elif [[ "$p" =~ /dot_claude-([A-Za-z0-9_-]+)/ ]]; then
+    elif [[ "$p" =~ ^"{{ $sourceDir }}"/dot_claude-([A-Za-z0-9_-]+)/ ]]; then
         echo "${BASH_REMATCH[1]}"
-    elif [[ "$p" =~ /dot_claude/ ]]; then
+    elif [[ "$p" =~ ^"{{ $sourceDir }}"/dot_claude/ ]]; then
         echo "default"
     fi
 }
@@ -113,7 +126,12 @@ path_profile() {
 # `set -e`.
 check_path() {
     local file_path="$1" tool="$2"
-    [[ "$file_path" =~ /\.claude[A-Za-z0-9_-]*/ ]] || return 0
+    case "$file_path" in
+        "$HOME/.claude.json") ;;
+        "$HOME"/.claude*/*) ;;
+        "{{ $sourceDir }}"/dot_claude*/*) ;;
+        *) return 0 ;;
+    esac
 
     local resolved_path="$file_path" real real_parent
     if real=$(realpath "$file_path" 2>/dev/null); then
@@ -136,6 +154,11 @@ check_path() {
         return 0
     fi
 
+    if ! command -v chezmoi >/dev/null 2>&1; then
+        echo "ASK|chezmoi isn't on this hook's PATH, so managed-file detection is disabled for this call — treat this edit with extra care.${mismatch}"
+        return 0
+    fi
+
     local managed source_path
     if managed=$(chezmoi managed --path-style absolute "$resolved_path" 2>/dev/null) && [[ -n "$managed" ]]; then
         source_path=$(chezmoi source-path "$resolved_path" 2>/dev/null) || source_path="(run: chezmoi source-path \"$resolved_path\")"
@@ -143,9 +166,27 @@ check_path() {
             if [[ "$tool" == "Write" ]]; then
                 echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply.${mismatch}"
             else
-                local old_new
-                old_new=$(jq -r '(.tool_input.old_string // "") + "\n" + (.tool_input.new_string // "")' <<<"$payload" 2>/dev/null) || old_new=""
-                if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions|_chezmoiManaged)"' <<<"$old_new"; then
+                local old_string new_string old_new
+                old_string=$(jq -r '.tool_input.old_string // ""' <<<"$payload" 2>/dev/null) || old_string=""
+                new_string=$(jq -r '.tool_input.new_string // ""' <<<"$payload" 2>/dev/null) || new_string=""
+                old_new="$old_string"$'\n'"$new_string"
+                # Catches an edit whose old_string/new_string mentions a managed key
+                # by name (e.g. adding a brand-new "hooks" block) AND, separately, an
+                # edit whose old_string is a value nested under one of those keys
+                # without mentioning the key name itself (e.g. flipping a single
+                # permissions.allow entry) — compared with whitespace stripped from
+                # both sides, since old_string's exact formatting rarely matches
+                # jq's compact reserialization.
+                local value_hit=0 managed_blob old_norm managed_norm
+                if [[ -n "$old_string" ]]; then
+                    managed_blob=$(jq -c '{skillOverrides, hooks, enabledPlugins, extraKnownMarketplaces, permissions, _chezmoiManaged}' "$resolved_path" 2>/dev/null) || managed_blob=""
+                    if [[ -n "$managed_blob" ]]; then
+                        old_norm=$(tr -d '[:space:]' <<<"$old_string")
+                        managed_norm=$(tr -d '[:space:]' <<<"$managed_blob")
+                        [[ -n "$old_norm" && "$managed_norm" == *"$old_norm"* ]] && value_hit=1
+                    fi
+                fi
+                if [[ "$value_hit" == 1 ]] || grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions|_chezmoiManaged)"' <<<"$old_new"; then
                     echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions/_chezmoiManaged in settings.json are chezmoi-managed baseline keys, not local toggles. Edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply.${mismatch}"
                 elif [[ -n "$mismatch" ]]; then
                     echo "ASK|This edits a ${target} profile's settings.json.${mismatch}"
@@ -172,56 +213,151 @@ check_path() {
     return 0
 }
 
-# Best-effort mutation-target extraction for a Bash command string, scoped to each
-# matched construct's OWN trailing argument(s) — never a global scan of the whole
-# command line. A global scan mistakes a managed path that's only read earlier in the
-# command (e.g. `cat file > /tmp/x`, `cp file /tmp/x` — a plain backup) for the write
-# destination, just because it's the only/last `.claude*/...`-shaped token present.
-extract_bash_target() {
-    local cmd="$1" cand args tok
+# Does this token look like one of the Claude Code tooling paths in scope —
+# a deployed/live profile path ("/.claude<name>/...", ".claude.json") or a
+# chezmoi-source profile path ("dot_claude<name>/...")? Shared between the Bash
+# fast-filter and every extraction handler below.
+_is_relevant_claude_token() {
+    local t="$1"
+    [[ "$t" =~ \.claude[A-Za-z0-9_-]*/ ]] && return 0
+    [[ "$t" =~ dot_claude[A-Za-z0-9_-]*/ ]] && return 0
+    [[ "$t" == *.claude.json ]] && return 0
+    return 1
+}
+
+# Strips one layer of surrounding matching quotes from a token (best-effort —
+# not shell-evaluated, so a quoted path like "$HOME/.claude/x" would otherwise
+# never resolve: realpath/chezmoi see the literal quote characters and call it
+# unmanaged).
+_strip_quotes() {
+    local s="$1"
+    if ((${#s} >= 2)); then
+        if [[ "${s:0:1}" == '"' && "${s: -1}" == '"' ]] || [[ "${s:0:1}" == "'" && "${s: -1}" == "'" ]]; then
+            s="${s:1:-1}"
+        fi
+    fi
+    printf '%s' "$s"
+}
+
+# Splits a whitespace-separated argument string into one token per line,
+# stripping one layer of quotes per token via `xargs -n1` (best-effort — not a
+# full shell parser; nested/unbalanced quoting, globs and $() are left as
+# literal text). Never word-splits the string itself against the filesystem
+# (a bare `for tok in $args` loop would expand a literal `*` token).
+_tokenize() {
+    xargs -n1 2>/dev/null <<<"$1" || true
+}
+
+# Every non-overlapping match of `pattern` within `cmd`, in declaration order.
+# Rescans the remainder after each match so a later occurrence is never hidden
+# by an earlier, unrelated one (e.g. two separate `rm` invocations joined by
+# `&&`, or `2>/dev/null` appearing before the real `>` redirect) — bash's `=~`
+# only ever returns the leftmost match, so a single non-looping test would stop
+# there. `group` selects which capture group of `pattern` to pass to `handler`.
+_for_each_match() {
+    local cmd="$1" pattern="$2" group="$3" handler="$4"
+    local remaining="$cmd" captured full_match
+    while [[ "$remaining" =~ $pattern ]]; do
+        # BASH_REMATCH is a single global array shared by every `=~` test in the
+        # script — capture what this match needs into locals BEFORE calling the
+        # handler, since the handler's own internal `=~` tests (e.g.
+        # _is_relevant_claude_token) overwrite BASH_REMATCH before we'd get to
+        # use it below otherwise.
+        captured="${BASH_REMATCH[$group]}"
+        full_match="${BASH_REMATCH[0]}"
+        # The handler's own exit status (e.g. "not a relevant token") must never
+        # abort this loop under `set -e` — it's a filter, not a failure.
+        "$handler" "$captured" || true
+        remaining="${remaining#*"$full_match"}"
+    done
+}
+
+# Every _emit_* handler below always returns 0, deliberately — "no relevant
+# token found" is a filter result, not a failure, and these are called as bare
+# statements (both by `_for_each_match` and by each other), where a nonzero
+# return would otherwise abort the whole scan under `set -e`.
+_emit_if_relevant() {
+    local cand
+    cand=$(_strip_quotes "$1")
+    if _is_relevant_claude_token "$cand"; then
+        echo "$cand"
+    fi
+    return 0
+}
+
+_emit_last_token() {
+    local last="" tok
+    while IFS= read -r tok; do
+        if [[ "$tok" == -* ]]; then
+            continue
+        fi
+        last="$tok"
+    done < <(_tokenize "$1")
+    if [[ -n "$last" ]] && _is_relevant_claude_token "$last"; then
+        echo "$last"
+    fi
+    return 0
+}
+
+_emit_all_tokens() {
+    local tok
+    while IFS= read -r tok; do
+        if [[ "$tok" == -* ]]; then
+            continue
+        fi
+        if _is_relevant_claude_token "$tok"; then
+            echo "$tok"
+        fi
+    done < <(_tokenize "$1")
+    return 0
+}
+
+# sed only mutates in place with -i/--in-place, which can appear anywhere among
+# its flags (not just first) and in GNU's fused `-iSUFFIX` form; skip entirely
+# if absent. When present, every remaining non-flag argument is a potential
+# target — sed -i accepts multiple files, mutating each.
+_emit_sed_inplace_targets() {
+    local args="$1" has_inplace=0 tok
+    while IFS= read -r tok; do
+        case "$tok" in
+            -i | -i.* | --in-place | --in-place=*) has_inplace=1 ;;
+        esac
+    done < <(_tokenize "$args")
+    if [[ "$has_inplace" == 1 ]]; then
+        _emit_all_tokens "$args"
+    fi
+    return 0
+}
+
+# Best-effort mutation-target extraction for a Bash command string: emits every
+# in-scope candidate path found (one per line), scoped to each matched
+# construct's OWN argument list — never a global scan of the whole command
+# line, which would mistake a managed path that's only read earlier (e.g.
+# `cat file > /tmp/x`, `cp file /tmp/x` — a plain backup) for the write
+# destination just because it's the only/last `.claude*/...`-shaped token
+# present. The caller checks every candidate, not just the first.
+extract_bash_targets() {
+    local cmd="$1"
 
     # Redirect: >, >> — destination is the token immediately after the operator.
-    if [[ "$cmd" =~ \>{1,2}[[:space:]]*([^[:space:];\&\|]+) ]]; then
-        cand="${BASH_REMATCH[1]}"
-        if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
-            echo "$cand"
-            return 0
-        fi
-    fi
+    _for_each_match "$cmd" '\>{1,2}[[:space:]]*([^[:space:];\&\|]+)' 1 _emit_if_relevant
 
-    # mv/cp: destination is the LAST token of that invocation's own argument list
-    # (mv/cp always take the destination last, even with multiple sources).
-    if [[ "$cmd" =~ (^|[;\&\|[:space:]])(mv|cp)[[:space:]]+([^;\&\|]+) ]]; then
-        args="${BASH_REMATCH[3]}"
-        cand="${args##* }"
-        if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
-            echo "$cand"
-            return 0
-        fi
-    fi
+    # mv: EVERY non-flag token is a potential target — both the destination
+    # (written) and every source (removed from its current, possibly managed,
+    # location), unlike cp below.
+    _for_each_match "$cmd" '(^|[;\&\|[:space:]])mv[[:space:]]+([^;\&\|]+)' 2 _emit_all_tokens
 
-    # sed -i: destination is the LAST token of that invocation's own argument list.
-    if [[ "$cmd" =~ (^|[;\&\|[:space:]])sed[[:space:]]+-i[^[:space:]]*[[:space:]]+([^;\&\|]+) ]]; then
-        args="${BASH_REMATCH[2]}"
-        cand="${args##* }"
-        if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
-            echo "$cand"
-            return 0
-        fi
-    fi
+    # cp: destination is the LAST token of that invocation's own argument list
+    # (cp always takes the destination last, even with multiple sources) — the
+    # source is only read, a common way to take a quick backup first.
+    _for_each_match "$cmd" '(^|[;\&\|[:space:]])cp[[:space:]]+([^;\&\|]+)' 2 _emit_last_token
 
-    # tee/rm: every non-flag token of that invocation's own argument list is a potential
-    # target (tee can write multiple files; rm can delete multiple).
-    if [[ "$cmd" =~ (^|[;\&\|[:space:]])(tee|rm)[[:space:]]+([^;\&\|]+) ]]; then
-        args="${BASH_REMATCH[3]}"
-        for tok in $args; do
-            [[ "$tok" == -* ]] && continue
-            if [[ "$tok" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
-                echo "$tok"
-                return 0
-            fi
-        done
-    fi
+    # sed -i: see _emit_sed_inplace_targets.
+    _for_each_match "$cmd" '(^|[;\&\|[:space:]])sed[[:space:]]+([^;\&\|]+)' 2 _emit_sed_inplace_targets
+
+    # tee/rm: every non-flag token of that invocation's own argument list is a
+    # potential target (tee can write multiple files; rm can delete multiple).
+    _for_each_match "$cmd" '(^|[;\&\|[:space:]])(tee|rm)[[:space:]]+([^;\&\|]+)' 3 _emit_all_tokens
 
     return 0
 }
@@ -246,20 +382,42 @@ case "$tool_name" in
             exit 0
         fi
 
-        # Does this command reference a deployed .claude*/... path at all?
-        broad_pattern='\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/)'
-        [[ "$command" =~ $broad_pattern ]] || exit 0
+        # Raw command text, not shell-evaluated — expand $CLAUDE_CONFIG_DIR and $HOME
+        # (both forms) manually before scanning, since realpath/chezmoi would otherwise
+        # see a nonexistent path and call it unmanaged. $CLAUDE_CONFIG_DIR is the
+        # canonical way to reference the *active* profile's dir and never contains the
+        # literal substring ".claude" itself, so it has to be expanded before either the
+        # fast filter or the extraction can see it.
+        config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+        expanded="$command"
+        expanded="${expanded//\$\{CLAUDE_CONFIG_DIR\}/$config_dir}"
+        expanded="${expanded//\$CLAUDE_CONFIG_DIR/$config_dir}"
+        expanded="${expanded//\$\{HOME\}/$HOME}"
+        expanded="${expanded//\$HOME/$HOME}"
 
-        target=$(extract_bash_target "$command")
-        # Raw command text, not shell-evaluated — expand ~ and a literal $HOME manually,
-        # since realpath/chezmoi would otherwise see a nonexistent path and call it unmanaged.
-        target="${target/#\~/$HOME}"
-        target="${target//\$HOME/$HOME}"
+        # Does this command reference a deployed .claude*/..., a source dot_claude*/...,
+        # or a bare .claude.json path at all?
+        broad_pattern='(\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/)|\.claude\.json|dot_claude[A-Za-z0-9_-]*/)'
+        [[ "$expanded" =~ $broad_pattern ]] || exit 0
+
         # "Write" semantics: Bash has no old_string/new_string to key-filter against, so
-        # settings.json always takes the blanket "any change is risky" path here.
-        reason=""
-        [[ -n "$target" ]] && reason=$(check_path "$target" "Write")
+        # settings.json always takes the blanket "any change is risky" path here. A deny
+        # on any candidate is decisive; otherwise the first ask (if any) wins.
+        deny_reason="" ask_reason="" target=""
+        while IFS= read -r target; do
+            [[ -z "$target" ]] && continue
+            target="${target/#\~/$HOME}"
+            reason=$(check_path "$target" "Write")
+            [[ -z "$reason" ]] && continue
+            if [[ "$reason" == DENY\|* ]]; then
+                deny_reason="$reason"
+                break
+            elif [[ -z "$ask_reason" ]]; then
+                ask_reason="$reason"
+            fi
+        done < <(extract_bash_targets "$expanded")
 
+        reason="${deny_reason:-$ask_reason}"
         if [[ -n "$reason" ]]; then
             emit_by_tier "$reason"
             exit 0

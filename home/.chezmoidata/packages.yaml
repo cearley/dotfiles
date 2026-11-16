@@ -156,6 +156,7 @@ packages:
       bun: # npm-compatible packages installed globally via bun
       - 'aws-cdk-local'                # cdklocal: wraps aws-cdk CLI to target LocalStack
       - 'azure-functions-core-tools@4' # func: Azure Functions CLI (Homebrew tap disabled by GitHub)
+      - 'bashunit'                     # Bash unit testing framework (shell-template-lint test suites)
       uv: # Python tools installed via uv tool install
       - 'aws-sam-cli-local'            # samlocal: wraps aws-sam-cli to target LocalStack
 
