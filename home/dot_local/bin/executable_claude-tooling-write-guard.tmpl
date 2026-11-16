@@ -43,7 +43,7 @@ payload=$(cat)
 tool_name=$(jq -r '.tool_name // ""' <<<"$payload")
 
 emit_ask() {
-  jq -n --arg reason "$1" '{
+    jq -n --arg reason "$1" '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       permissionDecision: "ask",
@@ -53,7 +53,7 @@ emit_ask() {
 }
 
 emit_deny() {
-  jq -n --arg reason "$1" '{
+    jq -n --arg reason "$1" '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       permissionDecision: "deny",
@@ -64,23 +64,23 @@ emit_deny() {
 
 # Dispatches a "TIER|message" string (see check_path) to emit_deny/emit_ask.
 emit_by_tier() {
-  local tagged="$1" tier="${1%%|*}"
-  if [[ "$tier" == "DENY" ]]; then
-    emit_deny "${tagged#DENY|}"
-  else
-    emit_ask "${tagged#ASK|}"
-  fi
+    local tagged="$1" tier="${1%%|*}"
+    if [[ "$tier" == "DENY" ]]; then
+        emit_deny "${tagged#DENY|}"
+    else
+        emit_ask "${tagged#ASK|}"
+    fi
 }
 
 # Active profile name from $CLAUDE_CONFIG_DIR ("default" for the unnamed profile,
 # empty if $CLAUDE_CONFIG_DIR is set to something unrecognized).
 active_profile() {
-  local dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-  if [[ "$dir" == "$HOME/.claude" ]]; then
-    echo "default"
-  elif [[ "$dir" =~ ^"$HOME"/\.claude-(.+)$ ]]; then
-    echo "${BASH_REMATCH[1]}"
-  fi
+    local dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+    if [[ "$dir" == "$HOME/.claude" ]]; then
+        echo "default"
+    elif [[ "$dir" =~ ^"$HOME"/\.claude-(.+)$ ]]; then
+        echo "${BASH_REMATCH[1]}"
+    fi
 }
 
 # Which profile a path belongs to, for ONLY the categories that are NOT shared
@@ -91,20 +91,20 @@ active_profile() {
 # must never be flagged. Echoes empty string if the path isn't in-scope for this
 # check at all (not under any profile dir, or it's a shared skills/rules path).
 path_profile() {
-  local p="$1"
-  if [[ "$p" =~ /\.claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]] || \
-     [[ "$p" =~ /dot_claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]]; then
-    return
-  fi
-  if [[ "$p" =~ /\.claude-([A-Za-z0-9_-]+)/ ]]; then
-    echo "${BASH_REMATCH[1]}"
-  elif [[ "$p" =~ /\.claude/ ]]; then
-    echo "default"
-  elif [[ "$p" =~ /dot_claude-([A-Za-z0-9_-]+)/ ]]; then
-    echo "${BASH_REMATCH[1]}"
-  elif [[ "$p" =~ /dot_claude/ ]]; then
-    echo "default"
-  fi
+    local p="$1"
+    if [[ "$p" =~ /\.claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]] ||
+        [[ "$p" =~ /dot_claude[A-Za-z0-9_-]*/(skills|rules)(/|$) ]]; then
+        return
+    fi
+    if [[ "$p" =~ /\.claude-([A-Za-z0-9_-]+)/ ]]; then
+        echo "${BASH_REMATCH[1]}"
+    elif [[ "$p" =~ /\.claude/ ]]; then
+        echo "default"
+    elif [[ "$p" =~ /dot_claude-([A-Za-z0-9_-]+)/ ]]; then
+        echo "${BASH_REMATCH[1]}"
+    elif [[ "$p" =~ /dot_claude/ ]]; then
+        echo "default"
+    fi
 }
 
 # Tiered guard advice for one deployed-target path (resolving profile symlinks first).
@@ -112,64 +112,64 @@ path_profile() {
 # prints nothing and always returns 0, so a bare `reason=$(check_path ...)` never trips
 # `set -e`.
 check_path() {
-  local file_path="$1" tool="$2"
-  [[ "$file_path" =~ /\.claude[A-Za-z0-9_-]*/ ]] || return 0
+    local file_path="$1" tool="$2"
+    [[ "$file_path" =~ /\.claude[A-Za-z0-9_-]*/ ]] || return 0
 
-  local resolved_path="$file_path" real real_parent
-  if real=$(realpath "$file_path" 2>/dev/null); then
-    resolved_path="$real"
-  elif real_parent=$(realpath "$(dirname "$file_path")" 2>/dev/null); then
-    resolved_path="${real_parent}/$(basename "$file_path")"
-  fi
+    local resolved_path="$file_path" real real_parent
+    if real=$(realpath "$file_path" 2>/dev/null); then
+        resolved_path="$real"
+    elif real_parent=$(realpath "$(dirname "$file_path")" 2>/dev/null); then
+        resolved_path="${real_parent}/$(basename "$file_path")"
+    fi
 
-  local active target mismatch=""
-  active=$(active_profile)
-  target=$(path_profile "$resolved_path")
-  if [[ -n "$active" && -n "$target" && "$active" != "$target" ]]; then
-    mismatch=" Active profile is ${active} (\$CLAUDE_CONFIG_DIR); this path belongs to ${target}."
-  fi
+    local active target mismatch=""
+    active=$(active_profile)
+    target=$(path_profile "$resolved_path")
+    if [[ -n "$active" && -n "$target" && "$active" != "$target" ]]; then
+        mismatch=" Active profile is ${active} (\$CLAUDE_CONFIG_DIR); this path belongs to ${target}."
+    fi
 
-  if [[ "$tool" == "Read" ]]; then
-    if [[ -n "$mismatch" ]]; then
-      echo "ASK|This reads a ${target} profile's file.${mismatch}"
+    if [[ "$tool" == "Read" ]]; then
+        if [[ -n "$mismatch" ]]; then
+            echo "ASK|This reads a ${target} profile's file.${mismatch}"
+        fi
+        return 0
+    fi
+
+    local managed source_path
+    if managed=$(chezmoi managed --path-style absolute "$resolved_path" 2>/dev/null) && [[ -n "$managed" ]]; then
+        source_path=$(chezmoi source-path "$resolved_path" 2>/dev/null) || source_path="(run: chezmoi source-path \"$resolved_path\")"
+        if [[ "$resolved_path" == *settings.json ]]; then
+            if [[ "$tool" == "Write" ]]; then
+                echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply.${mismatch}"
+            else
+                local old_new
+                old_new=$(jq -r '(.tool_input.old_string // "") + "\n" + (.tool_input.new_string // "")' <<<"$payload" 2>/dev/null) || old_new=""
+                if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions|_chezmoiManaged)"' <<<"$old_new"; then
+                    echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions/_chezmoiManaged in settings.json are chezmoi-managed baseline keys, not local toggles. Edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply.${mismatch}"
+                elif [[ -n "$mismatch" ]]; then
+                    echo "ASK|This edits a ${target} profile's settings.json.${mismatch}"
+                fi
+            fi
+        else
+            echo "DENY|This file is chezmoi-managed (tracked from ${source_path}). Editing the deployed copy directly gets silently overwritten or reasserted on the next chezmoi apply — edit the source instead.${mismatch}"
+        fi
+    elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*)/plugins/ ]]; then
+        local claude_dir="${BASH_REMATCH[1]}"
+        echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/plugins/ is populated by 'claude plugins install' per the plugin_marketplaces/plugins lists in {{ $sourceDir }}/.chezmoidata/packages.yaml. A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead.${mismatch}"
+    elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*/skills/[^/]+)(/.*)?$ ]]; then
+        local skill_root="${BASH_REMATCH[1]}" claude_dir skill_managed skill_source
+        claude_dir="${skill_root%/skills/*}"
+        if skill_managed=$(chezmoi managed --path-style absolute "$skill_root" 2>/dev/null) && [[ -n "$skill_managed" ]]; then
+            skill_source=$(chezmoi source-path "$skill_root" 2>/dev/null) || skill_source="(run: chezmoi source-path \"$skill_root\")"
+            echo "DENY|This exact file isn't chezmoi-tracked yet, but its skill directory is — a native skill, sourced at ${skill_source}. Add/edit the file there instead of the deployed copy, then chezmoi apply."
+        else
+            echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/skills/ is populated from packages.darwin.ai.agents.claude_code.skills in {{ $sourceDir }}/.chezmoidata/packages.yaml (externally-fetched skills land here, unlike native ones which chezmoi tracks directly). A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
+        fi
+    elif [[ -n "$mismatch" ]]; then
+        echo "ASK|This touches a ${target} profile's file.${mismatch}"
     fi
     return 0
-  fi
-
-  local managed source_path
-  if managed=$(chezmoi managed --path-style absolute "$resolved_path" 2>/dev/null) && [[ -n "$managed" ]]; then
-    source_path=$(chezmoi source-path "$resolved_path" 2>/dev/null) || source_path="(run: chezmoi source-path \"$resolved_path\")"
-    if [[ "$resolved_path" == *settings.json ]]; then
-      if [[ "$tool" == "Write" ]]; then
-        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply.${mismatch}"
-      else
-        local old_new
-        old_new=$(jq -r '(.tool_input.old_string // "") + "\n" + (.tool_input.new_string // "")' <<<"$payload" 2>/dev/null) || old_new=""
-        if grep -qE '"(skillOverrides|hooks|enabledPlugins|extraKnownMarketplaces|permissions|_chezmoiManaged)"' <<<"$old_new"; then
-          echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions/_chezmoiManaged in settings.json are chezmoi-managed baseline keys, not local toggles. Edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply.${mismatch}"
-        elif [[ -n "$mismatch" ]]; then
-          echo "ASK|This edits a ${target} profile's settings.json.${mismatch}"
-        fi
-      fi
-    else
-      echo "DENY|This file is chezmoi-managed (tracked from ${source_path}). Editing the deployed copy directly gets silently overwritten or reasserted on the next chezmoi apply — edit the source instead.${mismatch}"
-    fi
-  elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*)/plugins/ ]]; then
-    local claude_dir="${BASH_REMATCH[1]}"
-    echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/plugins/ is populated by 'claude plugins install' per the plugin_marketplaces/plugins lists in {{ $sourceDir }}/.chezmoidata/packages.yaml. A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead.${mismatch}"
-  elif [[ "$resolved_path" =~ ^(.*/\.claude[A-Za-z0-9_-]*/skills/[^/]+)(/.*)?$ ]]; then
-    local skill_root="${BASH_REMATCH[1]}" claude_dir skill_managed skill_source
-    claude_dir="${skill_root%/skills/*}"
-    if skill_managed=$(chezmoi managed --path-style absolute "$skill_root" 2>/dev/null) && [[ -n "$skill_managed" ]]; then
-      skill_source=$(chezmoi source-path "$skill_root" 2>/dev/null) || skill_source="(run: chezmoi source-path \"$skill_root\")"
-      echo "DENY|This exact file isn't chezmoi-tracked yet, but its skill directory is — a native skill, sourced at ${skill_source}. Add/edit the file there instead of the deployed copy, then chezmoi apply."
-    else
-      echo "ASK|This file isn't itself chezmoi-tracked, but ${claude_dir}/skills/ is populated from packages.darwin.ai.agents.claude_code.skills in {{ $sourceDir }}/.chezmoidata/packages.yaml (externally-fetched skills land here, unlike native ones which chezmoi tracks directly). A direct edit here won't be reverted by chezmoi apply, but it drifts silently from what a fresh install would produce — edit that declaration instead."
-    fi
-  elif [[ -n "$mismatch" ]]; then
-    echo "ASK|This touches a ${target} profile's file.${mismatch}"
-  fi
-  return 0
 }
 
 # Best-effort mutation-target extraction for a Bash command string, scoped to each
@@ -178,111 +178,111 @@ check_path() {
 # command (e.g. `cat file > /tmp/x`, `cp file /tmp/x` — a plain backup) for the write
 # destination, just because it's the only/last `.claude*/...`-shaped token present.
 extract_bash_target() {
-  local cmd="$1" cand args tok
+    local cmd="$1" cand args tok
 
-  # Redirect: >, >> — destination is the token immediately after the operator.
-  if [[ "$cmd" =~ \>{1,2}[[:space:]]*([^[:space:];\&\|]+) ]]; then
-    cand="${BASH_REMATCH[1]}"
-    if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
-      echo "$cand"
-      return 0
+    # Redirect: >, >> — destination is the token immediately after the operator.
+    if [[ "$cmd" =~ \>{1,2}[[:space:]]*([^[:space:];\&\|]+) ]]; then
+        cand="${BASH_REMATCH[1]}"
+        if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
+            echo "$cand"
+            return 0
+        fi
     fi
-  fi
 
-  # mv/cp: destination is the LAST token of that invocation's own argument list
-  # (mv/cp always take the destination last, even with multiple sources).
-  if [[ "$cmd" =~ (^|[;\&\|[:space:]])(mv|cp)[[:space:]]+([^;\&\|]+) ]]; then
-    args="${BASH_REMATCH[3]}"
-    cand="${args##* }"
-    if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
-      echo "$cand"
-      return 0
+    # mv/cp: destination is the LAST token of that invocation's own argument list
+    # (mv/cp always take the destination last, even with multiple sources).
+    if [[ "$cmd" =~ (^|[;\&\|[:space:]])(mv|cp)[[:space:]]+([^;\&\|]+) ]]; then
+        args="${BASH_REMATCH[3]}"
+        cand="${args##* }"
+        if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
+            echo "$cand"
+            return 0
+        fi
     fi
-  fi
 
-  # sed -i: destination is the LAST token of that invocation's own argument list.
-  if [[ "$cmd" =~ (^|[;\&\|[:space:]])sed[[:space:]]+-i[^[:space:]]*[[:space:]]+([^;\&\|]+) ]]; then
-    args="${BASH_REMATCH[2]}"
-    cand="${args##* }"
-    if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
-      echo "$cand"
-      return 0
+    # sed -i: destination is the LAST token of that invocation's own argument list.
+    if [[ "$cmd" =~ (^|[;\&\|[:space:]])sed[[:space:]]+-i[^[:space:]]*[[:space:]]+([^;\&\|]+) ]]; then
+        args="${BASH_REMATCH[2]}"
+        cand="${args##* }"
+        if [[ "$cand" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
+            echo "$cand"
+            return 0
+        fi
     fi
-  fi
 
-  # tee/rm: every non-flag token of that invocation's own argument list is a potential
-  # target (tee can write multiple files; rm can delete multiple).
-  if [[ "$cmd" =~ (^|[;\&\|[:space:]])(tee|rm)[[:space:]]+([^;\&\|]+) ]]; then
-    args="${BASH_REMATCH[3]}"
-    for tok in $args; do
-      [[ "$tok" == -* ]] && continue
-      if [[ "$tok" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
-        echo "$tok"
-        return 0
-      fi
-    done
-  fi
+    # tee/rm: every non-flag token of that invocation's own argument list is a potential
+    # target (tee can write multiple files; rm can delete multiple).
+    if [[ "$cmd" =~ (^|[;\&\|[:space:]])(tee|rm)[[:space:]]+([^;\&\|]+) ]]; then
+        args="${BASH_REMATCH[3]}"
+        for tok in $args; do
+            [[ "$tok" == -* ]] && continue
+            if [[ "$tok" =~ \.claude[A-Za-z0-9_-]*/ ]]; then
+                echo "$tok"
+                return 0
+            fi
+        done
+    fi
 
-  return 0
+    return 0
 }
 
 case "$tool_name" in
-Edit|Write|Read)
-  file_path=$(jq -r '.tool_input.file_path // ""' <<<"$payload")
-  [[ -z "$file_path" ]] && exit 0
-  reason=$(check_path "$file_path" "$tool_name")
-  [[ -z "$reason" ]] && exit 0
-  emit_by_tier "$reason"
-  ;;
-Bash)
-  command=$(jq -r '.tool_input.command // ""' <<<"$payload")
-  [[ -z "$command" ]] && exit 0
+    Edit | Write | Read)
+        file_path=$(jq -r '.tool_input.file_path // ""' <<<"$payload")
+        [[ -z "$file_path" ]] && exit 0
+        reason=$(check_path "$file_path" "$tool_name")
+        [[ -z "$reason" ]] && exit 0
+        emit_by_tier "$reason"
+        ;;
+    Bash)
+        command=$(jq -r '.tool_input.command // ""' <<<"$payload")
+        [[ -z "$command" ]] && exit 0
 
-  # `chezmoi add` of a modify_ target replaces the merge script with a full snapshot
-  # (with --force, silently); re-add is a no-op there. Either way it's the wrong tool.
-  add_pattern='(^|[;&|[:space:]])chezmoi[[:space:]]+([^;&|]*[[:space:]])?(add|re-add)[[:space:]][^;&|]*\.claude[A-Za-z0-9_-]*/settings\.json'
-  if [[ "$command" =~ $add_pattern ]]; then
-    emit_deny "A profile settings.json is a chezmoi modify_ target: chezmoi add would replace its merge script with a full snapshot of the live file (runtime keys included), and re-add does nothing. Edit the .claude-settings.json next to that profile's modify_settings.json.tmpl ({{ $sourceDir }}/dot_claude*/) instead, then chezmoi apply."
-    exit 0
-  fi
+        # `chezmoi add` of a modify_ target replaces the merge script with a full snapshot
+        # (with --force, silently); re-add is a no-op there. Either way it's the wrong tool.
+        add_pattern='(^|[;&|[:space:]])chezmoi[[:space:]]+([^;&|]*[[:space:]])?(add|re-add)[[:space:]][^;&|]*\.claude[A-Za-z0-9_-]*/settings\.json'
+        if [[ "$command" =~ $add_pattern ]]; then
+            emit_deny "A profile settings.json is a chezmoi modify_ target: chezmoi add would replace its merge script with a full snapshot of the live file (runtime keys included), and re-add does nothing. Edit the .claude-settings.json next to that profile's modify_settings.json.tmpl ({{ $sourceDir }}/dot_claude*/) instead, then chezmoi apply."
+            exit 0
+        fi
 
-  # Does this command reference a deployed .claude*/... path at all?
-  broad_pattern='\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/)'
-  [[ "$command" =~ $broad_pattern ]] || exit 0
+        # Does this command reference a deployed .claude*/... path at all?
+        broad_pattern='\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/)'
+        [[ "$command" =~ $broad_pattern ]] || exit 0
 
-  target=$(extract_bash_target "$command")
-  # Raw command text, not shell-evaluated — expand ~ and a literal $HOME manually,
-  # since realpath/chezmoi would otherwise see a nonexistent path and call it unmanaged.
-  target="${target/#\~/$HOME}"
-  target="${target//\$HOME/$HOME}"
-  # "Write" semantics: Bash has no old_string/new_string to key-filter against, so
-  # settings.json always takes the blanket "any change is risky" path here.
-  reason=""
-  [[ -n "$target" ]] && reason=$(check_path "$target" "Write")
+        target=$(extract_bash_target "$command")
+        # Raw command text, not shell-evaluated — expand ~ and a literal $HOME manually,
+        # since realpath/chezmoi would otherwise see a nonexistent path and call it unmanaged.
+        target="${target/#\~/$HOME}"
+        target="${target//\$HOME/$HOME}"
+        # "Write" semantics: Bash has no old_string/new_string to key-filter against, so
+        # settings.json always takes the blanket "any change is risky" path here.
+        reason=""
+        [[ -n "$target" ]] && reason=$(check_path "$target" "Write")
 
-  if [[ -n "$reason" ]]; then
-    emit_by_tier "$reason"
-    exit 0
-  fi
+        if [[ -n "$reason" ]]; then
+            emit_by_tier "$reason"
+            exit 0
+        fi
 
-  # Informational fallback, once per session: a read, an unrecognized mutation shape,
-  # or a legitimate source-tree edit.
-  session_id=$(jq -r '.session_id // ""' <<<"$payload")
-  if [[ -n "$session_id" ]]; then
-    marker_dir="${TMPDIR:-/tmp}/claude-tooling-write-guard"
-    marker_file="$marker_dir/$session_id"
-    mkdir -p "$marker_dir" 2>/dev/null || true
-    find "$marker_dir" -type f -mtime +7 -delete 2>/dev/null || true
-    [ -e "$marker_file" ] && exit 0
-    touch "$marker_file" 2>/dev/null || true
-  fi
+        # Informational fallback, once per session: a read, an unrecognized mutation shape,
+        # or a legitimate source-tree edit.
+        session_id=$(jq -r '.session_id // ""' <<<"$payload")
+        if [[ -n "$session_id" ]]; then
+            marker_dir="${TMPDIR:-/tmp}/claude-tooling-write-guard"
+            marker_file="$marker_dir/$session_id"
+            mkdir -p "$marker_dir" 2>/dev/null || true
+            find "$marker_dir" -type f -mtime +7 -delete 2>/dev/null || true
+            [ -e "$marker_file" ] && exit 0
+            touch "$marker_file" 2>/dev/null || true
+        fi
 
-  # Covers what the tiers above don't: cross-profile scope, and the two drift-audit
-  # skills for scenarios this hook doesn't resolve itself.
-  message="This command touches Claude Code tooling that the chezmoi dotfiles repo at {{ $repoRoot }} manages. This machine runs independent profiles ({{ $profileList }}) — settings.json/plugins/.claude.json aren't shared between them, so a check scoped to one won't see the others. For installed-but-undeclared drift see the clean-claude-orphans skill; for declared-but-locally-suppressed drift see check-claude-overrides."
-  jq -n --arg message "$message" '{
+        # Covers what the tiers above don't: cross-profile scope, and the two drift-audit
+        # skills for scenarios this hook doesn't resolve itself.
+        message="This command touches Claude Code tooling that the chezmoi dotfiles repo at {{ $repoRoot }} manages. This machine runs independent profiles ({{ $profileList }}) — settings.json/plugins/.claude.json aren't shared between them, so a check scoped to one won't see the others. For installed-but-undeclared drift see the clean-claude-orphans skill; for declared-but-locally-suppressed drift see check-claude-overrides."
+        jq -n --arg message "$message" '{
     hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: $message },
     systemMessage: $message
   }'
-  ;;
+        ;;
 esac
