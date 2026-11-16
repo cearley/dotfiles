@@ -80,9 +80,7 @@ function test_unclassified_bash_write_emits_note_without_permission_decision() {
 
     assert_not_empty "$out"
     assert_same "none" "$(decision "$out")"
-    local has_context
-    has_context=$(jq -e '.hookSpecificOutput.additionalContext' <<<"$out" >/dev/null && echo yes || echo no)
-    assert_same "yes" "$has_context"
+    assert_json_key_exists ".hookSpecificOutput.additionalContext" "$out"
 }
 
 function test_bash_read_of_managed_path_never_allows() {
