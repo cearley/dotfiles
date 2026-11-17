@@ -27,7 +27,13 @@ preferences are the rule `rules/global-preferences.md`; when one needs to change
 `{{ $sourceDir }}/dot_claude/rules/global-preferences.md.tmpl`, not any profile's `CLAUDE.md`.
 This machine may run multiple named Claude Code profiles besides the unnamed default, each with
 its own `CLAUDE_CONFIG_DIR` — resolve it explicitly as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}`
-rather than assuming a bare `~/.claude/` path.
+rather than assuming a bare `~/.claude/` path. In commands you run, when `CLAUDE_CONFIG_DIR` is
+set, use it bare (`"$CLAUDE_CONFIG_DIR/settings.json"`), with no `:-$HOME/.claude` default and
+no literal `~/.claude`, `~/.claude.json`, or `~/.claude/local` paths: they name the default
+profile, and `ccenv-profile-guard` prompts on them as a cross-profile access even when the
+command only reads. Never fall back to another
+profile's file when the active profile's file is missing — report it as absent, because a
+silent fallback makes every later check read the wrong profile.
 
 ## Skills, MCP Servers, and Plugins
 
@@ -52,7 +58,8 @@ rather than assuming a bare `~/.claude/` path.
 every profile after one `chezmoi apply`. What's **not** shared: {{ $notSharedLabeled | join ", " }}.
 Each resolves as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/<name>`, except `.claude.json`, which is
 `$CLAUDE_CONFIG_DIR/.claude.json` when set and `~/.claude.json` (in the home directory, not in
-`~/.claude/`) when unset. A profile's managed baseline for `settings.json` lives at
+`~/.claude/`) when unset. The leftover npm-local install directory follows the same rule:
+`$CLAUDE_CONFIG_DIR/local`, not `~/.claude/local`, in a named profile. A profile's managed baseline for `settings.json` lives at
 `{{ $sourceDir }}/dot_claude*/.claude-settings.json`, next to its `modify_settings.json.tmpl` —
 edit that, then `chezmoi apply`. Never `chezmoi add`/`re-add` a profile `settings.json`: `add`
 replaces its merge script with a snapshot of the live file, and `re-add` does nothing. When an
