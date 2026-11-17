@@ -74,15 +74,20 @@ settings_valid() {
 # Exact known script invocations, not filename/product-name substring matches.
 # The canonical command is quoted; v19's unquoted invocation is explicitly recognized.
 hook_owned_commands() {
-    local script="$1" canonical="$2" base literal old quoted
+    local script="$1" canonical="$2" base literal old old_quoted_chain quoted
     base='${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/'
     literal="$base$script"
     quoted="\"$literal\""
     old="$literal"
+    old_quoted_chain=""
     if [ "$script" = session-reminder.sh ]; then
         old="$literal; ${base}check-drift.sh drift-warn 2>/dev/null || true"
+        # v20-v22's actual deployed combined command (fix-save-session-redundancy
+        # collapsed the SessionStart chain into this one script): each path
+        # segment is individually quoted, unlike the unquoted $old form above.
+        old_quoted_chain="$quoted; \"${base}check-drift.sh\" drift-warn 2>/dev/null || true"
     fi
-    printf '%s\n' "$canonical" "$old" "$literal" "$quoted" \
+    printf '%s\n' "$canonical" "$old" "$old_quoted_chain" "$literal" "$quoted" \
         "$HOME/.claude/skills/setup-memory-workflow/scripts/$script" \
         "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/$script" |
         jq -Rs 'split("\n") | map(select(length > 0)) | unique'

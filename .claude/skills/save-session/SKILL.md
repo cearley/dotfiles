@@ -2,20 +2,15 @@
 name: save-session
 description: Save curated session findings, decisions and a checkpoint to basic-memory. Run proactively only with valid project-local standing consent and meaningful activity; a direct save request authorizes one save. Generic wrap-up language triggers an offer. No maintenance or transcript recovery without its own explicit request.
 ---
-<!-- setup-memory-workflow-version:22 -->
+<!-- setup-memory-workflow-version:23 -->
 <!-- setup-memory-workflow-project:chezmoi -->
 
 ## Preflight — before activity filtering or any marker write
 
 1. Resolve this checkout's physical root (`git rev-parse --show-toplevel`, then `cd`
-   and `pwd -P`; outside Git use `pwd -P`). Identity is verified by `check`/`authorize`
+   and `pwd -P`; outside Git use `pwd -P`). Identity is verified by `authorize`
    below; a directory name or the mere presence of a skill is insufficient.
-2. Run `~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh check`.
-   Require the installed `basic-memory` CLI major version 1 and the connected BM 1.x
-   tools `bm_read`, `bm_search`, `bm_project`, `bm_write`, `bm_edit`. Consult `bm_man`
-   for schemas when uncertain. Missing/incompatible prerequisites stop the save; do
-   not install, upgrade or substitute a shell write. Respect host approval prompts.
-3. For automatic recording, run
+2. For automatic recording, run
    `~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh authorize chezmoi auto`.
    This checks the current installed skill identity, resolved project and consent bound
    to this physical checkout. Missing, revoked, invalid, unsupported or mismatched
@@ -50,6 +45,16 @@ path/identifier for subsequent operations. `bm_edit` never creates missing notes
 Create only confirmed-missing notes with `bm_write(..., overwrite=false)`; valid forms
 include `identifier` or `title` plus `directory` and `note_type`.
 
+For a targeted edit, the replacement argument is named `content` — never guess a
+different name for it:
+
+```
+bm_edit(command="find_replace", identifier=<path>, find_text=<exact existing text>, content=<replacement text>, expected_checksum=<fresh checksum>, project="chezmoi", output_format="json")
+```
+
+`bm_read` paginates via `start_line`, `end_line` and `max_tokens` only — it has no
+`page` argument.
+
 Verify each structured receipt against the installed contract: a documented successful
 `action` for the requested operation, the intended returned `file_path`/identifier and a
 nonempty checksum. A missing `project` field is fine; an explicitly conflicting project
@@ -73,14 +78,34 @@ discovery finds no log, create `sessions/chezmoi-session-log.md` with `bm_write`
 identifier for the status link and Step 2; do not derive it from the title. If that path
 already exists, stop and resolve it instead of overwriting it.
 
+Before drafting the new Status Summary entry, run
+`~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh status-bloat`. A nonzero
+exit means the note already meets or exceeds its oversized thresholds (≥8,000 characters,
+≥200 lines, or any single line ≥800 characters): write only a short pointer line — noting
+that the save occurred and that `/save-session-maintenance` is needed — instead of a full
+entry, and add no further narrative content until maintenance has run. On exit 0, write a
+normal capped entry as described below.
+
 Update the status using targeted `bm_edit(command="find_replace" or "replace_section")`
 with a fresh checksum, or create the confirmed-missing canonical status via `bm_write`.
 Preserve the existing Open list as the baseline; move only named items actually resolved
 this session, add new open work and changed environment facts, update “Last updated”.
 Keep bd/OpenSpec as task authority and spot-check still-active work. Do not regenerate
-Open from this session alone, resize or restructure the whole note. End the dated Status
-Summary entry with a wikilink to the exact active log resolved above. Verify the receipt
-before continuing.
+Open from this session alone, resize or restructure the whole note.
+
+Write the new dated Status Summary entry as explicit short lines, not one flowing
+paragraph, capped at 5 physical lines: a date line, 1-3 short content lines or bullets,
+and a `Detail: [[...]]` line pointing at the exact active log resolved above. Anything
+that doesn't fit belongs in the session log, not a longer entry. Example:
+
+```
+**2026-11-17**
+- Fixed the `bm_edit`/`bm_read` tool-call examples and added the status-bloat gate.
+- Collapsed the SessionStart hook chain to one library-sourcing pass.
+Detail: [[Session Log — chezmoi]]
+```
+
+Verify the receipt before continuing.
 
 ## Step 2 — Append to the resolved session log
 
@@ -97,7 +122,7 @@ Never overwrite, roll over or triage it during a routine save. Verify the receip
 
 Only after both writes have confirmed receipts (or a legitimate authorized no-content
 Step 0 evaluation), update the current session's checkpoint. Re-run the same `authorize`
-mode used in Preflight 3 immediately before the marker write; if it fails, leave the
+mode used in Preflight 2 immediately before the marker write; if it fails, leave the
 marker intact. From the verified project root, locate exactly one current-session
 transcript:
 

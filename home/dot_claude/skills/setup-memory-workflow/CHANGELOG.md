@@ -4,6 +4,61 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v23 (2026-11-17)
+An audit of session transcripts since 2026-11-13 found concrete, evidenced friction in
+the save path and the `SessionStart` hook. Four independent fixes:
+
+`save-session-skill.md.template`'s BM 1.x write contract now shows a concrete, correctly
+shaped `bm_edit(command="find_replace", ..., content=...)` example (the replacement
+argument is `content`, not `replace_text`, which the model guessed wrong twice in one
+live session) and documents `bm_read`'s real pagination arguments
+(`start_line`/`end_line`/`max_tokens`; it has no `page` argument). A new bashunit suite
+(`tests/setup_memory_workflow_templates_test.sh`) greps the rendered template for both
+patterns so a future edit can't silently reintroduce either bug.
+
+`save-session-skill.md.template`'s Preflight no longer calls `check-drift.sh check`,
+keeping only `authorize`, which already re-derives and checks the same
+version/project-identity markers for the save path. `check`'s broader
+installed-piece/tool-contract report remains available through `/setup-memory-workflow`
+and through `save-session-maintenance-skill.md.template`'s own Step 0, both unchanged.
+
+Each new dated Status Summary entry is now written as explicit short lines (a date line,
+1-3 content lines/bullets, a `Detail: [[...]]` line) capped at 5 physical lines, instead
+of one flowing paragraph — full narrative stays in the session log, which almost every
+existing entry already links to. `executable_check-drift.sh` gains a new `status-bloat`
+subcommand wrapping `lib-status-note.sh`'s existing `check_status_note_bloat()` (exit 0
+under all three thresholds, exit 1 if any is met or exceeded); Step 1 calls it before
+drafting a new entry and writes only a short pointer line when the note is already
+oversized, per `specs/setup-memory-workflow/spec.md`'s new requirements. Covered by
+`tests/setup_memory_workflow_status_bloat_test.sh` (four fixtures, one per threshold
+signal).
+
+The `SessionStart` hook chain (`session-reminder.sh`, then a second
+`check-drift.sh drift-warn` subprocess) is collapsed to one invocation. The drift-warn
+check moves into a new shared `lib-drift-warn.sh` (`check_drift_warn()`, alongside the
+single `SMW_VERSION` marker, now sourced by both scripts instead of hardcoded in
+`check-drift.sh`), called in-process by `executable_session-reminder.sh` and still
+exposed unchanged as the standalone `check-drift.sh drift-warn` command. Both scripts
+now re-source each shared library only once per `SessionStart`, instead of twice. Output
+parity (including the old hook command's `2>/dev/null`, which already discarded
+drift-warn's stderr output before this change, so that lack of visible output carries
+over unchanged) is covered by `tests/setup_memory_workflow_drift_warn_test.sh`.
+
+Dogfooding this version in this repo's own checkout surfaced a fifth, latent bug in
+`lib-pieces.sh`'s `hook_owned_commands()`: its recognized "old" `session-reminder.sh`
+signature used unquoted path segments, but the combined command actually deployed since
+v20 quotes each path segment individually. Nothing exercised that mismatch before now,
+because the quoted-combined form was itself always canonical until this version retired
+it — `check-drift.sh update` ran clean but left both the old and new `SessionStart`
+commands in `settings.local.json` (`session-reminder.sh` firing twice), reported only as
+an `AMBIGUOUS: familiar session-reminder.sh text preserved` warning rather than a DRIFT
+it would repair. Fixed by also recognizing the quoted-combined form as owned. Covered by
+`tests/setup_memory_workflow_hook_migration_test.sh`, which reproduces the exact fixture
+and asserts a clean single-command result after `apply`/`update`.
+
+`SMW_VERSION` moves to 23 to ship these template, hook, and script changes to existing
+v22 installs via `check-drift.sh update`.
+
 ## v22 (2026-11-13)
 Both skill templates were reviewed for trimmable guidance (each rule stated once per
 file, not duplicated across sections) with an explicit instruction not to narrow any

@@ -13,15 +13,45 @@
 # a missing canonical note is left for the model to create via bm_write.
 # Non-canonical notes are flagged, never auto-moved (D4). Exits 0
 # unconditionally regardless of what it finds.
+#
+# Also runs the drift-warn check in-process (fix-save-session-redundancy):
+# SessionStart previously chained this script with a second
+# `check-drift.sh drift-warn` subprocess, re-sourcing every shared library a
+# second time for no visible benefit — its stderr was discarded by the old
+# hook command's own `2>/dev/null`. Calling check_drift_warn directly below,
+# with the same redirect, keeps that exact (lack of) visible effect while
+# dropping the extra subprocess and re-sourcing.
 set -euo pipefail
+LANG=${LANG:-C}
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# home/scripts/shared-utils.sh is never deployed (home/.chezmoiignore.tmpl
+# ignores scripts/), so this deployed, non-templated script can't source
+# it; inline the one function check_drift_warn needs instead (same
+# precedent as check-drift.sh's own inline copy).
+print_message() {
+    local level="$1"
+    local message="$2"
+    if [ "${LANG}" != "${LANG%UTF-8*}" ]; then
+        case "$level" in
+            "warning") echo "⚠️  $message" >&2 ;;
+        esac
+    else
+        case "$level" in
+            "warning") echo "[WARNING] $message" >&2 ;;
+        esac
+    fi
+}
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-project.sh
 source "$SKILL_DIR/lib-project.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-status-note.sh
 source "$SKILL_DIR/lib-status-note.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-session-log.sh
 source "$SKILL_DIR/lib-session-log.sh"
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-consent.sh
+source "$SKILL_DIR/lib-consent.sh"
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-drift-warn.sh
+source "$SKILL_DIR/lib-drift-warn.sh"
 
 INPUT=$(cat) || exit 0
 jq -e 'type == "object"' >/dev/null 2>&1 <<<"$INPUT" || exit 0
@@ -59,5 +89,6 @@ printf '%s%s%s\n' "$PREAMBLE" "$OPEN_EXCERPT_BLOCK" "$NONCANON_NOTICE"
 
 check_status_note_bloat || true
 check_session_log_bloat || true
+check_drift_warn 2>/dev/null || true
 
 exit 0

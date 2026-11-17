@@ -38,15 +38,6 @@ home/bin/executable_emergency-sync.sh.tmpl
 home/dot_aws/modify_private_credentials.tmpl
 home/dot_claude/skills/bulk-update-memory-workflow/scripts/executable_sweep.sh
 home/dot_claude/skills/clean-claude-orphans/scripts/executable_list-claude-orphans.sh.tmpl
-home/dot_claude/skills/setup-memory-workflow/scripts/executable_basic-memory-write-guard.sh
-home/dot_claude/skills/setup-memory-workflow/scripts/executable_check-drift.sh
-home/dot_claude/skills/setup-memory-workflow/scripts/executable_crash-recovery-hook.sh
-home/dot_claude/skills/setup-memory-workflow/scripts/executable_session-reminder.sh
-home/dot_claude/skills/setup-memory-workflow/scripts/lib-pieces.sh
-home/dot_claude/skills/setup-memory-workflow/scripts/lib-project.sh
-home/dot_claude/skills/setup-memory-workflow/scripts/lib-session-log.sh
-home/dot_claude/skills/setup-memory-workflow/scripts/lib-status-note.sh
-home/dot_claude/skills/setup-memory-workflow/scripts/migrations.sh
 home/dot_claude/skills/which-skill/scripts/executable_list-skills.sh
 home/dot_local/bin/executable_apply-claude-pattern.tmpl
 home/dot_local/bin/executable_audit-packages.tmpl

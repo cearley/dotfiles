@@ -5,7 +5,6 @@
 set -euo pipefail
 # Shared diagnostics inspect LANG; hooks and isolated clients may omit it.
 LANG=${LANG:-C}
-SMW_VERSION=22
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 ASSETS_DIR="$SKILL_DIR/assets"
 # home/scripts/shared-utils.sh is never deployed (home/.chezmoiignore.tmpl ignores
@@ -14,24 +13,38 @@ ASSETS_DIR="$SKILL_DIR/assets"
 print_message() {
     local level="$1"
     local message="$2"
+    local icon ascii
+    case "$level" in
+        "info")
+            icon="🔵"
+            ascii="[INFO]"
+            ;;
+        "success")
+            icon="✅"
+            ascii="[SUCCESS]"
+            ;;
+        "warning")
+            icon="⚠️ "
+            ascii="[WARNING]"
+            ;;
+        "error")
+            icon="❌"
+            ascii="[ERROR]"
+            ;;
+        "skip")
+            icon="⏭️"
+            ascii="[SKIP]"
+            ;;
+        "tip")
+            icon="💡"
+            ascii="[TIP]"
+            ;;
+        *) return ;;
+    esac
     if [ "${LANG}" != "${LANG%UTF-8*}" ]; then
-        case "$level" in
-            "info") echo "🔵 $message" >&2 ;;
-            "success") echo "✅ $message" >&2 ;;
-            "warning") echo "⚠️  $message" >&2 ;;
-            "error") echo "❌ $message" >&2 ;;
-            "skip") echo "⏭️ $message" >&2 ;;
-            "tip") echo "💡 $message" >&2 ;;
-        esac
+        echo "$icon $message" >&2
     else
-        case "$level" in
-            "info") echo "[INFO] $message" >&2 ;;
-            "success") echo "[SUCCESS] $message" >&2 ;;
-            "warning") echo "[WARNING] $message" >&2 ;;
-            "error") echo "[ERROR] $message" >&2 ;;
-            "skip") echo "[SKIP] $message" >&2 ;;
-            "tip") echo "[TIP] $message" >&2 ;;
-        esac
+        echo "$ascii $message" >&2
     fi
 }
 command_exists() {
@@ -45,6 +58,10 @@ source "$SKILL_DIR/scripts/lib-project.sh"
 PROJECT=$(resolve_project)
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-consent.sh
 source "$SKILL_DIR/scripts/lib-consent.sh"
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-drift-warn.sh
+source "$SKILL_DIR/scripts/lib-drift-warn.sh"
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-status-note.sh
+source "$SKILL_DIR/scripts/lib-status-note.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-pieces.sh
 source "$SKILL_DIR/scripts/lib-pieces.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-runtime.sh
@@ -59,7 +76,7 @@ HOOK_PIECE_EVENTS=(SessionStart PreToolUse SessionStart)
 HOOK_PIECE_MATCHERS=("" 'Bash|Edit|Write' "")
 HOOK_PIECE_SCRIPTS=(session-reminder.sh basic-memory-write-guard.sh crash-recovery-hook.sh)
 HOOK_BASE='${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/'
-HOOK_PIECE_CMDS=("\"${HOOK_BASE}session-reminder.sh\"; \"${HOOK_BASE}check-drift.sh\" drift-warn 2>/dev/null || true" "\"${HOOK_BASE}basic-memory-write-guard.sh\"" "\"${HOOK_BASE}crash-recovery-hook.sh\"")
+HOOK_PIECE_CMDS=("\"${HOOK_BASE}session-reminder.sh\"" "\"${HOOK_BASE}basic-memory-write-guard.sh\"" "\"${HOOK_BASE}crash-recovery-hook.sh\"")
 
 validate_project_name() {
     # This workflow stores local projects under one directory; reject path traversal.
@@ -138,22 +155,22 @@ cmd_apply() {
     return 1
 }
 
-cmd_drift_warn() {
-    local file=.claude/skills/save-session/SKILL.md version
-    [ -f "$file" ] || return 0
-    version=$(sed -n 's/.*setup-memory-workflow-version:\([0-9]*\).*/\1/p' "$file")
-    if [[ "$version" =~ ^[0-9]+$ ]] && [ "$version" -lt "$SMW_VERSION" ]; then
-        print_message warning "save-session v$version < v$SMW_VERSION; inspect with check before explicit update."
+cmd_status_bloat() {
+    validate_project_name
+    local warning
+    warning=$(check_status_note_bloat)
+    if [ -n "$warning" ]; then
+        print_message warning "$warning"
+        return 1
     fi
-    if [ "$(consent_status)" != GRANTED ]; then
-        print_message warning "Automatic recording disabled: $(consent_status). Explicit save or project consent required."
-    fi
+    return 0
 }
 
 case "${1:-}" in
     check | install | update) cmd_run "$1" ;;
     apply) cmd_apply "${2:?Expected piece}" ;;
-    drift-warn) cmd_drift_warn || true ;;
+    drift-warn) check_drift_warn || true ;;
+    status-bloat) cmd_status_bloat ;;
     consent)
         validate_project_name
         case "${2:-status}" in
@@ -167,7 +184,7 @@ case "${1:-}" in
         authorize_save "${2:?Expected project}" "${3:?Expected auto or once}"
         ;;
     *)
-        print_message error 'Usage: check-drift.sh check|install|update|apply PIECE|drift-warn|consent status|grant|revoke|authorize PROJECT auto|once'
+        print_message error 'Usage: check-drift.sh check|install|update|apply PIECE|drift-warn|status-bloat|consent status|grant|revoke|authorize PROJECT auto|once'
         exit 1
         ;;
 esac
