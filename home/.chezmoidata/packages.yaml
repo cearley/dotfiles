@@ -247,6 +247,7 @@ packages:
           - 'claude-code-setup@claude-plugins-official'
           - 'claude-md-management@claude-plugins-official'
           - 'chezmoi-tooling-guard@chezmoi-personal' # Replaces the retired claude-tooling-write-guard bash hook
+          - 'ccenv-profile-guard@chezmoi-personal' # Replaces the retired claude-profile-mismatch-guard bash hook; mod authored in cearley/zsh-claude-env
           - 'oh-my-claudecode@omc'
           - 'superpowers@claude-plugins-official'
           - 'timesheet-tools@timesheet-tools'

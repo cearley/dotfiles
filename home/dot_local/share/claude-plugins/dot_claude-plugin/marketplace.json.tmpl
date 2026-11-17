@@ -43,6 +43,17 @@
       "description": "Denies direct edits to chezmoi-managed Claude Code tooling files, pointing at the real source instead. Installed machine-wide via packages.yaml's global plugins list, not opt-in per project -- see claude-tooling.md."
     },
     {
+      "name": "ccenv-profile-guard",
+      "description": "Asks before a tool call crosses a ccenv-managed Claude Code profile boundary. Installed machine-wide via packages.yaml's global plugins list, not opt-in per project. Authored and owned by the separate zsh-claude-env project; this entry only drives installation. From cearley/zsh-claude-env.",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/cearley/zsh-claude-env.git",
+        "path": "mods/ccenv-profile-guard",
+        "ref": "main",
+        "sha": "6b61c48f1b8ede4ebf6e494302cd64c56d3fc86b"
+      }
+    },
+    {
       "name": "code-quality",
       "description": "Clean Code, refactoring patterns, clean architecture, software design philosophy, and pragmatic programming skills from wondelai/skills.",
       "source": {
