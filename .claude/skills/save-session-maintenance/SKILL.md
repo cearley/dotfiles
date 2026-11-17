@@ -3,7 +3,7 @@ name: save-session-maintenance
 description: Manually roll over an oversized session log and triage this project's status note. Explicit invocation authorizes this bounded maintenance; never run automatically from recording consent or bloat reminders.
 disable-model-invocation: true
 ---
-<!-- setup-memory-workflow-version:23 -->
+<!-- setup-memory-workflow-version:24 -->
 <!-- setup-memory-workflow-project:chezmoi -->
 
 ## Scope and preflight

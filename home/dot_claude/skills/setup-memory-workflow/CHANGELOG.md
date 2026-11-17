@@ -4,6 +4,14 @@ Starts fresh at v8. Earlier versions (v1–v7) predate this file and are not bac
 reconstructing accurate detail for all of them isn't reliably possible, and fabricating
 detail would be worse than omitting it.
 
+## v24 (2026-11-17)
+Fixes hardcoded `~/.claude/...` paths in `SKILL.md` and `save-session-skill.md.template`'s
+`check-drift.sh` invocations to `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/...` instead, matching
+every other path in the skill — on a non-default profile, the literal `~/.claude` path both
+resolves to the wrong profile's copy and gets blocked by a profile-mismatch guard. Found by
+another agent (different `CLAUDE_CONFIG_DIR`) hitting the block live. `SMW_VERSION` moves to
+24 to ship the template fix to existing v23 installs via `check-drift.sh update`.
+
 ## v23 (2026-11-17)
 An audit of session transcripts since 2026-11-13 found concrete, evidenced friction in
 the save path and the `SessionStart` hook. Four independent fixes:

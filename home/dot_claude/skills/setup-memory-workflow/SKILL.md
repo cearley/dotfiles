@@ -8,7 +8,7 @@ description: Inspect, explicitly install or repair the basic-memory session work
 Run from inside the target checkout:
 
 ```bash
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh check
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh check
 ```
 
 This resolves the physical checkout root and BM project (including
@@ -31,7 +31,7 @@ the active profile; do not audit other personas as a side effect.
 An explicit setup request authorizes missing registration/piece creation:
 
 ```bash
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh install
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh install
 ```
 
 Installation never grants recording consent. It preserves existing customized pieces.
@@ -41,12 +41,12 @@ pieces to update, preserve or manually merge. Version-only repair uses `update` 
 identity safeguards; targeted replacement uses:
 
 ```bash
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply save-session-skill
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply save-session-maintenance-skill
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply mcp-config
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply hook-config
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply write-guard-hook
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh apply crash-recovery-hook
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh apply save-session-skill
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh apply save-session-maintenance-skill
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh apply mcp-config
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh apply hook-config
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh apply write-guard-hook
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh apply crash-recovery-hook
 ```
 
 Only explicit install/update/apply run positively owned legacy migrations within their
@@ -65,7 +65,7 @@ using the new policy.
 Only after an explicit user instruction for that displayed scope, run:
 
 ```bash
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh consent grant
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh consent grant
 ```
 
 Installation and enrollment can be authorized by one clear request, but are separate
@@ -73,8 +73,8 @@ operations. Do not turn “set up memory” or a health check into an automatic 
 To inspect or explicitly revoke:
 
 ```bash
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh consent status
-~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh consent revoke
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh consent status
+${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh consent revoke
 ```
 
 Confirm `.basic-memory-workflow.json` location/scope. Missing, false, malformed,

@@ -8,7 +8,7 @@
 # time) lib-consent.sh's consent_status already in scope. Read-only, never
 # errors. Add a CHANGELOG.md entry alongside any change here.
 
-SMW_VERSION=23
+SMW_VERSION=24
 
 # Warns when the installed skill is outdated or recording isn't GRANTED.
 # Always exits 0; silence requires redirecting stderr, same as the

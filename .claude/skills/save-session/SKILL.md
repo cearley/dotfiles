@@ -2,7 +2,7 @@
 name: save-session
 description: Save curated session findings, decisions and a checkpoint to basic-memory. Run proactively only with valid project-local standing consent and meaningful activity; a direct save request authorizes one save. Generic wrap-up language triggers an offer. No maintenance or transcript recovery without its own explicit request.
 ---
-<!-- setup-memory-workflow-version:23 -->
+<!-- setup-memory-workflow-version:24 -->
 <!-- setup-memory-workflow-project:chezmoi -->
 
 ## Preflight — before activity filtering or any marker write
@@ -11,7 +11,7 @@ description: Save curated session findings, decisions and a checkpoint to basic-
    and `pwd -P`; outside Git use `pwd -P`). Identity is verified by `authorize`
    below; a directory name or the mere presence of a skill is insufficient.
 2. For automatic recording, run
-   `~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh authorize chezmoi auto`.
+   `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh authorize chezmoi auto`.
    This checks the current installed skill identity, resolved project and consent bound
    to this physical checkout. Missing, revoked, invalid, unsupported or mismatched
    `.basic-memory-workflow.json` denies automatic recording. Stop before notes AND
@@ -79,7 +79,7 @@ identifier for the status link and Step 2; do not derive it from the title. If t
 already exists, stop and resolve it instead of overwriting it.
 
 Before drafting the new Status Summary entry, run
-`~/.claude/skills/setup-memory-workflow/scripts/check-drift.sh status-bloat`. A nonzero
+`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh status-bloat`. A nonzero
 exit means the note already meets or exceeds its oversized thresholds (≥8,000 characters,
 ≥200 lines, or any single line ≥800 characters): write only a short pointer line — noting
 that the save occurred and that `/save-session-maintenance` is needed — instead of a full
