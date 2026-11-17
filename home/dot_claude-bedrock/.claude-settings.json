@@ -26,16 +26,13 @@
   "permissions": {
     "defaultMode": "auto",
     "allow": [
-      "mcp__basic-memory__search_notes",
-      "mcp__basic-memory__recent_activity",
-      "mcp__basic-memory__list_memory_projects",
-      "mcp__basic-memory__read_note"
+      "mcp__basic-memory__bm_search",
+      "mcp__basic-memory__bm_project",
+      "mcp__basic-memory__bm_read"
     ],
     "ask": [
       "Bash(git commit *)",
-      "Bash(git push *)",
-      "mcp__basic-memory__bm_write",
-      "mcp__basic-memory__bm_edit"
+      "Bash(git push *)"
     ]
   },
   "hooks": {

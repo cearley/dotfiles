@@ -23,9 +23,7 @@
   "permissions": {
     "ask": [
       "Bash(git commit *)",
-      "Bash(git push *)",
-      "mcp__basic-memory__bm_write",
-      "mcp__basic-memory__bm_edit"
+      "Bash(git push *)"
     ]
   },
   "hooks": {
