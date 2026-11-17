@@ -3,8 +3,9 @@
 # chezmoi-managed Claude Code tooling files, pointing at the real source via `chezmoi
 # managed`/`source-path`. Never auto-approves.
 #
-# Single-purpose: managed-file protection only. Cross-profile mismatch detection is the
-# sibling hook claude-profile-mismatch-guard's job, not this one's.
+# Single-purpose: managed-file protection only. Cross-profile mismatch detection used to be
+# the sibling hook claude-profile-mismatch-guard's job; it's now the ccenv-profile-guard
+# Claude Code mod in the separate zsh-claude-env project, not managed by this repo.
 #
 # Edit/Write give a structured file_path; Bash only gives a command string, so mutation
 # detection there is heuristic (see claude-bash-mutation-target-extraction) — an

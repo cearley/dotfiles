@@ -1,8 +1,10 @@
 {{- /* Shared Bash-command mutation-target extraction, rendered verbatim (no template
      variables) into every PreToolUse hook that needs to guess which path(s) a Bash
-     command string might write to: executable_claude-tooling-write-guard.tmpl and
-     executable_claude-profile-mismatch-guard.tmpl. Each calls extract_bash_targets()
-     with its own expanded command string and runs its own check per candidate. */ -}}
+     command string might write to: currently executable_claude-tooling-write-guard.tmpl
+     alone (its former sibling, executable_claude-profile-mismatch-guard.tmpl, was retired
+     2026-11-17 in favor of the ccenv-profile-guard mod in the separate zsh-claude-env
+     project). Still a template, not inlined, in case a future hook here needs the same
+     extract_bash_targets() logic. */ -}}
 # A deployed/live profile path ("/.claude<name>/...", ".claude.json") or chezmoi-source
 # profile path ("dot_claude<name>/...")? Shared by the Bash fast-filter and every handler
 # below.

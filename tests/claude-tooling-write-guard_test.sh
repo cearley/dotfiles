@@ -7,7 +7,9 @@
 #
 # bashunit suite for claude-tooling-write-guard's permission contract (openspec capability:
 # claude-tooling-write-guard), scoped to this hook's one tier (chezmoi-managed-file
-# protection) -- profile-mismatch tests live in tests/claude-profile-mismatch-guard_test.sh.
+# protection). Profile-mismatch detection was a sibling hook here (tests formerly in
+# tests/claude-profile-mismatch-guard_test.sh); retired 2026-11-17 in favor of the
+# ccenv-profile-guard mod in the separate zsh-claude-env project.
 #
 # The guard is a chezmoi TEMPLATE: rendered once (set_up_before_script) via tests/run-template
 # into a scratch file, then executed as a whole script per test (stdin->stdout contract,
@@ -211,7 +213,8 @@ function test_h4_edit_changing_nested_protected_value_without_key_literal_is_den
 
 #
 # --- M severity ---------------------------------------------------------------
-# M1-M4 (profile mismatch) moved to tests/claude-profile-mismatch-guard_test.sh.
+# M1-M4 (profile mismatch) belonged to the retired claude-profile-mismatch-guard hook; see
+# ccenv-profile-guard's own test suite in the separate zsh-claude-env project instead.
 #
 
 # Moving a managed file away is a mutation of its source location too, not just its

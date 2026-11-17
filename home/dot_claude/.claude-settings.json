@@ -69,15 +69,6 @@
             "command": "claude-tooling-write-guard"
           }
         ]
-      },
-      {
-        "matcher": "Bash|Edit|Write|Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-profile-mismatch-guard"
-          }
-        ]
       }
     ],
     "SessionStart": [

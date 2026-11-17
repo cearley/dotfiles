@@ -18,8 +18,6 @@ PYTHON_TEST_SUITES := tests/test_memory_workflow.py tests/test_memory_workflow_h
 #                                             real `chezmoi managed` and reads the real
 #                                             $HOME/.claude; HOME is not sandboxed (bashunit suite,
 #                                             not run via TEST_SUITES/bash $t either way)
-#   tests/claude-profile-mismatch-guard_test.sh  same mock-render/HOME properties as above
-#                                             (no chezmoi calls of its own though)
 #   other tests/test_*.py                     Python tests; runner not yet confirmed
 #                                             isolated, so they stay out of `check`
 

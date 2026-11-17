@@ -1,12 +1,14 @@
-{{- /* Shared helpers for the two sibling PreToolUse guards that both reason about
-     Claude Code tooling paths: executable_claude-tooling-write-guard.tmpl (managed-file
-     protection) and executable_claude-profile-mismatch-guard.tmpl (cross-profile
-     detection). Each includes this once, then calls:
-       - resolve_check_path    (unchanged by either caller)
-       - claude_path_in_scope  (replaces each caller's own duplicated scope `case`)
-       - claude_scope_prefilter (replaces each caller's own duplicated Bash-command
-         $CLAUDE_CONFIG_DIR/$HOME expansion + broad_pattern fast filter; sets
-         $__claude_scope_expanded as its side effect on success)
+{{- /* Shared helpers for PreToolUse guards that reason about Claude Code tooling paths:
+     currently executable_claude-tooling-write-guard.tmpl (managed-file protection) alone —
+     its former sibling, executable_claude-profile-mismatch-guard.tmpl (cross-profile
+     detection), was retired 2026-11-17 in favor of the ccenv-profile-guard mod in the
+     separate zsh-claude-env project. Still a shared template, not inlined, in case a future
+     hook here needs the same helpers:
+       - resolve_check_path    (realpath fallback for a not-yet-created Write target)
+       - claude_path_in_scope  (the $HOME/chezmoi-source-dir scope check)
+       - claude_scope_prefilter (the Bash-command $CLAUDE_CONFIG_DIR/$HOME expansion +
+         broad_pattern fast filter; sets $__claude_scope_expanded as its side effect on
+         success)
      Uses {{ .chezmoi.sourceDir }} directly, so callers must `includeTemplate` this with
      their own `.` context (same convention as claude-bash-mutation-target-extraction). */ -}}
 

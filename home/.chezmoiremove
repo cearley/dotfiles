@@ -8,3 +8,9 @@
 # this skill installed before the removal.
 .claude/skills/setup-memory-workflow/scripts/sync-memory.py.template
 .claude/skills/setup-memory-workflow/assets/sync-memory-skill.md.template
+
+# claude-profile-mismatch-guard retired (2026-11-17): replaced by the ccenv-profile-guard
+# Claude Code mod in the separate zsh-claude-env project. The deployed script would
+# otherwise linger on every machine's ~/.local/bin forever, since its source entry alone
+# being removed doesn't delete it.
+.local/bin/claude-profile-mismatch-guard

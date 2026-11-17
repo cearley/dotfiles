@@ -4,8 +4,9 @@
 
 Defines the permission contract of `claude-tooling-write-guard`, the `PreToolUse` hook that
 steers edits of chezmoi-managed Claude Code tooling files to their source. It may block,
-prompt, or inform, but never approve. Cross-profile mismatch detection is a separate concern
-with its own sibling hook and spec — see `openspec/specs/claude-profile-mismatch-guard/`.
+prompt, or inform, but never approve. Cross-profile mismatch detection used to be a sibling
+hook here (`claude-profile-mismatch-guard`, retired 2026-11-17); it's now the
+`ccenv-profile-guard` Claude Code mod in the separate `zsh-claude-env` project.
 ## Requirements
 ### Requirement: Guard Never Auto-Approves
 
@@ -41,8 +42,8 @@ The guard SHALL return `deny` for direct edits to chezmoi-managed tooling files,
 the managed-key and full-overwrite rules for `settings.json`. The guard SHALL NOT flag
 installed-but-undeclared drift under `plugins/` or `skills/` on its own — that is the
 `clean-claude-orphans`/`check-claude-overrides` skills' job, not this hook's — and performs
-no cross-profile checking of its own; that is the sibling `claude-profile-mismatch-guard`
-hook's job (see `openspec/specs/claude-profile-mismatch-guard/`).
+no cross-profile checking of its own; that moved to the `ccenv-profile-guard` mod in the
+separate `zsh-claude-env` project (see "Cross-profile mismatch detection" above).
 
 #### Scenario: Managed file edit still denied
 - **WHEN** an Edit targets a chezmoi-managed file under a profile directory
