@@ -1,24 +1,14 @@
 #!/usr/bin/env bash
-# basic-memory-write-guard — PreToolUse hook (Bash|Edit|Write matcher). Denies any
-# write-shaped Bash command, or any Edit/Write call, that targets a path under
-# basic-memory's notes store. Prefer indexed MCP agent writes to avoid stale
-# revisions and indexing delay. Human Markdown edits are supported by Basic Memory;
-# this heuristic guard expresses agent policy, not a security sandbox.
+# basic-memory-write-guard — PreToolUse hook (Bash|Edit|Write matcher): denies any
+# write-shaped Bash command, or Edit/Write call, that targets basic-memory's notes
+# store. Prefer indexed MCP writes (bm_write/bm_edit) instead; human Markdown edits
+# are supported. Heuristic agent policy, not a security sandbox — it favors false
+# positives (an unnecessary block) over false negatives, and a sufficiently creative
+# command (e.g. a Python one-liner) can still slip through. Read is left unguarded.
 #
-# Deployed once, machine-wide, by chezmoi (like check-drift.sh itself) — this script
-# takes no __PROJECT__ substitution, since the guard applies to the whole
-# ~/.local/share/basic-memory/ tree, not just one project's subdirectory. Every
-# project's .claude/settings.local.json just points its PreToolUse hook at this same
-# global path; see check-drift.sh's write-guard-hook piece.
-#
-# Heuristic, not a sandbox: Bash detection matches common write-shaped constructs
-# (redirects, tee/rm/mv/cp/touch/mkdir/sed -i/etc.) anywhere in a command that also
-# references the base dir — deliberately favors false positives (an unnecessary block)
-# over false negatives, same "any change is risky" tradeoff the retired
-# claude-tooling-write-guard bash hook made for its own Bash handling. A sufficiently
-# creative command (e.g. a Python one-liner) can still slip through. Read is left
-# unguarded — inspecting a note file directly is lower-risk and sometimes legitimate
-# while debugging this workflow itself.
+# Deployed once, machine-wide by chezmoi, no __PROJECT__ substitution — every
+# project's PreToolUse hook points at this same global path (see check-drift.sh's
+# write-guard-hook piece).
 set -euo pipefail
 
 BASE="$HOME/.local/share/basic-memory"
@@ -38,8 +28,8 @@ emit_deny() {
   }'
 }
 
-# Resolves symlinks where possible (falls back to the parent dir's real path, then the
-# raw path) before checking whether it sits under $BASE.
+# Resolves symlinks (falling back to the parent's real path, then the raw path)
+# before checking containment under $BASE.
 under_base() {
     local path="$1" resolved="$1" real real_parent
     if real=$(realpath "$path" 2>/dev/null); then

@@ -1,34 +1,17 @@
 #!/usr/bin/env bash
-# session-reminder.sh — SessionStart hook: prints a deferential background-
-# context reminder, with a live excerpt of the current-status note's Open
-# section when one can be resolved. Static, machine-wide, non-templated —
-# see check-drift.sh's reminder-hook piece for the fixed command string
-# that points every project's SessionStart hook at this one script (design
-# D2). Resolves $PROJECT itself at runtime via lib-project.sh's
-# resolve_project() — the one piece of apply-time logic this script
-# duplicates rather than re-derives.
-#
-# Read-only by construction (D3): only ever reads files under
-# ~/.local/share/basic-memory/; never creates, writes, or moves anything —
-# a missing canonical note is left for the model to create via bm_write.
-# Non-canonical notes are flagged, never auto-moved (D4). Exits 0
-# unconditionally regardless of what it finds.
-#
-# Also runs the drift-warn check in-process (fix-save-session-redundancy):
-# SessionStart previously chained this script with a second
-# `check-drift.sh drift-warn` subprocess, re-sourcing every shared library a
-# second time for no visible benefit — its stderr was discarded by the old
-# hook command's own `2>/dev/null`. Calling check_drift_warn directly below,
-# with the same redirect, keeps that exact (lack of) visible effect while
-# dropping the extra subprocess and re-sourcing.
+# session-reminder.sh — SessionStart hook: prints a deferential background
+# reminder with a live excerpt of the current-status note's Open section
+# when one resolves, plus bloat/drift warnings. Deployed once, machine-wide
+# by chezmoi; resolves $PROJECT itself at runtime via lib-project.sh. Never
+# creates, writes, or moves anything — a missing canonical note is left for
+# the model to create, and a non-canonical one is only flagged. Exits 0
+# unconditionally.
 set -euo pipefail
 LANG=${LANG:-C}
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# home/scripts/shared-utils.sh is never deployed (home/.chezmoiignore.tmpl
-# ignores scripts/), so this deployed, non-templated script can't source
-# it; inline the one function check_drift_warn needs instead (same
-# precedent as check-drift.sh's own inline copy).
+# shared-utils.sh isn't deployed here; inline the one function
+# check_drift_warn needs (same precedent as check-drift.sh's own copy).
 print_message() {
     local level="$1"
     local message="$2"
@@ -60,8 +43,6 @@ if [ -n "$HOOK_CWD" ]; then
     cd "$HOOK_CWD" 2>/dev/null || exit 0
 fi
 
-# Same override-file-then-git-basename logic check-drift.sh uses at
-# apply-time (lib-project.sh's resolve_project(), not re-derived here).
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$PROJECT_ROOT" 2>/dev/null || exit 0
 PROJECT=$(resolve_project 2>/dev/null) || exit 0
@@ -89,6 +70,9 @@ printf '%s%s%s\n' "$PREAMBLE" "$OPEN_EXCERPT_BLOCK" "$NONCANON_NOTICE"
 
 check_status_note_bloat || true
 check_session_log_bloat || true
+# Runs in-process instead of exec'ing check-drift.sh as a second subprocess;
+# the redirect preserves the old hook chain's silence (its stderr was
+# already discarded there).
 check_drift_warn 2>/dev/null || true
 
 exit 0

@@ -82,9 +82,8 @@ hook_owned_commands() {
     old_quoted_chain=""
     if [ "$script" = session-reminder.sh ]; then
         old="$literal; ${base}check-drift.sh drift-warn 2>/dev/null || true"
-        # v20-v22's actual deployed combined command (fix-save-session-redundancy
-        # collapsed the SessionStart chain into this one script): each path
-        # segment is individually quoted, unlike the unquoted $old form above.
+        # v20-v22's actual combined command quoted each path segment
+        # individually, unlike the unquoted $old form above.
         old_quoted_chain="$quoted; \"${base}check-drift.sh\" drift-warn 2>/dev/null || true"
     fi
     printf '%s\n' "$canonical" "$old" "$old_quoted_chain" "$literal" "$quoted" \

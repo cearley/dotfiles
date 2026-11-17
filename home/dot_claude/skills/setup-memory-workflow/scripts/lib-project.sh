@@ -1,30 +1,25 @@
 # shellcheck shell=bash
-# lib-project.sh — sourced by check-drift.sh. Resolves the current project's
-# basic-memory identity once, at apply-time.
+# lib-project.sh — sourced by check-drift.sh. Resolves $PROJECT once, at
+# apply-time (every installed piece bakes the value in via render() in
+# lib-pieces.sh; no runtime script re-derives it). Requires $PROJECT_ROOT
+# already set by the caller.
 #
-# $PROJECT resolution (apply-time only — no runtime script ships in any
-# installed piece):
+# Resolution order:
 #   1. <project-root>/.claude/basic-memory-project.txt, if present and
-#      non-blank (a deliberately narrow escape hatch for when a project's
-#      basic-memory identity needs to diverge from its directory name)
+#      non-blank (escape hatch for when identity must diverge from the
+#      directory name)
 #   2. basename of `git rev-parse --show-toplevel`
-#
-# Requires $PROJECT_ROOT to already be set by the caller.
-
-# Resolves $PROJECT once, at apply-time. No runtime script — every installed
-# piece gets this value baked in via render() in lib-pieces.sh, not
-# re-derived later.
 resolve_project() {
-  local override_file="$PROJECT_ROOT/.claude/basic-memory-project.txt"
-  if [ -f "$override_file" ]; then
-    local override
-    override=$(tr -d '[:space:]' <"$override_file" 2>/dev/null || true)
-    if [ -n "$override" ]; then
-      # Print the file's actual (untrimmed-of-internal-content) first line, not
-      # the whitespace-stripped value used only to test for blankness above.
-      head -n1 "$override_file" | tr -d '\r\n'
-      return
+    local override_file="$PROJECT_ROOT/.claude/basic-memory-project.txt"
+    if [ -f "$override_file" ]; then
+        local override
+        override=$(tr -d '[:space:]' <"$override_file" 2>/dev/null || true)
+        if [ -n "$override" ]; then
+            # Use the file's actual first line, not the whitespace-stripped
+            # value above (which only tests for blankness).
+            head -n1 "$override_file" | tr -d '\r\n'
+            return
+        fi
     fi
-  fi
-  basename "$PROJECT_ROOT"
+    basename "$PROJECT_ROOT"
 }
