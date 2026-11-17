@@ -32,7 +32,7 @@ chezmoi execute-template < filename.tmpl
 
 ### Shell Linting
 Run `tests/lint-shell <file>` on every shell file or template you create or modify, and fix all failures before reporting done.
-- Three layers run in order: syntax (`bash -n`), lint (shellcheck), format (shfmt). A syntax failure stops the later layers.
+- Four layers run in order: syntax (`sh -n`/`bash -n`), lint (shellcheck), format (shfmt -d), complexity (shellmetrics, CCN > 10 fails). A syntax failure skips the other three; lint, format, and complexity are otherwise independent of each other.
 - Templates are rendered first (via `tests/run-template`, using this machine's tags), so results reflect this machine only. Line numbers refer to the **rendered** output; run `tests/run-template <file>` to see it.
 - Fix template format diffs (e.g. stray blank lines from `{{ if }}`/`{{ end }}`) with whitespace control (`{{-` / `-}}`). **Never** run shfmt on a template — it corrupts the template syntax.
 - `make fmt` (shfmt -w) is for plain `*.sh` files only.

@@ -4,7 +4,8 @@
 
 Defines the permission contract of `claude-tooling-write-guard`, the `PreToolUse` hook that
 steers edits of chezmoi-managed Claude Code tooling files to their source. It may block,
-prompt, or inform, but never approve.
+prompt, or inform, but never approve. Cross-profile mismatch detection is a separate concern
+with its own sibling hook and spec — see `openspec/specs/claude-profile-mismatch-guard/`.
 ## Requirements
 ### Requirement: Guard Never Auto-Approves
 
@@ -34,21 +35,23 @@ When a Bash command references a deployed tooling path, and the guard neither de
 - **THEN** the first SHALL produce the informational note
 - **AND** the second SHALL produce no output
 
-### Requirement: Deny and Ask Tiers Unchanged
+### Requirement: Deny Tier
 
-The guard SHALL keep its existing tiered decisions. It SHALL return `deny` for direct
-edits to chezmoi-managed tooling files, including the managed-key and full-overwrite rules
-for `settings.json`. It SHALL return `ask` for edits under `plugins/`, or under `skills/`
-directories chezmoi does not track.
+The guard SHALL return `deny` for direct edits to chezmoi-managed tooling files, including
+the managed-key and full-overwrite rules for `settings.json`. The guard SHALL NOT flag
+installed-but-undeclared drift under `plugins/` or `skills/` on its own — that is the
+`clean-claude-orphans`/`check-claude-overrides` skills' job, not this hook's — and performs
+no cross-profile checking of its own; that is the sibling `claude-profile-mismatch-guard`
+hook's job (see `openspec/specs/claude-profile-mismatch-guard/`).
 
 #### Scenario: Managed file edit still denied
 - **WHEN** an Edit targets a chezmoi-managed file under a profile directory
 - **THEN** the guard SHALL return `permissionDecision: "deny"`
 
-#### Scenario: Plugin cache edit still asks
+#### Scenario: Plugins write is not flagged
 - **WHEN** a Bash command redirects output into a file under a profile's `plugins/`
   directory
-- **THEN** the guard SHALL return `permissionDecision: "ask"`
+- **THEN** the guard SHALL NOT return a `permissionDecision`
 
 ### Requirement: chezmoi add of a Profile settings.json Is Denied
 

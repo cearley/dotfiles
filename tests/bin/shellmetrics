@@ -1,0 +1,495 @@
+#!/bin/bash
+# Vendored from: https://github.com/shellspec/shellmetrics
+# Pinned version: 0.5.0
+# Vendored on: 2026-11-16
+# License: MIT, per GitHub's repository license detection for shellspec/shellmetrics (exact LICENSE file text not independently fetched — network access unavailable in this environment).
+
+test || eval "__() { :; }"
+
+set -eu
+
+VERSION=0.5.0
+
+usage() {
+cat<<HERE
+Usage: shellmetrics [options] files...
+
+  -s, --shell           The path of shell to use as parser [default: bash]
+                          Supported shells: bash, mksh, yash, zsh
+      --[no-]color      Enable / Disable color [default: enabled]
+      --csv             Generate CSV output
+  -p, --pretty          Format pretty with wrapper function(s)
+  -d, --debug           Display parsed data for debug instead of report
+  -v, --version         Display the version
+  -h, --help            You're looking at it
+HERE
+}
+
+[ "${ZSH_VERSION:-}" ] && setopt shwordsplit
+
+MARK="@SHELLMETRICS_LINENO@"
+SP=$(printf ' \t') && TAB=${SP#?}
+
+SHELL_VERSION='' INDENT="$TAB"
+[ "${BASH_VERSION:-}" ] && SHELL_VERSION="bash $BASH_VERSION" INDENT="    "
+[ "${ZSH_VERSION:-}" ] && SHELL_VERSION="zsh $ZSH_VERSION"
+[ "${YASH_VERSION:-}" ] && SHELL_VERSION="yash $YASH_VERSION" INDENT="   "
+case ${KSH_VERSION:-} in (*MIRBSD*) SHELL_VERSION="mksh $KSH_VERSION"; esac
+
+proxy() {
+  eval "$1() { $2 \"\$@\"; }"
+}
+
+putsn() {
+  putsn() {
+     printf '%s\n' "$1"
+  }
+  if [ "${KSH_VERSION:-}" ]; then
+    putsn() {
+      print -r -- "$1"
+    }
+  fi
+  putsn "$@"
+}
+
+count() {
+  max_indent=0 lines=0 comment_lines=0 blank_lines=0
+  [ "$INDENT" = "$TAB" ] && indent_width=8 || indent_width=${#INDENT}
+  while IFS= read -r line || [ "$line" ]; do
+    is_comment_line "$line" && comment_lines=$((comment_lines + 1))
+    is_blank_line "$line" && blank_lines=$((blank_lines + 1))
+    line=${line%%[!$SP]*} lines=$((lines + 1))
+    max_indent=$(( (${#line} > max_indent) ? ${#line} : max_indent))
+  done
+  max_indent=$((max_indent / indent_width))
+  eval "$1=$lines $2=$comment_lines $3=$blank_lines $4=$max_indent"
+}
+
+is_comment_line() {
+  set -- "$1" "${1%%#*}"
+  [ "$1" != "$2" ] && is_blank_line "$2"
+}
+
+is_blank_line() {
+  case $1 in (*[!$SP]*) false; esac
+}
+
+repeat_string() {
+  [ "$2" -gt 0 ] || return 0
+  eval "$1=\"\${$1}$3\""
+  repeat_string "$1" $(($2 - 1)) "$3"
+}
+
+array() {
+  while [ $# -gt 0 ]; do
+    eval "$1_array=0-0"
+    shift
+  done
+}
+
+array_is_empty() {
+  eval "array=\$$1_array"
+  eval "[ \$(($array)) -eq 0 ]"
+}
+
+push_array() {
+  while [ $# -gt 0 ]; do
+    eval "array=\${$1_array}"
+    eval "$1_array_${array%-*}=\$$1"
+    eval "$1_array_last=\$$1_array_${array%-*}"
+    array=$((${array%-*} + 1))-${array#*-}
+    eval "$1_array=$array"
+    shift
+  done
+}
+
+pop_array() {
+  while [ $# -gt 0 ]; do
+    eval "array=\$$1_array"
+    eval "[ \$(($array)) -eq 0 ]" && continue
+    array=$((${array%-*} - 1))-${array#*-}
+    eval "$1=\$$1_array_${array%-*}"
+    unset "$1_array_${array%-*}"
+    if eval "[ \$(($array)) -eq 0 ]"; then
+      unset "$1_array_last"
+    else
+      eval "$1_array_last=\$$1_array_$((${array%-*} - 1))"
+    fi
+    eval "$1_array=$array"
+    shift
+  done
+}
+
+shift_array() {
+  while [ $# -gt 0 ]; do
+    eval "array=\$$1_array"
+    eval "[ \$(($array)) -eq 0 ]" && continue
+    eval "$1=\$$1_array_${array#*-}"
+    unset "$1_array_${array#*-}"
+    array=${array%-*}-$((${array#*-} + 1))
+    if eval "[ \$(($array)) -eq 0 ]"; then
+      unset "$1_array_last"
+    else
+      eval "$1_array_last=\$$1_array_$((${array%-*} - 1))"
+    fi
+    eval "$1_array=$array"
+    shift
+  done
+}
+
+is_empty_file() {
+  while IFS= read -r line; do
+    line=${line%%#*}
+    case $line in (*[!${SP}${TAB}]*) return 1; esac
+  done
+}
+
+peel() {
+  i=0
+  while [ "$i" -lt "$1" ] && i=$((i + 1)); do
+    IFS= read -r line
+    [ "${line%"{"}" = "$line" ] && IFS= read -r line
+  done
+  set --
+  while IFS= read -r line; do
+    [ "$#" -eq "$i" ] && putsn "$1" && shift
+    set -- "$@" "$line"
+  done
+}
+
+pretty() {
+  i=0
+  while [ "$i" -lt "$1" ] && i=$((i + 1)); do
+    echo 'shellmetrics_wrapper() {'
+  done
+  mark "$MARK" | awk "{i++; gsub(/$MARK/,i); print}"
+  while [ "$i" -gt 0 ] && i=$((i - 1)); do
+    echo '}'
+  done
+  echo "typeset -fp shellmetrics_wrapper 2>/dev/null" \
+    "|| typeset -f shellmetrics_wrapper"
+}
+
+mark() {
+  set -- \
+    "s/\([^[:space:]\$'\"();&|<>=@!*?+]\)\([[:space:]]*([[:space:]]*)\)/\1_L${1}\2/g;" \
+    "s/^[[:space:]]*function[[:space:]]\{1,\}[^[:space:]\$'\"();&|<>]\{1,\}/&_L${1}/g;" \
+    "s/[;&|(][[:space:]]*function[[:space:]]\{1,\}[^[:space:]\$'\"();&|<>]\{1,\}/&_L${1}/g;" \
+    "s/_L${1}_L${1}/_L${1}/g"
+  sed "$*"
+}
+
+process() {
+  set -- "$(($1 + 1))"
+  eval "$(pretty "$1")" | peel "$1" | parse "$1"
+}
+
+parse() {
+  base='' eof='' indent='' nindent=0 pindent=0 ccn=1 lloc=0
+  array indent func ccn lloc
+  repeat_string base "$1" "$INDENT" && bindent=${#base}
+
+  IFS= read -r next_line || eof=1
+  indent=${next_line%%[!$SP]*} && next=${next_line#$indent}
+  nindent=${#indent}
+
+  until [ "$eof" ]; do
+    mark="*  " current=$next current_line=$next_line cindent=$nindent
+    IFS= read -r next_line || eof=1
+
+    indent=${next_line%%[!$SP]*} && next=${next_line#$indent}
+    nindent=${#indent}
+
+    if [ "$cindent" -lt "$bindent" ]; then
+      putsn "   |~  |${current_line#$base}"
+      continue
+    fi
+
+    while :; do
+      case $current in
+        *\ "() {" | *"() {" | *" () " | *"()"           ) mark="*f "; break ;;
+        "{ " | "{" | "}" | "} " | "};" | "} ;;" | "else") mark="   "; break ;;
+        "(" | ")" | ") ;;" | "" | *" &&" | *" ||" | ";;") mark="   "; break ;;
+        "(*)  ;;"                                       ) mark="   "; break ;;
+        "then" | "("*")  ;;"                            ) mark="  c"; break ;;
+        "(*)"*";;"                                      ) mark="*  "; break ;;
+        "("*")"*";;"                                    ) mark="* c"; break ;;
+      esac
+
+      if [ "$next" = "" ]; then
+        case $current in
+            "*)" | "(*)"                                ) mark="   "; break ;;
+            *")"                                        ) mark="  c"; break ;;
+          esac
+      fi
+
+      if [ "$cindent" -lt "$nindent" ]; then
+        case $current in
+          *" then"                                      ) mark="* c"; break ;;
+          *" do"                                        ) mark="* l"; break ;;
+          "do"                                          ) mark="  l"; break ;;
+          "*)" | "(*)"*                                 ) mark="   "; break ;;
+          *")"                                          ) mark="  c"; break ;;
+          "("*")"*                                      ) mark="* c"; break ;;
+        esac
+      fi
+
+      if [ "$cindent" -lt "$pindent" ]; then
+        case $current in
+          "fi"   | "fi "   | "fi;"   | "fi ;;"          ) mark="   "; break ;;
+          "esac" | "esac " | "esac;" | "esac ;;"        ) mark="   "; break ;;
+          "done" | "done " | "done;" | "done ;;"        ) mark="   "; break ;;
+        esac
+      fi
+
+      break
+    done
+    pindent=$cindent
+
+    indent_width=$((cindent - bindent))
+    case $indent_width in
+      ?) indent_width="  $indent_width" ;;
+      ??) indent_width=" $indent_width" ;;
+    esac
+    putsn "$indent_width|$mark|${current_line#$base}"
+  done
+}
+
+analyze() {
+  ccn=1 lloc=0 func_array_last=0
+  array indent func ccn lloc
+  echo 0 0 "<begin>" "$1|${2:-0}:${3:-0}:${4:-0}"
+  while IFS="|" read -r indent mark line; do
+    case $mark in (*"~"*)
+      continue
+    esac
+
+    case $line in (*"}" | *"};" | *"} "*)
+      if [ "$indent" = "${indent_array_last:-none}" ]; then
+        echo "$lloc" "$ccn" "$func_array_last" "$1"
+        pop_array indent func ccn lloc
+      fi
+    esac
+
+    case $mark in (*"*"*)
+      lloc=$((lloc + 1))
+    esac
+
+    case $mark in (*"c"* | *"l"*)
+      ccn=$((ccn + 1))
+    esac
+
+    case $mark in (*"f"*)
+      func=${line%"()"*} && func=${func%" "} && func=${func##*[$SP]}
+      lineno=${func##*_L}
+      [ "$lineno" != "$func" ] && func=${func%_L*}:$lineno
+      push_array indent func ccn lloc
+      ccn=1 lloc=0
+    esac
+  done
+  echo "$lloc" "$ccn" "<main>" "$1"
+  echo 0 0 "<end>" "$1|${2:-0}:${3:-0}:${4:-0}"
+}
+
+
+default_report() {
+  echo "=============================================================================="
+  echo "  LLOC  CCN  Location"
+  echo "------------------------------------------------------------------------------"
+  file_count=0 func_count_all=0
+  array lloc_total ccn_total func_count file nloc_total
+  array lines_total comment_total blank_total
+  while IFS=" " read -r lloc ccn func file; do
+    if [ "$func" = "<begin>" ]; then
+      lloc_total=0 ccn_total=0 func_count=0 nloc_total=0
+      file_count=$((file_count + 1))
+      continue
+    fi
+    if [ "$func" = "<end>" ]; then
+      file_metrics=${file##*"|"} && file=${file%"|"*}
+      # shellcheck disable=SC2086
+      IFS=:$IFS && set -- $file_metrics && IFS=${IFS#?}
+      lines_total=${1:-0} comment_total=${2:-0} blank_total=${3:-0}
+      nloc_total=$((lines_total - comment_total - blank_total))
+      push_array lloc_total ccn_total func_count file nloc_total
+      push_array lines_total comment_total blank_total
+      continue
+    fi
+    lloc_total=$((lloc_total + lloc))
+    ccn_total=$((ccn_total + ccn))
+    func_count=$((func_count + 1))
+    func_count_all=$((func_count_all + 1))
+    printf '%6d %4d  %s %s\n' "$lloc" "$ccn" "$func" "$file"
+  done
+  echo "------------------------------------------------------------------------------"
+  set -- "$file_count" "$func_count_all" "$SHELL_VERSION"
+  printf " %d file(s), %d function(s) analyzed. [%s]\n" "$@"
+
+  echo
+
+  echo "=============================================================================="
+  echo " NLOC    NLOC  LLOC    LLOC    CCN Func File (lines:comment:blank)"
+  echo "total     avg total     avg    avg  cnt"
+  echo "------------------------------------------------------------------------------"
+  lloc_total_all=0 ccn_total_all=0 func_count_all=0 nloc_total_all=0
+  lines_total_all=0 comment_total_all=0 blank_total_all=0
+  until array_is_empty file; do
+    shift_array lloc_total ccn_total func_count file nloc_total
+    shift_array lines_total comment_total blank_total
+
+    lloc_total_all=$((lloc_total_all + lloc_total))
+    ccn_total_all=$((ccn_total_all + ccn_total))
+    func_count_all=$((func_count_all + func_count))
+    nloc_total_all=$((nloc_total_all + nloc_total))
+
+    lines_total_all=$((lines_total_all + lines_total))
+    comment_total_all=$((comment_total_all + comment_total))
+    blank_total_all=$((blank_total_all + blank_total))
+
+    awk -v file="$file" "BEGIN { \
+      printf \"%5d %7.2f %5d %7.2f %6.2f %4d %s (%d:%d:%d)\\n\", \
+      $nloc_total, ($nloc_total / $func_count), \
+      $lloc_total, ($lloc_total / $func_count), \
+      ($ccn_total / $func_count), \
+      $func_count, file, $lines_total, $comment_total, $blank_total \
+    }"
+  done
+
+  echo "------------------------------------------------------------------------------"
+
+  echo
+
+  echo "=============================================================================="
+  echo " NLOC    NLOC  LLOC    LLOC    CCN Func File    lines comment   blank"
+  echo "total     avg total     avg    avg  cnt  cnt    total   total   total"
+  echo "------------------------------------------------------------------------------"
+  # func_count_all: to avoid "fatal: division by zero attempted"
+  awk -v func_count_all=$((func_count_all == 0 ? 1 : func_count_all)) "BEGIN { \
+    printf \"%5d %7.2f %5d %7.2f %6.2f %4d %4d  %7d %7d %7d\\n\", \
+    $nloc_total_all, ($nloc_total_all / func_count_all), \
+    $lloc_total_all, ($lloc_total_all / func_count_all), \
+    $ccn_total_all / func_count_all, \
+    $func_count_all, $file_count, \
+    $lines_total_all, $comment_total_all, $blank_total_all \
+  }"
+  echo "------------------------------------------------------------------------------"
+}
+
+csv_report() {
+  echo "file,func,lineno,lloc,ccn,lines,comment,blank"
+  while IFS=" " read -r lloc ccn func file; do
+    lineno=0 lines=0 comment=0 blank=0
+    case $func in ("<begin>" | "<end>")
+      lines=${file##*"|"} && file=${file%"|"*}
+      # shellcheck disable=SC2086
+      IFS=":$IFS" && set -- $lines && IFS=${IFS#?}
+      lines=$1 comment=$2 blank=$3
+    esac
+    case $func in (*:*)
+      lineno=${func##*:} && func=${func%:*}
+    esac
+    echo "\"$file\",\"$func\",$lineno,$lloc,$ccn,$lines,$comment,$blank"
+  done
+}
+
+title() {
+  echo "[$1]"
+  cat
+  echo
+}
+
+passthrough() {
+  cat
+}
+
+init_mode() {
+  case $1 in
+    default) proxy report default_report ;;
+    csv) proxy report csv_report ;;
+    debug)
+      proxy analyze title
+      proxy report passthrough
+      ;;
+    pretty)
+      proxy analyze title
+      proxy report passthrough
+      proxy parse passthrough
+      proxy peel passthrough
+      ;;
+  esac
+}
+
+main() {
+  init_mode "$1"
+  shift
+
+  for file in "$@"; do
+    [ ! -f "$file" ] && error "'$file' is not a file." && continue
+    is_empty_file < "$file" && continue
+    lines=0 comment_lines=0 blank_lines=0 max_indent=0 filepath=$file
+    count lines comment_lines blank_lines max_indent < "$file"
+    process "$max_indent" < "$file" | {
+      analyze "$filepath" "$lines" "$comment_lines" "$blank_lines"
+    }
+  done | report
+}
+
+error() {
+  sleep 0
+  if [ "$COLOR" ]; then
+    printf '\033[2;31m%s\033[0m\n' "${*:-}" >&2
+  else
+    printf '%s\n' "${*:-}" >&2
+  fi
+}
+
+abort() {
+  error "$@"
+  exit 1
+}
+
+unknown() { abort "Unrecognized option '$1'"; }
+required() { [ $# -gt 1 ] || abort "Option '$1' requires an argument"; }
+param() { eval "$1=\$$1\ \\\"\"\\\${$2}\"\\\""; }
+params() { [ "$2" -ge "$3" ] || params_ "$@"; }
+params_() { param "$1" "$2"; params "$1" $(($2 + 1)) "$3"; }
+
+parse_options() {
+  OPTIND=$(($# + 1))
+  while [ $# -gt 0 ]; do
+    case $1 in
+      -s | --shell    ) required "$@" && shift; SH=$1 ;;
+           --color    ) COLOR=1 ;;
+           --no-color ) COLOR='' ;;
+           --csv      ) MODE=csv ;;
+      -p | --pretty   ) MODE=pretty ;;
+      -d | --debug    ) MODE=debug ;;
+      -h | --help     ) usage; exit ;;
+      -v | --version  ) echo "$VERSION"; exit ;;
+      --) shift; params PARAMS $((OPTIND - $#)) $OPTIND; break ;;
+      -?*) unknown "$@" ;;
+      *) param PARAMS $((OPTIND - $#))
+    esac
+    shift
+  done
+}
+
+SH=bash MODE=default PARAMS=''
+[ -t 1 ] && COLOR=1 || COLOR=''
+
+${__SOURCED__:+return}
+
+parse_options "$@"
+if [ "$SH" != "-" ]; then
+  type "$SH" 1>/dev/null 2>&1 || abort "'$SH' not found."
+  { pid=$($SH -c "echo \$PPID") ||:; } 2>/dev/null
+  [ "$pid" = $$ ] || abort "It seems not a shell."
+  exec $SH "$0" "$@" --shell -
+fi
+eval "set -- $PARAMS"
+
+__ main __
+
+[ "$SHELL_VERSION" ] || abort "Unsupported shell."
+
+main "$MODE" "$@"

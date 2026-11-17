@@ -1,0 +1,166 @@
+{{- /* Shared Bash-command mutation-target extraction, rendered verbatim (no template
+     variables) into every PreToolUse hook that needs to guess which path(s) a Bash
+     command string might write to: executable_claude-tooling-write-guard.tmpl and
+     executable_claude-profile-mismatch-guard.tmpl. Each calls extract_bash_targets()
+     with its own expanded command string and runs its own check per candidate. */ -}}
+# A deployed/live profile path ("/.claude<name>/...", ".claude.json") or chezmoi-source
+# profile path ("dot_claude<name>/...")? Shared by the Bash fast-filter and every handler
+# below.
+_is_relevant_claude_token() {
+    local t="$1"
+    [[ "$t" =~ \.claude[A-Za-z0-9_-]*/ ]] && return 0
+    [[ "$t" =~ dot_claude[A-Za-z0-9_-]*/ ]] && return 0
+    [[ "$t" == *.claude.json ]] && return 0
+    return 1
+}
+
+# Best-effort, not shell-evaluated: a quoted path like "$HOME/.claude/x" would otherwise
+# keep its literal quote characters and never resolve.
+_strip_quotes() {
+    local s="$1"
+    if ((${#s} >= 2)); then
+        if [[ "${s:0:1}" == '"' && "${s: -1}" == '"' ]] || [[ "${s:0:1}" == "'" && "${s: -1}" == "'" ]]; then
+            s="${s:1:-1}"
+        fi
+    fi
+    printf '%s' "$s"
+}
+
+# One token per line via `xargs -n1` (best-effort, not a full shell parser). Never
+# word-splits the string itself against the filesystem (a bare `for tok in $args` would
+# expand a literal `*`).
+_tokenize() {
+    xargs -n1 2>/dev/null <<<"$1" || true
+}
+
+# Every non-overlapping match of `pattern` in `cmd`, rescanning the remainder after each
+# hit so a later occurrence is never hidden by an earlier, unrelated one (bash `=~` only
+# ever returns the leftmost match). `group` selects which capture group to pass `handler`.
+_for_each_match() {
+    local cmd="$1" pattern="$2" group="$3" handler="$4"
+    local remaining="$cmd" captured full_match
+    while [[ "$remaining" =~ $pattern ]]; do
+        # BASH_REMATCH is one global array shared by every `=~` test -- capture what's
+        # needed into locals before calling handler, whose own `=~` tests would otherwise
+        # overwrite it first.
+        captured="${BASH_REMATCH[$group]}"
+        full_match="${BASH_REMATCH[0]}"
+        "$handler" "$captured" || true # a filter result, never allowed to abort under set -e
+        remaining="${remaining#*"$full_match"}"
+    done
+}
+
+# Every _emit_* below always returns 0 -- "no relevant token" is a filter result, not a
+# failure, and a nonzero return here would abort the whole scan under `set -e`.
+_emit_if_relevant() {
+    local cand
+    cand=$(_strip_quotes "$1")
+    if _is_relevant_claude_token "$cand"; then
+        echo "$cand"
+    fi
+    return 0
+}
+
+_emit_last_token() {
+    local last="" tok
+    while IFS= read -r tok; do
+        if [[ "$tok" == -* ]]; then
+            continue
+        fi
+        last="$tok"
+    done < <(_tokenize "$1")
+    if [[ -n "$last" ]] && _is_relevant_claude_token "$last"; then
+        echo "$last"
+    fi
+    return 0
+}
+
+_emit_all_tokens() {
+    local tok
+    while IFS= read -r tok; do
+        if [[ "$tok" == -* ]]; then
+            continue
+        fi
+        if _is_relevant_claude_token "$tok"; then
+            echo "$tok"
+        fi
+    done < <(_tokenize "$1")
+    return 0
+}
+
+# Per-verb mutation-target rule, keyed by bare command name -- which of the verb's OWN
+# non-flag arguments (never a global scan of the command line) are potential targets:
+#   all             every non-flag token (mv, rm, tee, truncate: each can act on several)
+#   last            only the final token (cp, install, ln, sponge: the rest are read-only)
+#   inplace:F1,F2   every token, but only if F1/F2 (or fused/=value, e.g. "-i.bak") appears
+#                   among the verb's own flags (sed/perl's -i / --in-place)
+#   kv:KEY          the VALUE of a literal "KEY=VALUE" argument (dd's of=)
+# Redirects (>, >>) are a separate operator, handled in extract_bash_targets below.
+# Known, accepted gaps: `cp -t DIR` (needs DIR+basename(source), which no shape computes)
+# and any relative path after a separate `cd` (no notion of an implied working directory
+# across `&&`).
+declare -A BASH_MUTATION_VERB_RULES=(
+    [mv]=all [rm]=all [tee]=all [truncate]=all [sponge]=last
+    [cp]=last [install]=last [ln]=last
+    [sed]="inplace:-i,--in-place" [perl]="inplace:-i"
+    [dd]="kv:of"
+)
+
+_extract_target_if_inplace_flag() {
+    local flags="$1" args="$2" has=0 tok flag
+    local flaglist=()
+    IFS=',' read -ra flaglist <<<"$flags" || true
+    while IFS= read -r tok; do
+        for flag in "${flaglist[@]}"; do
+            case "$tok" in "$flag" | "$flag".* | "$flag"=*) has=1 ;; esac
+        done
+    done < <(_tokenize "$args")
+    [[ "$has" == 1 ]] && _emit_all_tokens "$args"
+    return 0
+}
+
+_extract_target_kv() {
+    local key="$1" args="$2" tok target=""
+    while IFS= read -r tok; do
+        case "$tok" in "$key="*) target="${tok#"$key"=}" ;; esac
+    done < <(_tokenize "$args")
+    [[ -n "$target" ]] && _is_relevant_claude_token "$target" && echo "$target"
+    return 0
+}
+
+# Dispatches one verb's own argument string ($2) per its BASH_MUTATION_VERB_RULES entry.
+# An unlisted verb produces nothing.
+_extract_verb_targets() {
+    local verb="$1" args="$2" rule="${BASH_MUTATION_VERB_RULES[$1]:-}"
+    case "$rule" in
+        all) _emit_all_tokens "$args" ;;
+        last) _emit_last_token "$args" ;;
+        inplace:*) _extract_target_if_inplace_flag "${rule#inplace:}" "$args" ;;
+        kv:*) _extract_target_kv "${rule#kv:}" "$args" ;;
+    esac
+    return 0
+}
+
+# _for_each_match's handler takes one argument, so the verb name travels through this
+# global (no closures in bash), set right before each loop iteration below.
+_current_mutation_verb=""
+_extract_verb_targets_handler() {
+    _extract_verb_targets "$_current_mutation_verb" "$1"
+}
+
+# Emits every in-scope candidate (one per line), scoped to each match's OWN argument list
+# -- never a global scan of the command line, which would mistake a path only read earlier
+# (e.g. `cp file /tmp/x`, a plain backup) for the write destination.
+extract_bash_targets() {
+    local cmd="$1"
+
+    _for_each_match "$cmd" '\>{1,2}[[:space:]]*([^[:space:];\&\|]+)' 1 _emit_if_relevant
+
+    local verb
+    for verb in "${!BASH_MUTATION_VERB_RULES[@]}"; do
+        _current_mutation_verb="$verb"
+        _for_each_match "$cmd" "(^|[;\&\|[:space:]])${verb}[[:space:]]+([^;\&\|]+)" 2 _extract_verb_targets_handler
+    done
+
+    return 0
+}

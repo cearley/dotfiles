@@ -15,6 +15,9 @@ paths:
 {{- $sourceDir := .chezmoi.sourceDir }}
 {{- $repoRoot := trimSuffix "/home" $sourceDir }}
 {{- $localMarketplaceName := includeTemplate "local-marketplace-name" . }}
+{{- $notSharedCategories := includeTemplate "claude-profile-not-shared-categories" . | fromJson }}
+{{- $notSharedLabeled := list }}
+{{- range $notSharedCategories }}{{ if eq . "projects/" }}{{ $notSharedLabeled = append $notSharedLabeled "session history (`projects/`)" }}{{ else }}{{ $notSharedLabeled = append $notSharedLabeled (printf "`%s`" .) }}{{ end }}{{ end }}
 # Claude Code Tooling in the chezmoi Dotfiles Repo
 
 This machine's Claude Code skills, MCP servers, plugins, and global preferences are managed by
@@ -113,14 +116,19 @@ the source file under `{{ $sourceDir }}/dot_claude/`, not the deployed copy unde
 
 ## Per-Profile Settings: The Managed-Settings Ledger
 
-What's **not** shared per profile: `settings.json`, `.claude.json`, `plugins/`, session
-history (`projects/`), and `CLAUDE.md`. Each resolves as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/<name>`
+What's **not** shared per profile: {{ $notSharedLabeled | join ", " }}. Each resolves as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/<name>`
 — compute it explicitly rather than substituting a bare `~/.claude/` path — except
 `.claude.json`, which is `$CLAUDE_CONFIG_DIR/.claude.json` when `CLAUDE_CONFIG_DIR` is set and
 `~/.claude.json` (in the home directory, not in `~/.claude/`) when it is unset.
-`claude-tooling-write-guard` flags cross-profile reads/writes to these automatically (skills/
-rules are symlink-shared and never flagged). When an audit, health check, or cleanup could mean every profile rather than
-just the active one, ask which is wanted before running. Each profile's
+`claude-profile-mismatch-guard` flags cross-profile reads/writes to these automatically —
+except `.claude.json`, which it deliberately leaves out of this check entirely, since it's
+never chezmoi-managed in any profile and this hook's job is a "wrong profile" signal for the
+categories that genuinely differ per profile on disk, not general profile hygiene (skills/rules
+are symlink-shared and never flagged either, but for the opposite reason — there's no "wrong
+profile" for them). `claude-tooling-write-guard` is a separate, sibling hook: it only denies
+direct edits to chezmoi-managed files and has no profile-awareness of its own. When an audit,
+health check, or cleanup
+could mean every profile rather than just the active one, ask which is wanted before running. Each profile's
 `.claude-settings.json`, next to its `modify_settings.json.tmpl` in
 `{{ $sourceDir }}/dot_claude*/`, is written in `settings.json`'s own shape and declares everything chezmoi manages
 in that profile's `settings.json` — its `hooks` (not shared via the skills/rules symlink

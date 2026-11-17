@@ -1,0 +1,14 @@
+{{- /* Canonical list of Claude Code config categories that are NOT shared across profiles
+     (each profile gets its own copy, unlike the shared symlink skills/ and rules/ get --
+     see "Profiles Share Skills and Rules via Symlink" in claude-tooling.md). Consumed by
+     claude-tooling.md.tmpl (the full list, as-is) and executable_claude-profile-mismatch-
+     guard.tmpl (the same list minus ".claude.json", excluded since it's never chezmoi-
+     managed in any profile). One list instead of hand-written prose in each keeps them
+     from drifting apart.
+
+     Returns a plain JSON array of bare category labels; each consumer formats its own way.
+
+     Example:
+       {{- $categories := includeTemplate "claude-profile-not-shared-categories" . | fromJson -}}
+*/ -}}
+{{- toJson (list "settings.json" ".claude.json" "plugins/" "projects/" "CLAUDE.md") -}}

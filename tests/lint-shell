@@ -14,7 +14,8 @@
 # rendered bytes, so line numbers refer to the rendered output.
 #
 # Layers: [syntax] sh -n / bash -n, [lint] shellcheck (.shellcheckrc),
-# [format] shfmt -d (.editorconfig). A syntax failure skips the other two.
+# [format] shfmt -d (.editorconfig), [complexity] shellmetrics (CCN > 10).
+# A syntax failure skips the other three.
 # Run from the repo root. Exit 0 only when no checked file failed.
 
 set -uo pipefail
@@ -69,6 +70,15 @@ lint_file() { # <source path>; returns 1 on failure
         rc=1
         label format <<<"$out"
     }
+    out="$("$ROOT/tests/bin/shellmetrics" --csv "$file" 2>&1 | awk -F',' 'NR>1 {
+        name=$2; ccn=$5+0; gsub(/"/,"",name)
+        if (ccn>10) printf "%s: CCN %d exceeds 10\n", name, ccn
+    }')"
+    if [[ -n "$out" ]]; then
+        [[ $rc -eq 0 ]] && echo "FAIL $src"
+        rc=1
+        label complexity <<<"$out"
+    fi
     [[ $rc -eq 0 ]] && echo "ok   $src"
     return "$rc"
 }

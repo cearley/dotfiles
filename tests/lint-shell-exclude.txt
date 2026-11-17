@@ -51,7 +51,6 @@ home/dot_claude/skills/which-skill/scripts/executable_list-skills.sh
 home/dot_local/bin/executable_apply-claude-pattern.tmpl
 home/dot_local/bin/executable_audit-packages.tmpl
 home/dot_local/bin/executable_check-claude-overrides.tmpl
-home/dot_local/bin/executable_claude-tooling-write-guard.tmpl
 home/dot_local/bin/executable_jev_curl_test.tmpl
 home/dot_local/bin/executable_mcp-env-wrapper.tmpl
 home/dot_local/lib/audit-claude-code.sh.tmpl

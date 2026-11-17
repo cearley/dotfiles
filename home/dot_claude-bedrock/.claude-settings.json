@@ -74,11 +74,20 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|Edit|Write|Read",
+        "matcher": "Bash|Edit|Write",
         "hooks": [
           {
             "type": "command",
             "command": "claude-tooling-write-guard"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|Edit|Write|Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-profile-mismatch-guard"
           }
         ]
       }
