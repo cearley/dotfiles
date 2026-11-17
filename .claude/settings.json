@@ -27,9 +27,6 @@
       }
     ]
   },
-  "enabledPlugins": {
-    "code-quality@chezmoi-personal": true
-  },
   "basicMemory": {
     "primaryProject": "chezmoi",
     "sessionProfile": "coding",
