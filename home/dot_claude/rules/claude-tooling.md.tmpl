@@ -20,178 +20,52 @@ paths:
 {{- range $notSharedCategories }}{{ if eq . "projects/" }}{{ $notSharedLabeled = append $notSharedLabeled "session history (`projects/`)" }}{{ else }}{{ $notSharedLabeled = append $notSharedLabeled (printf "`%s`" .) }}{{ end }}{{ end }}
 # Claude Code Tooling in the chezmoi Dotfiles Repo
 
-This machine's Claude Code skills, MCP servers, plugins, and global preferences are managed by
-the chezmoi dotfiles repo at `{{ $repoRoot }}` (source tree at `{{ $sourceDir }}`) — regardless
-of which project or repo you're currently working in, that is where the guidance below applies.
-Global preferences are the rule `rules/global-preferences.md`; edit
-`{{ $sourceDir }}/dot_claude/rules/global-preferences.md.tmpl`, not any `CLAUDE.md`.
-This machine may run multiple named Claude Code profiles in addition to the
-unnamed default, each with its own `CLAUDE_CONFIG_DIR` — the guidance below refers to them as
-"profiles" throughout, whether or not any are currently configured on this machine.
-Diagnosing installation health, editing settings/plugins, or reasoning about skill/MCP usage
-(e.g. `/doctor`) concerns that repo's `{{ $sourceDir }}/dot_claude/`,
-`{{ $sourceDir }}/.chezmoidata/`, and `{{ $sourceDir }}/.chezmoiscripts/`, not the current
-working directory.
+This machine's Claude Code skills, MCP servers, plugins, settings, and global preferences are
+managed by the chezmoi dotfiles repo at `{{ $repoRoot }}` (source tree at `{{ $sourceDir }}`) —
+regardless of which project you're currently in, that's where an edit belongs. Global
+preferences are the rule `rules/global-preferences.md`; when one needs to change, edit
+`{{ $sourceDir }}/dot_claude/rules/global-preferences.md.tmpl`, not any profile's `CLAUDE.md`.
+This machine may run multiple named Claude Code profiles besides the unnamed default, each with
+its own `CLAUDE_CONFIG_DIR` — resolve it explicitly as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}`
+rather than assuming a bare `~/.claude/` path.
 
-## Two Distinct Sources of Skills
+## Skills, MCP Servers, and Plugins
 
-**Native skills** (`{{ $sourceDir }}/dot_claude/skills/`): authored and version-controlled in
-the chezmoi repo above. `ls` there is authoritative over any hand-maintained list — same
-anti-drift principle as `{{ $sourceDir }}/.chezmoiscripts/`, where `ls` is likewise
-authoritative over any hand-maintained table.
-Deployed by `chezmoi apply` to `~/.claude/skills/`, symlinked from each profile's
-`~/.claude-<name>/skills` (see "Profiles Share Skills and Rules via Symlink" below).
+- **Native skills** (`{{ $sourceDir }}/dot_claude/skills/`) are authored in this repo; `ls`
+  there is authoritative over any hand-maintained list.
+- **External skills, MCP servers, and plugins/marketplaces** are declared under
+  `packages.darwin.ai.agents.claude_code` in `{{ $sourceDir }}/.chezmoidata/packages.yaml` and
+  installed from there by chezmoi scripts — that file is the source of truth, not anything
+  found under `~/.claude/skills/` on disk (native and external skills land in the same
+  deployed directory, so it's a merge of both).
+- The `{{ $localMarketplaceName }}` plugin marketplace (`dot_local/share/claude-plugins/`) is a
+  deliberate exception: declaring it only makes its plugins installable — enabling one for a
+  given project is still its own `/plugin install` there, not a machine-wide default.
+- **Removing or disabling a declared item**: edit `packages.yaml`, don't add a local
+  `skillOverrides`/`disabledMcpServers` entry — that only drifts from the declared state, it
+  doesn't undo it.
 
-**External skills**: declared in `packages.darwin.ai.agents.claude_code.skills` in
-`{{ $sourceDir }}/.chezmoidata/packages.yaml`, fetched from third-party GitHub repos
-(e.g. `basicmachines-co/basic-memory-skills`, `specstoryai/agent-skills`) by
-`{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-37-install-claude-skills.sh.tmpl`.
-Their source of truth is the external repo, not the chezmoi repo — adding, removing, or pinning
-one is a `packages.yaml` edit, and their files won't be found in the chezmoi repo itself. They
-land in the same `~/.claude/skills/` directory as the native ones, so `~/.claude/skills/` on
-disk is a merge of both sources.
+## Profiles
 
-## MCP Servers and Plugins
+`skills/` and `rules/` are shared via symlink across every profile — edit the source under
+`{{ $sourceDir }}/dot_claude/`, never a deployed copy under `~/.claude/`; the change reaches
+every profile after one `chezmoi apply`. What's **not** shared: {{ $notSharedLabeled | join ", " }}.
+Each resolves as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/<name>`, except `.claude.json`, which is
+`$CLAUDE_CONFIG_DIR/.claude.json` when set and `~/.claude.json` (in the home directory, not in
+`~/.claude/`) when unset. A profile's managed baseline for `settings.json` lives at
+`{{ $sourceDir }}/dot_claude*/.claude-settings.json`, next to its `modify_settings.json.tmpl` —
+edit that, then `chezmoi apply`. Never `chezmoi add`/`re-add` a profile `settings.json`: `add`
+replaces its merge script with a snapshot of the live file, and `re-add` does nothing. When an
+audit, health check, or cleanup could mean every profile rather than just the active one, ask
+which is wanted before running.
 
-Also declared under `packages.darwin.ai.agents.claude_code` in that same `packages.yaml`:
+## Checking for Override Drift
 
-- `mcp_servers` — installed by
-  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-38-install-claude-mcp-servers.sh.tmpl`
-- `plugin_marketplaces` / `plugins` — installed by
-  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`,
-  which runs `claude plugins install <id> --scope user` per entry; that CLI command is what
-  actually records `enabledPlugins: true` in each profile's `settings.json`, not the script directly
-
-## Disabling, Removing, or Overriding Requires a packages.yaml Cross-Check (e.g. /doctor audits)
-
-A skill/MCP-server/plugin usage audit (`/doctor` Check 1, or similar) needs a `packages.yaml`
-cross-check before any removal is proposed. Declared items — everything under
-`packages.darwin.ai.agents.claude_code` above — are managed machine-wide by this repo; a local
-`skillOverrides: off` or `disabledMcpServers` entry doesn't undo that, it just drifts from the
-declared state. Zero/stale usage on a declared item is a signal to edit `packages.yaml`
-(remove/replace the declaration), not to disable it locally. The `clean-claude-orphans` Skill
-(`{{ $sourceDir }}/dot_claude/skills/clean-claude-orphans/`) already draws exactly this
-distinction — it has `disable-model-invocation: true`, so it only runs when invoked via the
-Skill tool, for anything genuinely installed-but-undeclared; its `SKILL.md` documents the same
-logic for applying it by hand.
-
-## Checking for Override Drift (the mirror-image case)
-
-`clean-claude-orphans` handles installed-but-undeclared drift. This is the opposite
-direction — **declared-but-locally-suppressed**. `check-claude-overrides` detects it, and is
-relevant whenever auditing tooling health (`/doctor`-style checks) or when a skill/plugin isn't
-behaving despite being installed and declared — it checks every profile's live `settings.json`
-against that profile's own managed-settings baseline,
-`{{ $sourceDir }}/dot_claude*/.claude-settings.json`, and flags:
-
-- `skillOverrides.<skill>: "off"` for a **native** skill (listed under
-  `{{ $sourceDir }}/dot_claude/skills/`) the baseline doesn't explain — someone toggled it
-  off ad hoc with `/skill` in a session and it was never captured in source.
-- `enabledPlugins.<id>: false` for a plugin that's in `packages.yaml`'s `claude_code.plugins`
-  list (meaning chezmoi intends it enabled) the baseline doesn't explain — same ad hoc drift,
-  opposite direction.
-- `permissions.<key>` / `env.<key>` scalars the baseline manages whose live value differs —
-  a runtime change (e.g. `/config` changing `permissions.defaultMode`) that the next
-  `chezmoi apply` will silently revert.
-
-Each flagged entry needs the user's input on which way it should go:
-
-- **Keep the override** → `check-claude-overrides --fix <profile>
-  <skillOverrides|enabledPlugins|permissions|env> <key>` reads the live value straight from
-  `settings.json`, writes it into that profile's `.claude-settings.json`, and
-  verifies the write on a copy before the tracked file is touched (editing the JSON by hand
-  also works).
-- **Drop the override** → removing the key via the equivalent `/skill` or `/plugin` command (or
-  editing the live `settings.json` directly) is correct, since nothing in chezmoi asked for it;
-  for a `permissions`/`env` value, the next `chezmoi apply` restores the baseline.
-  This direction stays manual — `check-claude-overrides` never modifies a live `settings.json`.
-
-## Profiles Share Skills and Rules via Symlink
-
-Each profile (`{{ $sourceDir }}/dot_claude-<name>/`) gets `symlink_skills.tmpl` and
-`symlink_rules.tmpl` pointing back at `~/.claude/skills` and `~/.claude/rules` — so a skill
-edit or a rule edit takes effect for every profile after one `chezmoi apply`, with no
-per-profile copy to keep in sync. For anything under `skills/` or `rules/`, the edit target is
-the source file under `{{ $sourceDir }}/dot_claude/`, not the deployed copy under `~/.claude/`.
-
-## Per-Profile Settings: The Managed-Settings Ledger
-
-What's **not** shared per profile: {{ $notSharedLabeled | join ", " }}. Each resolves as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/<name>`
-— compute it explicitly rather than substituting a bare `~/.claude/` path — except
-`.claude.json`, which is `$CLAUDE_CONFIG_DIR/.claude.json` when `CLAUDE_CONFIG_DIR` is set and
-`~/.claude.json` (in the home directory, not in `~/.claude/`) when it is unset.
-`claude-profile-mismatch-guard` flags cross-profile reads/writes to these automatically —
-except `.claude.json`, which it deliberately leaves out of this check entirely, since it's
-never chezmoi-managed in any profile and this hook's job is a "wrong profile" signal for the
-categories that genuinely differ per profile on disk, not general profile hygiene (skills/rules
-are symlink-shared and never flagged either, but for the opposite reason — there's no "wrong
-profile" for them). `claude-tooling-write-guard` is a separate, sibling hook: it only denies
-direct edits to chezmoi-managed files and has no profile-awareness of its own. When an audit,
-health check, or cleanup
-could mean every profile rather than just the active one, ask which is wanted before running. Each profile's
-`.claude-settings.json`, next to its `modify_settings.json.tmpl` in
-`{{ $sourceDir }}/dot_claude*/`, is written in `settings.json`'s own shape and declares everything chezmoi manages
-in that profile's `settings.json` — its `hooks` (not shared via the skills/rules symlink
-above, by design: separate files let hooks diverge per profile, e.g. a stricter write-guard
-for work than personal; the four happen to match today, but that's not an invariant) plus a
-baseline `skillOverrides`/`enabledPlugins`/`permissions` posture for that profile's typical
-workload (these postures are derived from `/doctor` runs per-profile, and copying them
-verbatim between profiles skips re-running that analysis for a different workload). The
-`modify_settings.json.tmpl` files are identical one-line callers; don't put settings there.
-The source directory's leading dot makes chezmoi skip it: the file is neither deployed nor
-template-parsed. Never `chezmoi add`/`re-add` a profile `settings.json`: `add` replaces the
-merge script with a snapshot of the live file, and the write guard denies it.
-
-**What `chezmoi apply` does to it:**
-- Objects merge key by key, and arrays gain source elements while keeping their live order,
-  so runtime additions survive.
-- Managed scalars overwrite the live value, so a runtime change to one (e.g. `/config`
-  changing `permissions.defaultMode`) is reverted.
-- Removing an entry from source removes it live: array elements always, scalars only while
-  their live value is unchanged.
-
-Full rules are in the header of `{{ $sourceDir }}/.chezmoitemplates/claude-settings-modifier`.
-
-**Drift note**: the live `~/.claude*/settings.json` can carry more `skillOverrides`/
-`enabledPlugins` entries than the managed JSON declares — ad hoc `/skill`/`/plugin` toggles
-survive because the ledger (`_chezmoiManaged`, don't hand-edit) only retracts entries chezmoi
-itself wrote. See "Checking for Override Drift" above to find and resolve these.
-
-## Permission Patterns Are a Separate Axis from Profile Selection
-
-Profile selection (`CLAUDE_CONFIG_DIR`, "Profiles Share Skills and Rules via Symlink" above)
-answers *whose account is this* — it says nothing about *how much rope should this task get* in
-the repo in front of you. That's a second, independent axis: `apply-claude-pattern a|b|c`
-(`{{ $sourceDir }}/dot_local/bin/executable_apply-claude-pattern.tmpl`) stamps one of three
-chezmoi-templated permission postures — Pattern A (approval-first), Pattern B (curated
-allow-list), Pattern C (sandboxed full-auto, refused without container evidence) — into the
-*current project repo's* gitignored `.claude/settings.local.json`. It never reads or writes any
-profile's `settings.json` or the `_chezmoiManaged` ledger described above, and choosing a
-profile never implies or constrains which pattern, if any, is stamped into a given repo. The
-three patterns themselves live at
-`{{ $sourceDir }}/.chezmoitemplates/claude-pattern-{a,b,c}`, plus a companion Pattern C
-devcontainer definition at `{{ $sourceDir }}/.chezmoitemplates/claude-pattern-c-devcontainer/`.
-That devcontainer backs `.claude/` with its own named Docker volume, layered on top of the
-working-tree bind mount, so a `bypassPermissions` write inside the container never lands on the
-host checkout; `apply-claude-pattern c` independently verifies this isolation via
-`/proc/self/mountinfo` before writing and refuses (distinct from its bare-host refusal) if
-`.claude/` is only an ordinary subdirectory of the bind-mounted tree — e.g. a hand-rolled
-container config that skips the devcontainer template's volume mount.
-See `openspec/specs/claude-repo-permission-patterns/` for the full spec; `claude-environments`
-and `claude-settings-ledger` (referenced above) remain the identity axis, untouched by this.
-
-## Two Deliberately Different Install Models
-
-- **`{{ $sourceDir }}/dot_claude/skills/` + `packages.yaml`** (this file's subject): global,
-  always-on, identical across every profile and project on this machine.
-- **The `{{ $localMarketplaceName }}` marketplace** (`{{ $sourceDir }}/dot_local/share/claude-plugins/`,
-  deployed by `chezmoi apply` to `~/.local/share/claude-plugins`): chezmoi-managed like any
-  other `home/` content — its path is declared as a plain entry in `packages.yaml`'s
-  `plugin_marketplaces` list and registered by the same generic
-  `{{ $sourceDir }}/.chezmoiscripts/run_onchange_after_darwin-39-install-claude-plugins.sh.tmpl`
-  every other declared marketplace goes through (no dedicated script). What makes it
-  different from the bullet above isn't its registration mechanism — it's that declaring the
-  marketplace only makes its plugins *installable*; which plugins are actually enabled for a
-  given project stays a deliberate, per-project decision (`/plugin install`), not a
-  machine-wide one. Adding something here just because it's useful somewhere skips the
-  marketplace's actual purpose, which exists for exactly that per-project case.
+A profile's live `settings.json` can carry `skillOverrides`/`enabledPlugins` entries, or
+changed `permissions`/`env` values, that its managed baseline above doesn't explain — an ad hoc
+`/skill`/`/plugin`/`/config` toggle the next `chezmoi apply` will otherwise silently revert or
+reassert. Run `check-claude-overrides` to detect these rather than comparing files by hand. To
+keep a flagged entry, `check-claude-overrides --fix <profile>
+<skillOverrides|enabledPlugins|permissions|env> <key>` writes it into that profile's
+`.claude-settings.json`. To drop it instead, that stays manual — the equivalent `/skill`/
+`/plugin` command, or just letting the next `chezmoi apply` revert a `permissions`/`env` value.

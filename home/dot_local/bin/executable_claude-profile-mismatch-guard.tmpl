@@ -3,20 +3,11 @@
 {{- $guardScopedCategories := list }}
 {{- range $notSharedCategories }}{{ if ne . ".claude.json" }}{{ $guardScopedCategories = append $guardScopedCategories . }}{{ end }}{{ end }}
 # claude-profile-mismatch-guard — PreToolUse hook (Bash|Edit|Write|Read). Asks when a
-# read/write crosses Claude Code profile boundaries (e.g. editing ~/.claude-work/CLAUDE.md
-# while $CLAUDE_CONFIG_DIR says ~/.claude-personal). Only ever asks or stays silent — never
-# denies, never checks chezmoi-managed status. Sibling to claude-tooling-write-guard, which
-# handles that different concern.
+# read/write crosses Claude Code profile boundaries. Only ever asks or stays silent — never
+# denies, never checks chezmoi-managed status. Sibling to claude-tooling-write-guard.
 #
-# In scope: {{ $guardScopedCategories | join ", " }} (live or chezmoi-source). `.claude.json`
-# is excluded — never chezmoi-managed in any profile. skills/ and rules/ are excluded too —
-# symlink-shared across every profile, so there's no "wrong profile" for them. Drift under
-# plugins/skills (installed-but-undeclared or declared-but-suppressed) is
-# clean-claude-orphans/check-claude-overrides' job, not this hook's.
-#
-# Bash mutation detection reuses the same best-effort heuristic as claude-tooling-write-guard
-# (see claude-bash-mutation-target-extraction) — an unrecognized shape produces no output,
-# never a false "no mismatch".
+# In scope: {{ $guardScopedCategories | join ", " }} (live or chezmoi-source); `.claude.json`
+# and symlink-shared skills/rules are excluded (see claude-tooling.md for why).
 #
 # Rendered by chezmoi from {{ .chezmoi.sourceDir }}/dot_local/bin/executable_claude-profile-mismatch-guard.tmpl.
 set -euo pipefail
@@ -71,19 +62,7 @@ path_profile() {
     fi
 }
 
-# Falls back to a realpath'd dirname + basename if the path doesn't exist yet (a Write
-# target that hasn't been created).
-resolve_check_path() {
-    local file_path="$1"
-    local resolved_path="$file_path" real real_parent
-    if real=$(realpath "$file_path" 2>/dev/null); then
-        resolved_path="$real"
-    elif real_parent=$(realpath "$(dirname "$file_path")" 2>/dev/null); then
-        resolved_path="${real_parent}/$(basename "$file_path")"
-    fi
-    echo "$resolved_path"
-}
-
+{{ includeTemplate "claude-tooling-guard-shared" . }}
 profile_mismatch_message() {
     local active="$1" target="$2"
     if [[ -n "$active" && -n "$target" && "$active" != "$target" ]]; then
@@ -95,11 +74,7 @@ profile_mismatch_message() {
 # profile than the active one, else nothing. Always returns 0 (never trips `set -e`).
 check_mismatch() {
     local file_path="$1" tool="$2"
-    case "$file_path" in
-        "$HOME"/.claude*/*) ;;
-        "{{ $sourceDir }}"/dot_claude*/*) ;;
-        *) return 0 ;;
-    esac
+    claude_path_in_scope "$file_path" || return 0
 
     local resolved_path
     resolved_path=$(resolve_check_path "$file_path")
@@ -131,15 +106,8 @@ case "$tool_name" in
         command=$(jq -r '.tool_input.command // ""' <<<"$payload")
         [[ -z "$command" ]] && exit 0
 
-        config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-        expanded="$command"
-        expanded="${expanded//\$\{CLAUDE_CONFIG_DIR\}/$config_dir}"
-        expanded="${expanded//\$CLAUDE_CONFIG_DIR/$config_dir}"
-        expanded="${expanded//\$\{HOME\}/$HOME}"
-        expanded="${expanded//\$HOME/$HOME}"
-
-        broad_pattern='(\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/)|\.claude\.json|dot_claude[A-Za-z0-9_-]*/)'
-        [[ "$expanded" =~ $broad_pattern ]] || exit 0
+        claude_scope_prefilter "$command" || exit 0
+        expanded="$__claude_scope_expanded"
 
         # Only one decision type here (ask), so the first mismatch found wins outright.
         ask_reason="" target=""

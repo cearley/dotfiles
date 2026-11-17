@@ -3,10 +3,8 @@
 # chezmoi-managed Claude Code tooling files, pointing at the real source via `chezmoi
 # managed`/`source-path`. Never auto-approves.
 #
-# Single-purpose: managed-file protection only. Cross-profile mismatch detection lives in
-# the sibling hook claude-profile-mismatch-guard; installed-but-undeclared/suppressed drift
-# under plugins/skills is clean-claude-orphans/check-claude-overrides' job — neither is
-# this hook's concern.
+# Single-purpose: managed-file protection only. Cross-profile mismatch detection is the
+# sibling hook claude-profile-mismatch-guard's job, not this one's.
 #
 # Edit/Write give a structured file_path; Bash only gives a command string, so mutation
 # detection there is heuristic (see claude-bash-mutation-target-extraction) — an
@@ -51,17 +49,11 @@ emit_by_tier() {
     fi
 }
 
-# Falls back to a realpath'd dirname + basename if the path doesn't exist yet (a Write
-# target that hasn't been created).
-resolve_check_path() {
-    local file_path="$1"
-    local resolved_path="$file_path" real real_parent
-    if real=$(realpath "$file_path" 2>/dev/null); then
-        resolved_path="$real"
-    elif real_parent=$(realpath "$(dirname "$file_path")" 2>/dev/null); then
-        resolved_path="${real_parent}/$(basename "$file_path")"
-    fi
-    echo "$resolved_path"
+{{ includeTemplate "claude-tooling-guard-shared" . }}
+# Shared tail for a settings.json-related denial: where the real edit belongs.
+_settings_json_edit_hint() {
+    local source_path="$1"
+    echo "Edit $(dirname "$source_path")/.claude-settings.json (read by $source_path) instead, then chezmoi apply"
 }
 
 # Whether old_string/new_string touches a chezmoi-managed baseline key — by naming it
@@ -87,7 +79,7 @@ _settings_json_managed_key_touched() {
 check_managed_settings_json() {
     local resolved_path="$1" tool="$2" source_path="$3"
     if [[ "$tool" == "Write" ]]; then
-        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply."
+        echo "DENY|This settings.json is chezmoi-managed. A full overwrite bypasses the modify_ merge model regardless of which keys change — $(_settings_json_edit_hint "$source_path")."
         return 0
     fi
 
@@ -95,7 +87,7 @@ check_managed_settings_json() {
     old_string=$(jq -r '.tool_input.old_string // ""' <<<"$payload" 2>/dev/null) || old_string=""
     new_string=$(jq -r '.tool_input.new_string // ""' <<<"$payload" 2>/dev/null) || new_string=""
     if _settings_json_managed_key_touched "$old_string" "$new_string" "$resolved_path"; then
-        echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions/_chezmoiManaged in settings.json are chezmoi-managed baseline keys, not local toggles. Edit $(dirname "${source_path}")/.claude-settings.json (read by ${source_path}) instead, then chezmoi apply — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
+        echo "DENY|skillOverrides/hooks/enabledPlugins/extraKnownMarketplaces/permissions/_chezmoiManaged in settings.json are chezmoi-managed baseline keys, not local toggles. $(_settings_json_edit_hint "$source_path") — a direct edit here drifts from source and gets silently overwritten or reasserted on the next apply."
     fi
     return 0
 }
@@ -116,11 +108,7 @@ check_managed_file() {
 # bare `reason=$(check_path ...)` never trips `set -e`.
 check_path() {
     local file_path="$1" tool="$2"
-    case "$file_path" in
-        "$HOME"/.claude*/*) ;;
-        "{{ $sourceDir }}"/dot_claude*/*) ;;
-        *) return 0 ;;
-    esac
+    claude_path_in_scope "$file_path" || return 0
 
     local resolved_path
     resolved_path=$(resolve_check_path "$file_path")
@@ -159,17 +147,8 @@ case "$tool_name" in
             exit 0
         fi
 
-        # Expand $CLAUDE_CONFIG_DIR/$HOME manually -- raw command text isn't shell-evaluated,
-        # and $CLAUDE_CONFIG_DIR never contains a literal ".claude" for the filters below to see.
-        config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-        expanded="$command"
-        expanded="${expanded//\$\{CLAUDE_CONFIG_DIR\}/$config_dir}"
-        expanded="${expanded//\$CLAUDE_CONFIG_DIR/$config_dir}"
-        expanded="${expanded//\$\{HOME\}/$HOME}"
-        expanded="${expanded//\$HOME/$HOME}"
-
-        broad_pattern='(\.claude[A-Za-z0-9_-]*/(settings\.json|plugins/|skills/|rules/)|\.claude\.json|dot_claude[A-Za-z0-9_-]*/)'
-        [[ "$expanded" =~ $broad_pattern ]] || exit 0
+        claude_scope_prefilter "$command" || exit 0
+        expanded="$__claude_scope_expanded"
 
         # No old_string/new_string to key-filter against in Bash, so settings.json always
         # takes the blanket "any change is risky" path. Deny on any candidate is decisive;
@@ -206,7 +185,7 @@ case "$tool_name" in
             touch "$marker_file" 2>/dev/null || true
         fi
 
-        message="This command touches Claude Code tooling that the chezmoi dotfiles repo at {{ $repoRoot }} manages. For installed-but-undeclared drift see the clean-claude-orphans skill; for declared-but-locally-suppressed drift see check-claude-overrides. Cross-profile mismatches are flagged separately by claude-profile-mismatch-guard, not this hook."
+        message="This command touches Claude Code tooling managed by the chezmoi dotfiles repo at {{ $repoRoot }} — find the source with \`chezmoi source-path\`."
         jq -n --arg message "$message" '{
     hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: $message },
     systemMessage: $message
