@@ -1,5 +1,20 @@
 # Proposal
 
+> **Status: Rejected (2026-11-17).** Superseded by `chezmoi-tooling-guard`, a Claude Code
+> mod (`tool.check` hook, TypeScript, no shell-out) in the `chezmoi-personal` marketplace,
+> built as the direct replacement for `claude-tooling-write-guard`. The mod already closes
+> this proposal's core security gap (the write-guard's `permissionDecision: "allow"`
+> auto-approval branch — the mod only ever returns `deny`/`ask` or falls through, never
+> `allow`) and already has hooks-ownership live with the mod's own author (no
+> `settings.json` merge-drift risk), without this proposal's broader rule-delivery,
+> `config.env`, or `session-topic-capture`-ownership changes. This repo is standardizing
+> chezmoi-managed Claude Code guards on the mod architecture (see also `ccenv-profile-guard`,
+> which replaced the sibling `claude-profile-mismatch-guard` hook the same way) rather than
+> moving classic `hooks/hooks.json` script registration into a plugin. 0/18 tasks were ever
+> started; nothing here was implemented. Left in place rather than archived, since `archive`
+> merges a change's spec deltas into the main specs, which would be wrong for a change that
+> was never built.
+
 ## Why
 
 Chezmoi-managed Claude Code hooks are currently merged into each persona's `settings.json`,

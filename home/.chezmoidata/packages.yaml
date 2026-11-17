@@ -246,6 +246,7 @@ packages:
           plugins: # Installed via `claude plugins install`
           - 'claude-code-setup@claude-plugins-official'
           - 'claude-md-management@claude-plugins-official'
+          - 'chezmoi-tooling-guard@chezmoi-personal' # Replaces the retired claude-tooling-write-guard bash hook
           - 'oh-my-claudecode@omc'
           - 'superpowers@claude-plugins-official'
           - 'timesheet-tools@timesheet-tools'

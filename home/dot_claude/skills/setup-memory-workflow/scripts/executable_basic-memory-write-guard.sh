@@ -14,8 +14,8 @@
 # Heuristic, not a sandbox: Bash detection matches common write-shaped constructs
 # (redirects, tee/rm/mv/cp/touch/mkdir/sed -i/etc.) anywhere in a command that also
 # references the base dir — deliberately favors false positives (an unnecessary block)
-# over false negatives, same tradeoff as the blanket "any change is risky" Bash handling
-# in home/dot_local/bin/executable_claude-tooling-write-guard.tmpl. A sufficiently
+# over false negatives, same "any change is risky" tradeoff the retired
+# claude-tooling-write-guard bash hook made for its own Bash handling. A sufficiently
 # creative command (e.g. a Python one-liner) can still slip through. Read is left
 # unguarded — inspecting a note file directly is lower-risk and sometimes legitimate
 # while debugging this workflow itself.
@@ -39,8 +39,7 @@ emit_deny() {
 }
 
 # Resolves symlinks where possible (falls back to the parent dir's real path, then the
-# raw path) before checking whether it sits under $BASE — same approach as
-# claude-tooling-write-guard's check_path().
+# raw path) before checking whether it sits under $BASE.
 under_base() {
     local path="$1" resolved="$1" real real_parent
     if real=$(realpath "$path" 2>/dev/null); then

@@ -69,17 +69,6 @@
         ]
       }
     ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash|Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "claude-tooling-write-guard"
-          }
-        ]
-      }
-    ],
     "SessionStart": [
       {
         "matcher": "",

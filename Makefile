@@ -14,10 +14,6 @@ PYTHON_TEST_SUITES := tests/test_memory_workflow.py tests/test_memory_workflow_h
 # Excluded from `test` (not confirmed isolated):
 #   tests/test-claude-settings-ledger.sh      executes mock-rendered scripts (run-template
 #                                             output) and does not sandbox HOME/PATH
-#   tests/claude-tooling-write-guard_test.sh  executes a mock-rendered guard that calls the
-#                                             real `chezmoi managed` and reads the real
-#                                             $HOME/.claude; HOME is not sandboxed (bashunit suite,
-#                                             not run via TEST_SUITES/bash $t either way)
 #   other tests/test_*.py                     Python tests; runner not yet confirmed
 #                                             isolated, so they stay out of `check`
 

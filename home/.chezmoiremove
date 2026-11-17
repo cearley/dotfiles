@@ -14,3 +14,8 @@
 # otherwise linger on every machine's ~/.local/bin forever, since its source entry alone
 # being removed doesn't delete it.
 .local/bin/claude-profile-mismatch-guard
+
+# claude-tooling-write-guard retired (2026-11-17): replaced by the chezmoi-tooling-guard
+# Claude Code mod in this repo's own chezmoi-personal marketplace (packages.yaml installs
+# it machine-wide). Same orphaned-leftover reasoning as the entry above.
+.local/bin/claude-tooling-write-guard
