@@ -327,6 +327,19 @@ function test_resolved_item_never_counted() {
     run_open_staleness >/dev/null 2>&1 || ec=$?
     assert_same "0" "$ec"
 }
+
+function test_already_stale_item_never_recounted() {
+    # Pins the fix for the bug this exact fixture would otherwise expose:
+    # an item Task 4 already rolled into the index keeps status "stale",
+    # not "open" — if it were left "open", this item would incorrectly
+    # reappear here on every later run.
+    set_up_project_dir
+    write_status_summary 2026-11-17 2026-11-16 2026-11-15 2026-11-14 2026-11-13
+    write_open_item itemA stale 2026-01-01
+    local ec=0
+    run_open_staleness >/dev/null 2>&1 || ec=$?
+    assert_same "0" "$ec"
+}
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -385,8 +398,11 @@ git commit -m "feat(setup-memory-workflow): add session-count Open-item stalenes
 - Consumes: nothing from Tasks 1–2 (independent track; shares only the `open-items/`
   directory name and the frontmatter field names below, which this task defines).
 - Produces (fixed field names/values for Tasks 4–5 to rely on): `open-item` note
-  frontmatter — `type: open-item`, `status` (`open`/`resolved`), `found_session` (date
-  string of the entry that created it), `last_touched_session` (date string, same
+  frontmatter — `type: open-item`, `status` (`open`/`stale`/`resolved` — `stale` is set
+  only by Task 4, when an item is rolled into the index, so Task 2's
+  `stale_open_items()` never re-reports an already-indexed item on a later run),
+  `found_session` (date string of the entry that created it), `last_touched_session`
+  (date string, same
   convention Task 2 reads), optional `severity`. Status-note Open-section line format:
   `- [<category>] <short title> — [[Open: <slug>]]`. `open-items/` directory and its
   `type: schema`, `entity: open-item` note are created lazily, on first need, by this
@@ -545,6 +561,15 @@ function test_maintenance_template_runs_schema_validate() {
     grep -q 'bm_schema' "$TEMPLATE_MAINT" && found=1
     assert_same "1" "$found"
 }
+
+function test_maintenance_template_sets_status_stale_on_rollup() {
+    # Without this, check-drift.sh open-staleness would re-report the same
+    # already-indexed item on every later maintenance run (Task 2's
+    # stale_open_items() only skips items whose own status is "stale").
+    local found=0
+    grep -q 'status.*stale' "$TEMPLATE_MAINT" && found=1
+    assert_same "1" "$found"
+}
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -556,7 +581,10 @@ Expected: FAIL on the three new assertions
 
 Add a new sub-step, run after the existing status-note triage described there: run
 `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh
-open-staleness`; for each returned `<path>` (consulting its `open-items/` note),
+open-staleness`; for each returned `<path>`, fresh-read that `open-items/` note and
+update its `status` field from `open` to `stale` via checksum-guarded `bm_edit` —
+this is what keeps the same item from being reported by `open-staleness` again on a
+future run, since that check only ever considers notes with `status: open`. Then
 replace that item's individual pointer line in the status note's Open section with (or
 fold its count into) the single rollup line `>N sessions untouched: <count> items —
 [[Stale Open Items Index — __PROJECT__]]`, creating that index note
