@@ -31,6 +31,8 @@ source "$SKILL_DIR/lib-project.sh"
 source "$SKILL_DIR/lib-status-note.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-session-log.sh
 source "$SKILL_DIR/lib-session-log.sh"
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-open-items.sh
+source "$SKILL_DIR/lib-open-items.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-consent.sh
 source "$SKILL_DIR/lib-consent.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-drift-warn.sh
@@ -70,6 +72,7 @@ printf '%s%s%s\n' "$PREAMBLE" "$OPEN_EXCERPT_BLOCK" "$NONCANON_NOTICE"
 
 check_status_note_bloat || true
 check_session_log_bloat || true
+check_open_section_overflow || true
 # Runs in-process instead of exec'ing check-drift.sh as a second subprocess;
 # the redirect preserves the old hook chain's silence (its stderr was
 # already discarded there).
