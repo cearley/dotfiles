@@ -74,3 +74,36 @@ function test_save_session_template_documents_resolving_pointer_items() {
     grep -qi 'resolving a pointer-ized item' "$TEMPLATE" && found=1
     assert_same "1" "$found"
 }
+
+TEMPLATE_MAINT="$REPO_ROOT/home/dot_claude/skills/setup-memory-workflow/assets/save-session-maintenance-skill.md.template"
+
+function test_maintenance_template_exists() {
+    assert_file_exists "$TEMPLATE_MAINT"
+}
+
+function test_maintenance_template_calls_open_staleness() {
+    local found=0
+    grep -q 'open-staleness' "$TEMPLATE_MAINT" && found=1
+    assert_same "1" "$found"
+}
+
+function test_maintenance_template_documents_stale_index_title() {
+    local found=0
+    grep -q 'Stale Open Items Index' "$TEMPLATE_MAINT" && found=1
+    assert_same "1" "$found"
+}
+
+function test_maintenance_template_runs_schema_validate() {
+    local found=0
+    grep -q 'bm_schema' "$TEMPLATE_MAINT" && found=1
+    assert_same "1" "$found"
+}
+
+function test_maintenance_template_sets_status_stale_on_rollup() {
+    # Without this, check-drift.sh open-staleness would re-report the same
+    # already-indexed item on every later maintenance run (Task 2's
+    # stale_open_items() only skips items whose own status is "stale").
+    local found=0
+    grep -q 'status.*stale' "$TEMPLATE_MAINT" && found=1
+    assert_same "1" "$found"
+}

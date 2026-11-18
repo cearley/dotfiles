@@ -96,6 +96,35 @@ Their broader defaults do not expand this request. Reassess after bounded target
 if further work would expand scope or lose uncertain material, report it and ask rather
 than repeatedly rewriting until thresholds are met.
 
+### Stale Open Items Index rollup
+
+After the triage above, run
+`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh
+open-staleness`. It prints one `<path>\t<sessions-untouched-count>` line per stale
+`open-items/` note and exits nonzero when any exist; nothing/exit 0 means no rollup work.
+
+For each returned `<path>`:
+1. Fresh-read that `open-items/` note; set its `status` from `open` to `stale` via
+   checksum-guarded `bm_edit`. This step is not optional: Task 2's `open-staleness` check
+   only ever considers notes with `status: open`, so skipping this transition would make
+   the same already-indexed item get reported as newly stale again on every future
+   maintenance run.
+2. Replace that item's individual `- [<category>] <short title> — [[Open: <slug>]]`
+   pointer line in the status note's Open section with (or fold its count into) a single
+   rollup line: `>5 sessions untouched: <count> items — [[Stale Open Items Index —
+   __PROJECT__]]`, where `<count>` is the total number of items now folded into that
+   rollup line. (The `5` mirrors `STALE_SESSION_THRESHOLD` in `lib-open-items.sh`; keep
+   this literal in sync if that constant is ever retuned.)
+3. Add or update that item's grouped pointer line, preserving its original `[category]`,
+   in the `Stale Open Items Index — __PROJECT__` note: `bm_write(overwrite=false)` to
+   create the index note on first use, checksum-guarded `bm_edit` append thereafter. Group
+   lines by the item's original `[category]`.
+
+Verify every receipt per the contract table above before moving to the next item. Then
+run `bm_schema(command="validate", note_type="open-item", project="__PROJECT__")` — this
+is read-only, same as Step 0's `memory-doctor` check — and fold any findings into the
+completion summary; never auto-fix them.
+
 ## On completion or failure
 
 Confirm touched note titles and returned permalinks/paths, final status size if triaged,
