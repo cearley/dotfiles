@@ -41,7 +41,8 @@
     "parallel-worktrees": "off"
   },
   "enabledPlugins": {
-    "claude-md-management@claude-plugins-official": true
+    "claude-md-management@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": false
   },
   "hooks": {
     "UserPromptSubmit": [

@@ -1,6 +1,9 @@
 {
   "syncClaudeAiSkills": false,
   "syncClaudeAiPlugins": false,
+  "enabledPlugins": {
+    "superpowers@claude-plugins-official": false
+  },
   "pluginConfigs": {
     "jev-model-router@skills-dir": {
       "options": {

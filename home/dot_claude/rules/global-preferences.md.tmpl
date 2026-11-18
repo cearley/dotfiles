@@ -31,6 +31,9 @@ For tasks spanning many files or exceeding context capacity, use subagents or to
 
 When executing a named skill workflow, mandatory steps must not be silently skipped — even when the outcome seems obvious. If skipping a step, explicitly state the rationale before proceeding (e.g., "Skipping month-calendar — week header already present and date confirmed as 2026-03-20"). This makes deviations visible and auditable in retrospectives.
 
+## OMC and Superpowers
+Superpowers is off by default and enabled per project. When `superpowers:*` skills are loaded, Superpowers owns the development workflow (brainstorm, plan, execute, review, verify, debug, TDD); don't also run the OMC equivalent for the same step. OMC still provides agents, hooks, model routing, HUD and memory tools.
+
 ## Environment Notes
 - Background subagents (via Agent tool) cannot respond to interactive permission prompts — Bash commands already approved in `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json` work fine, but unapproved commands are silently denied. For shell tasks not yet pre-approved, use foreground agents instead.
 - `$CLAUDE_CONFIG_DIR` is this session's active Claude Code config directory. It's unset unless multiple named profiles are configured on this machine{{ if $claudeEnvs }} (see below){{ end }} — when unset, the Claude Code config directory defaults to `~/.claude`.
