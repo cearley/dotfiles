@@ -242,11 +242,13 @@ packages:
           - 'anthropics/claude-plugins-official' # Official Claude plugins from Anthropics
           - '$HOME/Business/time-tracking/claude-plugins' # Local timesheet-tools marketplace (separate repo, this machine only)
           - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace, deployed under home/dot_local/share/claude-plugins/
+          - 'cearley/hcom-hud' # hcom agent HUD mod (repo is its own marketplace, named hcom-hud)
           plugins: # Installed via `claude plugins install`
           - 'claude-code-setup@claude-plugins-official'
           - 'claude-md-management@claude-plugins-official'
           - 'chezmoi-tooling-guard@chezmoi-personal' # Replaces the retired claude-tooling-write-guard bash hook
           - 'ccenv-profile-guard@chezmoi-personal' # Replaces the retired claude-profile-mismatch-guard bash hook; mod authored in cearley/zsh-claude-env
+          - 'hcom-hud@hcom-hud' # hcom handle/status/unread band + /hcom roster pane; no-op outside hcom sessions
           - 'oh-my-claudecode@omc'
           - 'superpowers@claude-plugins-official'
           - 'timesheet-tools@timesheet-tools'
