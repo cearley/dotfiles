@@ -182,7 +182,6 @@ packages:
       - '--ignore-scripts --min-release-age=0 --no-fund --no-audit @earendil-works/pi-coding-agent'
       - '@fission-ai/openspec@latest'  # AI-native system for spec-driven development
       - '@oh-my-pi/pi-coding-agent'    # omp: oh-my-pi AI coding agent
-      - 'oh-my-claude-sisyphus'        # omc: oh-my-claudecode CLI (HUD, teleport, team helpers)
       - 'ralph-tui'                    # AI agent loop orchestrator TUI
       casks:
       - 'antigravity'                  # Antigravity AI agent desktop app
@@ -234,15 +233,15 @@ packages:
           - 'specstoryai/agent-skills --skill specstory-session-summary'
           - 'specstoryai/agent-skills --skill specstory-yak'
           plugin_marketplaces: # Registered via `claude plugins marketplace add`
-          - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace, deployed under home/dot_local/share/claude-plugins/
-          - '$HOME/Business/time-tracking/claude-plugins' # Local timesheet-tools marketplace (separate repo, this machine only)
-          - 'anthropics/claude-plugins-official' # Official Claude plugins from Anthropics
-          - 'anthropics/skills' # Official skills from Anthropics
-          - 'aws/agent-toolkit-for-aws' # Official AWS agent toolkit
-          - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev' # Willdan ViewPoint Utilities Docs (dev branch)
-          - 'https://github.com/Yeachan-Heo/oh-my-claudecode' # Oh My Claude code repository
-          - 'microsoftdocs/mcp' # Microsoft Docs MCP marketplace
           - 'wondelai/skills' # Wondelai's collection of skills
+          - 'microsoftdocs/mcp' # Microsoft Docs MCP marketplace
+          - 'https://github.com/Yeachan-Heo/oh-my-claudecode' # Oh My Claude code repository
+          - 'https://dev.azure.com/Willdan-WLE/ViewPointV2/_git/WES.ViewPoint.Utilities.Docs#dev' # Willdan ViewPoint Utilities Docs (dev branch)
+          - 'aws/agent-toolkit-for-aws' # Official AWS agent toolkit
+          - 'anthropics/skills' # Official skills from Anthropics
+          - 'anthropics/claude-plugins-official' # Official Claude plugins from Anthropics
+          - '$HOME/Business/time-tracking/claude-plugins' # Local timesheet-tools marketplace (separate repo, this machine only)
+          - '$HOME/.local/share/claude-plugins' # This repo's own local marketplace, deployed under home/dot_local/share/claude-plugins/
           plugins: # Installed via `claude plugins install`
           - 'claude-code-setup@claude-plugins-official'
           - 'claude-md-management@claude-plugins-official'
