@@ -12,6 +12,11 @@
 # growing unboundedly and stale items should be rolled into the index.
 OPEN_LINE_CAP=15
 
+# Session-count staleness threshold: an open-item note whose
+# last_touched_session is this many (or more) status-note sessions in the
+# past is stale and should be rolled into the index.
+STALE_SESSION_THRESHOLD=5
+
 # Open-section overflow signal: counts top-level bullets in the Open
 # section (same awk extraction as extract_open_excerpt()) and warns only
 # when that count exceeds OPEN_LINE_CAP. No-op if no status note, or no
@@ -33,4 +38,74 @@ check_open_section_overflow() {
     if [ "$count" -gt "$OPEN_LINE_CAP" ] 2>/dev/null; then
         echo "[setup-memory-workflow] Open section has $count live items (cap $OPEN_LINE_CAP) — run /save-session-maintenance to roll stale items into the index."
     fi
+}
+
+# Resolves the on-disk open-items directory for $PROJECT. Prints nothing if
+# it doesn't exist (no items have ever been created).
+resolve_open_items_dir() {
+    local dir="$HOME/.local/share/basic-memory/$PROJECT/open-items"
+    [ -d "$dir" ] || return 0
+    printf '%s\n' "$dir"
+}
+
+# Session-count staleness: for every open-items/*.md note with
+# "status: open", counts how many status-note sessions have passed since
+# its "last_touched_session" date and prints "<path>\t<count>" for every
+# note at or past STALE_SESSION_THRESHOLD. Prints nothing (and always
+# exits 0) if the open-items directory is missing/empty, the status note
+# is missing/unreadable, or its Status Summary section has no dated
+# entries.
+#
+# Session dates are collected from the status note's "## Status Summary"
+# section only (same bounded-section idiom as extract_open_excerpt()), in
+# file order (top = newest), without deduplicating same-day entries — each
+# matched "**YYYY-MM-DD" line counts as one session. An item's
+# sessions-untouched count is how many collected dates are strictly newer
+# than its last_touched_session (i.e. appear above the first collected
+# date that is <= it). If last_touched_session doesn't match any
+# collected date, it's treated as older than all of them (count = total
+# collected dates) — the conservative fallback for a date condensed away
+# by a prior maintenance run.
+stale_open_items() {
+    local items_dir note dates
+    items_dir=$(resolve_open_items_dir)
+    [ -n "$items_dir" ] || return 0
+
+    note=$(resolve_status_note_path)
+    [ -n "$note" ] && [ -r "$note" ] || return 0
+
+    dates=$(awk '
+    /^## Status Summary[[:space:]]*$/ { found=1; next }
+    found && /^##/ { exit }
+    found && /^\*\*[0-9]{4}-[0-9]{2}-[0-9]{2}/ { print substr($0, 3, 10) }
+  ' "$note" 2>/dev/null) || true
+    [ -n "$dates" ] || return 0
+
+    local total
+    total=$(printf '%s\n' "$dates" | wc -l | tr -d ' ')
+
+    local f status last_touched count d matched
+    for f in "$items_dir"/*.md; do
+        [ -f "$f" ] || continue
+        status=$(sed -n 's/^status:[[:space:]]*//p' "$f" | head -n1 | tr -d '[:space:]')
+        [ "$status" = open ] || continue
+        last_touched=$(sed -n 's/^last_touched_session:[[:space:]]*//p' "$f" | head -n1 | tr -d '[:space:]')
+        [ -n "$last_touched" ] || continue
+
+        count=0
+        matched=0
+        while IFS= read -r d; do
+            if ! [[ "$d" > "$last_touched" ]]; then
+                matched=1
+                break
+            fi
+            count=$((count + 1))
+        done <<<"$dates"
+        [ "$matched" -eq 1 ] || count=$total
+
+        if [ "$count" -ge "$STALE_SESSION_THRESHOLD" ]; then
+            printf '%s\t%s\n' "$f" "$count"
+        fi
+    done
+    return 0
 }

@@ -62,6 +62,8 @@ source "$SKILL_DIR/scripts/lib-consent.sh"
 source "$SKILL_DIR/scripts/lib-drift-warn.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-status-note.sh
 source "$SKILL_DIR/scripts/lib-status-note.sh"
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-open-items.sh
+source "$SKILL_DIR/scripts/lib-open-items.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-pieces.sh
 source "$SKILL_DIR/scripts/lib-pieces.sh"
 # shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-runtime.sh
@@ -166,11 +168,23 @@ cmd_status_bloat() {
     return 0
 }
 
+cmd_open_staleness() {
+    validate_project_name
+    local stale
+    stale=$(stale_open_items)
+    if [ -n "$stale" ]; then
+        printf '%s\n' "$stale"
+        return 1
+    fi
+    return 0
+}
+
 case "${1:-}" in
     check | install | update) cmd_run "$1" ;;
     apply) cmd_apply "${2:?Expected piece}" ;;
     drift-warn) check_drift_warn || true ;;
     status-bloat) cmd_status_bloat ;;
+    open-staleness) cmd_open_staleness ;;
     consent)
         validate_project_name
         case "${2:-status}" in
@@ -184,7 +198,7 @@ case "${1:-}" in
         authorize_save "${2:?Expected project}" "${3:?Expected auto or once}"
         ;;
     *)
-        print_message error 'Usage: check-drift.sh check|install|update|apply PIECE|drift-warn|status-bloat|consent status|grant|revoke|authorize PROJECT auto|once'
+        print_message error 'Usage: check-drift.sh check|install|update|apply PIECE|drift-warn|status-bloat|open-staleness|consent status|grant|revoke|authorize PROJECT auto|once'
         exit 1
         ;;
 esac
