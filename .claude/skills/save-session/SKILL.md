@@ -2,7 +2,7 @@
 name: save-session
 description: Save curated session findings, decisions and a checkpoint to basic-memory. Run proactively only with valid project-local standing consent and meaningful activity; a direct save request authorizes one save. Generic wrap-up language triggers an offer. No maintenance or transcript recovery without its own explicit request.
 ---
-<!-- setup-memory-workflow-version:24 -->
+<!-- setup-memory-workflow-version:25 -->
 <!-- setup-memory-workflow-project:chezmoi -->
 
 ## Preflight — before activity filtering or any marker write
@@ -92,6 +92,47 @@ Preserve the existing Open list as the baseline; move only named items actually 
 this session, add new open work and changed environment facts, update “Last updated”.
 Keep bd/OpenSpec as task authority and spot-check still-active work. Do not regenerate
 Open from this session alone, resize or restructure the whole note.
+
+This is forward-only: items already in the Open section as freeform bullets are left
+exactly as they are; only a *new* Open item created this session uses the pointer shape
+below. For a new item: on confirmed-missing `open-items/` directory or schema note,
+create the `type: schema`/`entity: open-item` note (consult `bm_man(page="bm-schema(3)")`
+for exact Picoschema authoring syntax if uncertain — required fields `status` (accepts
+`open`/`stale`/`resolved`), `found_session`, `last_touched_session`, optional
+`severity`), then create the note with title `Open: <slug>` (not the filename alone —
+the pointer line below is a Basic Memory wikilink, which resolves by note title, not by
+filename or path) and directory `open-items`, via
+`bm_write(overwrite=false)` carrying that frontmatter and the
+item's `[category]` observation line as its body, then add one line to the status note's
+Open section: `- [<category>] <short title> — [[Open: <slug>]]`. Frontmatter shape:
+
+```
+---
+type: open-item
+status: open
+found_session: 2026-11-17
+last_touched_session: 2026-11-17
+---
+```
+
+**Touch tracking**: if this session's work references, updates, or reaffirms an
+*existing* pointer-ized Open item (one with an `[[Open: <slug>]]` line already in the
+status note), fresh-read that item's note and update its `last_touched_session` field to
+today's dated entry via checksum-guarded `bm_edit`; this is the only time an existing
+`open-items/` note's frontmatter changes outside of resolution or maintenance. If the
+touched item instead currently appears in the `Stale Open Items Index — chezmoi` note
+(not in the status note's live Open section), it is being actively worked again: set its
+`status` back to `open`, update `last_touched_session` as above, move its pointer line
+back into the status note's Open section (`- [<category>] <short title> — [[Open:
+<slug>]]`), and remove its line from the index note, decrementing that rollup line's
+`<count>` (or removing the rollup line if it was the last item folded into it).
+
+**Resolving a pointer-ized item**: when a named item with an `[[Open: <slug>]]` line is
+actually resolved this session, update its note's `status` to `resolved` (mirroring how a
+plain prose Open item already moves to Resolved) and remove its line from wherever it
+currently appears — the live Open section if it has its own pointer line, or the Stale
+Open Items Index note if it was already rolled up there (same removal operation,
+different target note).
 
 Write the new dated Status Summary entry as explicit short lines, not one flowing
 paragraph, capped at 5 physical lines: a date line, 1-3 short content lines or bullets,
