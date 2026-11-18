@@ -11,8 +11,9 @@ directly. Design: `docs/superpowers/specs/2026-11-17-status-note-open-items-bloa
 
 `executable_check-drift.sh` gains an `open-staleness` subcommand, backed by a new
 `lib-open-items.sh`. It flags Open items that have gone a session-count threshold without
-being touched, and reports the Open-section overflow signal alongside it. Covered by
-`tests/setup_memory_workflow_open_items_test.sh`.
+being touched. Separately, `executable_session-reminder.sh`'s SessionStart check now also
+warns when the Open section's live-item count exceeds a cap (`check_open_section_overflow()`,
+same new `lib-open-items.sh`). Covered by `tests/setup_memory_workflow_open_items_test.sh`.
 
 `save-session-skill.md.template` now creates new Open items as forward-only pointers: a
 short Open line that links to a detail note, instead of inline prose. Touch and resolve
