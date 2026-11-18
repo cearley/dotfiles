@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016
 # bashunit coverage guarding setup-memory-workflow's rendered skill
 # templates against reintroducing the bm_edit/bm_read parameter-name bugs
 # fixed by fix-save-session-redundancy: `content` (not `replace_text`) as
@@ -101,10 +102,12 @@ function test_maintenance_template_runs_schema_validate() {
 
 function test_maintenance_template_sets_status_stale_on_rollup() {
     # Without this, check-drift.sh open-staleness would re-report the same
-    # already-indexed item on every later maintenance run (Task 2's
-    # stale_open_items() only skips items whose own status is "stale").
+    # already-indexed item on every later maintenance run (stale_open_items()
+    # only skips items whose own status is "stale"). Matches the specific
+    # transition instruction, not just "status" and "stale" appearing
+    # anywhere in the file.
     local found=0
-    grep -q 'status.*stale' "$TEMPLATE_MAINT" && found=1
+    grep -qF 'status` from `open` to `stale`' "$TEMPLATE_MAINT" && found=1
     assert_same "1" "$found"
 }
 

@@ -74,6 +74,22 @@ Under 300 lines, leave it unchanged. No unrelated archive chain traversal or cle
 
 ## Step 2 — Triage the current status note
 
+### Capture Open-item staleness before triage
+
+Before any triage/condensing below, run
+`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh
+open-staleness` and capture its full output verbatim — one `<path>\t<sessions-untouched-count>`
+line per stale `open-items/` note — for the rollup subsection later in this step; nothing/exit
+0 means no rollup work. Capturing it now, before triage, matters: `stale_open_items()` counts
+each dated Status Summary entry as one session, and the triage below may condense several
+dated entries into a single range entry (e.g. `**2026-11-07 → 2026-11-16:**`) — a condensed
+range entry counts as only one session, dated by its start date, so capturing the stale list
+after condensing would undercount sessions and most items would never reach
+`STALE_SESSION_THRESHOLD`. (A longer-term alternative — counting session-log boundaries
+instead of Status Summary dated entries — is noted in the design doc as a future option, not
+required now.) Do not re-run `open-staleness` again later in this step; reuse this captured
+list for the rollup below.
+
 Assess the status note independently for: a size/token-limit read failure, roughly 8,000
 characters or 200 lines, or a single entry over roughly 800 characters. No signals means
 no triage. A limited response is not the whole note: use documented bounded `bm_read`
@@ -83,7 +99,9 @@ view. A host-provided full-response temporary file may be inspected read-only.
 
 Extract stable reference facts or still-real known issues to a relevant existing/new
 note under `reference/` or `known-issues/`, leaving a concise `See [[Note Title]]` pointer.
-Preserve Open items and task-tracker authority. Prefer archival to deletion; this skill
+Preserve Open items and task-tracker authority (now including items rolled into the Stale
+Open Items Index — that index is also authoritative for stale items, not just the live
+Open section). Prefer archival to deletion; this skill
 does not authorize outright deletion. Use `bm_move(identifier=..., destination="archive/",
 expected_checksum=...)` for whole-note archival where appropriate, then verify the
 returned identity, and repair and re-verify directly affected links using returned
@@ -98,27 +116,26 @@ than repeatedly rewriting until thresholds are met.
 
 ### Stale Open Items Index rollup
 
-After the triage above, run
-`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/check-drift.sh
-open-staleness`. It prints one `<path>\t<sessions-untouched-count>` line per stale
-`open-items/` note and exits nonzero when any exist; nothing/exit 0 means no rollup work.
-
-For each returned `<path>`:
+Using the stale list captured above (not a fresh `open-staleness` run), for each returned
+`<path>`:
 1. Fresh-read that `open-items/` note; set its `status` from `open` to `stale` via
-   checksum-guarded `bm_edit`. This step is not optional: Task 2's `open-staleness` check
+   checksum-guarded `bm_edit`. This step is not optional: `check-drift.sh open-staleness`
    only ever considers notes with `status: open`, so skipping this transition would make
    the same already-indexed item get reported as newly stale again on every future
    maintenance run.
 2. Replace that item's individual `- [<category>] <short title> — [[Open: <slug>]]`
    pointer line in the status note's Open section with (or fold its count into) a single
-   rollup line: `>5 sessions untouched: <count> items — [[Stale Open Items Index —
+   rollup line: `5+ sessions untouched: <count> items — [[Stale Open Items Index —
    __PROJECT__]]`, where `<count>` is the total number of items now folded into that
    rollup line. (The `5` mirrors `STALE_SESSION_THRESHOLD` in `lib-open-items.sh`; keep
-   this literal in sync if that constant is ever retuned.)
-3. Add or update that item's grouped pointer line, preserving its original `[category]`,
-   in the `Stale Open Items Index — __PROJECT__` note: `bm_write(overwrite=false)` to
-   create the index note on first use, checksum-guarded `bm_edit` append thereafter. Group
-   lines by the item's original `[category]`.
+   this literal in sync if that constant is ever retuned. This bullet itself counts toward
+   `OPEN_LINE_CAP` like any other Open bullet — that's expected, not a bug to fix.)
+3. Add or update that item's grouped pointer line — same pointer shape as a live Open
+   entry, `- [<category>] <title> — [[Open: <slug>]]`, so the wikilink resolves against
+   the same `Open: <slug>` note title used when the item was created or converted —
+   preserving its original `[category]`, in the `Stale Open Items Index — __PROJECT__`
+   note: `bm_write(overwrite=false)` to create the index note on first use, checksum-guarded
+   `bm_edit` append thereafter. Group lines by the item's original `[category]`.
 
 Verify every receipt per the contract table above before moving to the next item. Then
 run `bm_schema(command="validate", note_type="open-item", project="__PROJECT__")` — this
@@ -138,8 +155,13 @@ For each named item: find its prose bullet in the status note's Open section and
 `found_session` from the dated Status Summary entry it originally appeared under (walk
 back through the log/archive chain if it predates the current status note); infer
 `severity` from any existing "(low priority)"-style marker in its text, omitting the
-field if none is present. Create its `open-items/<slug>.md` note with that frontmatter
-(`status: open`, the inferred `found_session`, `last_touched_session` set to today) and
+field if none is present. On confirmed-missing `open-items/` directory or schema note,
+apply the same lazy schema provisioning as save-session's creation path (create the
+`type: schema`/`entity: open-item` note first; consult `bm_man(page="bm-schema(3)")` if
+uncertain). Create its `open-items/<slug>.md` note with title `Open: <slug>` (not the
+filename alone — the pointer line is a Basic Memory wikilink, which resolves by note
+title) and directory `open-items`, carrying frontmatter `type: open-item`, `status: open`,
+the inferred `found_session`, `last_touched_session` set to today, and
 the item's `[category]` text as its body, using `bm_write(overwrite=false)`. Then
 fresh-read the status note and replace that one prose bullet — and only that bullet —
 with the standard pointer line from the save-session template:

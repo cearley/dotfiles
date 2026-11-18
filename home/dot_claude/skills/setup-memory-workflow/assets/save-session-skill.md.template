@@ -99,8 +99,10 @@ below. For a new item: on confirmed-missing `open-items/` directory or schema no
 create the `type: schema`/`entity: open-item` note (consult `bm_man(page="bm-schema(3)")`
 for exact Picoschema authoring syntax if uncertain — required fields `status` (accepts
 `open`/`stale`/`resolved`), `found_session`, `last_touched_session`, optional
-`severity`), then create
-`open-items/<slug>.md` with `bm_write(overwrite=false)` carrying that frontmatter and the
+`severity`), then create the note with title `Open: <slug>` (not the filename alone —
+the pointer line below is a Basic Memory wikilink, which resolves by note title, not by
+filename or path) and directory `open-items`, via
+`bm_write(overwrite=false)` carrying that frontmatter and the
 item's `[category]` observation line as its body, then add one line to the status note's
 Open section: `- [<category>] <short title> — [[Open: <slug>]]`. Frontmatter shape:
 
@@ -117,7 +119,13 @@ last_touched_session: 2026-11-17
 *existing* pointer-ized Open item (one with an `[[Open: <slug>]]` line already in the
 status note), fresh-read that item's note and update its `last_touched_session` field to
 today's dated entry via checksum-guarded `bm_edit`; this is the only time an existing
-`open-items/` note's frontmatter changes outside of resolution or maintenance.
+`open-items/` note's frontmatter changes outside of resolution or maintenance. If the
+touched item instead currently appears in the `Stale Open Items Index — __PROJECT__` note
+(not in the status note's live Open section), it is being actively worked again: set its
+`status` back to `open`, update `last_touched_session` as above, move its pointer line
+back into the status note's Open section (`- [<category>] <short title> — [[Open:
+<slug>]]`), and remove its line from the index note, decrementing that rollup line's
+`<count>` (or removing the rollup line if it was the last item folded into it).
 
 **Resolving a pointer-ized item**: when a named item with an `[[Open: <slug>]]` line is
 actually resolved this session, update its note's `status` to `resolved` (mirroring how a

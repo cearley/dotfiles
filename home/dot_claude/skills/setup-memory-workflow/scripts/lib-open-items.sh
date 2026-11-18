@@ -20,23 +20,36 @@ STALE_SESSION_THRESHOLD=5
 # Open-section overflow signal: counts top-level bullets in the Open
 # section (same awk extraction as extract_open_excerpt()) and warns only
 # when that count exceeds OPEN_LINE_CAP. No-op if no status note, or no
-# Open section, resolves.
+# Open section, resolves. Legacy bullets (no "[[Open: " pointer, predating
+# this feature) are counted separately from pointer bullets, because the
+# maintenance rollup can only ever roll up pointer-ized items — on a
+# project where legacy bullets dominate the overflow, the rollup can't
+# clear the warning, so the message must point at legacy conversion
+# instead of promising a rollup fix.
 check_open_section_overflow() {
     local note
     note=$(resolve_status_note_path)
     [ -n "$note" ] && [ -r "$note" ] || return 0
 
-    local count
-    count=$(awk '
+    local counts legacy pointer count
+    counts=$(awk '
     /^## Open[[:space:]]*$/ { found=1; next }
     found && /^##/ { exit }
-    found && /^- / { n++ }
-    END { print n + 0 }
+    found && /^- / { if ($0 ~ /\[\[Open: /) p++; else l++ }
+    END { print (l + 0) "\t" (p + 0) }
   ' "$note" 2>/dev/null) || true
-    [ -n "$count" ] || return 0
+    [ -n "$counts" ] || return 0
+
+    legacy=$(printf '%s' "$counts" | cut -f1)
+    pointer=$(printf '%s' "$counts" | cut -f2)
+    count=$((legacy + pointer))
 
     if [ "$count" -gt "$OPEN_LINE_CAP" ] 2>/dev/null; then
-        echo "[setup-memory-workflow] Open section has $count live items (cap $OPEN_LINE_CAP) — run /save-session-maintenance to roll stale items into the index."
+        if [ "$legacy" -ge "$pointer" ]; then
+            echo "[setup-memory-workflow] Open section has $count live items (cap $OPEN_LINE_CAP), mostly legacy bullets without an [[Open: ]] pointer — /save-session-maintenance's rollup can't touch those; use its on-request legacy-conversion path to pointer-ize them first."
+        else
+            echo "[setup-memory-workflow] Open section has $count live items (cap $OPEN_LINE_CAP) — run /save-session-maintenance to roll stale items into the index."
+        fi
     fi
 }
 
@@ -84,12 +97,19 @@ stale_open_items() {
     local total
     total=$(printf '%s\n' "$dates" | wc -l | tr -d ' ')
 
+    # Pin collation for the [[ > ]] string date comparison below so a
+    # non-C locale can't reorder "YYYY-MM-DD" strings unexpectedly.
+    local LC_ALL=C
     local f status last_touched count d matched
     for f in "$items_dir"/*.md; do
         [ -f "$f" ] || continue
-        status=$(sed -n 's/^status:[[:space:]]*//p' "$f" | head -n1 | tr -d '[:space:]')
+        # Basic Memory can re-serialize these as YAML-quoted strings
+        # (e.g. 'open', "2026-11-17") on a note that goes through a
+        # bm_write/bm_edit path that re-serializes metadata; strip quotes
+        # along with whitespace or a quoted value never matches/sorts right.
+        status=$(sed -n 's/^status:[[:space:]]*//p' "$f" | head -n1 | tr -d "\"'[:space:]")
         [ "$status" = open ] || continue
-        last_touched=$(sed -n 's/^last_touched_session:[[:space:]]*//p' "$f" | head -n1 | tr -d '[:space:]')
+        last_touched=$(sed -n 's/^last_touched_session:[[:space:]]*//p' "$f" | head -n1 | tr -d "\"'[:space:]")
         [ -n "$last_touched" ] || continue
 
         count=0

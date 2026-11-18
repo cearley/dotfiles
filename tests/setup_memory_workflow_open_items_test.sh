@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# bashunit coverage for lib-open-items.sh's check_open_section_overflow(),
+# bashunit coverage for lib-open-items.sh: check_open_section_overflow(),
 # the SessionStart signal that fires when the status note's Open section
-# has grown past OPEN_LINE_CAP live items.
+# has grown past OPEN_LINE_CAP live items, and stale_open_items() /
+# `check-drift.sh open-staleness`, which flags open-items/ notes that have
+# gone STALE_SESSION_THRESHOLD or more status-note sessions untouched.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SKILL_DIR="$REPO_ROOT/home/dot_claude/skills/setup-memory-workflow/scripts"
@@ -53,6 +55,32 @@ function test_no_status_note_prints_nothing() {
     local out
     out=$(check_open_section_overflow)
     assert_empty "$out"
+}
+
+function write_mixed_open_section() {
+    # args: legacy count, pointer count
+    local legacy="$1" pointer="$2"
+    {
+        printf '## Open\n\n'
+        for ((i = 0; i < legacy; i++)); do printf -- '- [problem] legacy item %d\n' "$i"; done
+        for ((i = 0; i < pointer; i++)); do printf -- '- [problem] item %d — [[Open: slug-%d]]\n' "$i" "$i"; done
+    } >"$NOTE"
+}
+
+function test_overflow_dominated_by_legacy_points_at_conversion() {
+    write_mixed_open_section 12 4
+    local out
+    out=$(check_open_section_overflow)
+    assert_contains "legacy" "$out"
+    assert_contains "conversion" "$out"
+}
+
+function test_overflow_dominated_by_pointers_points_at_rollup() {
+    write_mixed_open_section 4 12
+    local out
+    out=$(check_open_section_overflow)
+    assert_contains "save-session-maintenance" "$out"
+    assert_not_contains "legacy" "$out"
 }
 
 CHECK_DRIFT="$REPO_ROOT/home/dot_claude/skills/setup-memory-workflow/scripts/executable_check-drift.sh"
@@ -131,14 +159,37 @@ function test_same_day_entries_each_count() {
 
 function test_last_touched_not_found_is_conservatively_stale() {
     set_up_project_dir
-    # Only 2 collected dates: below the 5-session threshold on its own, so
-    # this fixture also proves "not found" falls back to counting *all*
-    # collected dates (2), not some larger implicit value — update this
-    # fixture's date count alongside STALE_SESSION_THRESHOLD if it changes.
+    # 5 dates, item's last_touched_session (2026-01-01) is older than all
+    # of them, so it never matches a collected date and the conservative
+    # fallback counts = total = 5 — update this fixture's date count
+    # alongside STALE_SESSION_THRESHOLD if it changes.
     write_status_summary 2026-11-17 2026-11-16 2026-11-15 2026-11-14 2026-11-13
     write_open_item itemA open 2026-01-01
     local out ec=0
     out=$(run_open_staleness) || ec=$?
+    assert_contains "itemA" "$out"
+}
+
+function test_quoted_frontmatter_values_are_stripped() {
+    # Pins Important 8: Basic Memory can re-serialize frontmatter values as
+    # YAML-quoted strings (e.g. 'open', "2026-11-17"). Without stripping
+    # quotes, a quoted status never matches "open" (never counted as
+    # stale) and a quoted date sorts below every unquoted date (falsely
+    # maximally stale) — this fixture uses a quoted status AND a quoted
+    # last_touched_session that should legitimately be at-threshold stale.
+    set_up_project_dir
+    write_status_summary 2026-11-17 2026-11-16 2026-11-15 2026-11-14 2026-11-13
+    mkdir -p "$SCRATCH/.local/share/basic-memory/proj/open-items"
+    cat >"$SCRATCH/.local/share/basic-memory/proj/open-items/itemA.md" <<'EOF'
+---
+type: open-item
+status: 'open'
+last_touched_session: "2026-11-12"
+---
+EOF
+    local out ec=0
+    out=$(run_open_staleness) || ec=$?
+    assert_same "1" "$ec"
     assert_contains "itemA" "$out"
 }
 

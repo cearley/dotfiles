@@ -16,19 +16,23 @@ warns when the Open section's live-item count exceeds a cap (`check_open_section
 same new `lib-open-items.sh`). Covered by `tests/setup_memory_workflow_open_items_test.sh`.
 
 `save-session-skill.md.template` now creates new Open items as forward-only pointers: a
-short Open line that links to a detail note, instead of inline prose. Touch and resolve
-steps update the pointer, not a growing paragraph. Two review fixes tightened the wording
-of that pointer guidance so the model can't write the old inline shape by accident.
+short Open line that links to a detail note, instead of inline prose. Touch updates the
+item note's own frontmatter (`last_touched_session`), not the pointer line itself; resolve
+removes the pointer line and marks the note resolved. Two review fixes documented the
+3-state `status` enum (`open`/`stale`/`resolved`) and strengthened a regression test
+guarding the rollup's status transition.
 
 `save-session-maintenance-skill.md.template` gains a Stale Open Items Index rollup: a
-single index of stale pointers, validated against the note's `bm_schema` before it is
-written, so a malformed rollup fails loudly instead of silently corrupting the note. A
+single index of stale pointers. After the rollup is written, a read-only
+`bm_schema validate` pass over `open-item` notes reports any findings without auto-fixing
+them, so drift surfaces instead of silently accumulating. A
 template placeholder left undefined in the rollup line was also resolved. Covered by
 additional cases in `tests/setup_memory_workflow_templates_test.sh`.
 
 Legacy inline Open items are not converted automatically. The maintenance skill now offers
-an on-request conversion path that moves one legacy item at a time into the pointer shape,
-so existing notes are never rewritten in bulk without the user asking for it.
+an on-request conversion path that moves one or more specific items, named by the user,
+into the pointer shape, so existing notes are never rewritten in bulk without the user
+asking for it.
 
 `SMW_VERSION` moves to 25 to ship these template and script changes to existing v24
 installs via `check-drift.sh update`.
