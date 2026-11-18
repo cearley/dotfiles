@@ -36,3 +36,41 @@ function test_template_documents_bm_read_pagination_arguments() {
     grep -q 'start_line.*end_line.*max_tokens' "$TEMPLATE" && found=1
     assert_same "1" "$found"
 }
+
+function test_save_session_template_documents_open_item_note_type() {
+    local found=0
+    grep -q 'type: open-item' "$TEMPLATE" && found=1
+    assert_same "1" "$found"
+}
+
+function test_save_session_template_documents_open_pointer_line_format() {
+    local found=0
+    grep -q '\[\[Open: ' "$TEMPLATE" && found=1
+    assert_same "1" "$found"
+}
+
+function test_save_session_template_is_forward_only_for_open_items() {
+    local found=0
+    grep -qi 'forward-only' "$TEMPLATE" && found=1
+    assert_same "1" "$found"
+}
+
+function test_save_session_template_still_preserves_open_baseline() {
+    # Guards against this task accidentally dropping the existing v-anything
+    # rule that resolved items are the only thing ever removed from Open.
+    local found=0
+    grep -q 'Preserve the existing Open' "$TEMPLATE" && found=1
+    assert_same "1" "$found"
+}
+
+function test_save_session_template_documents_touch_tracking() {
+    local found=0
+    grep -qi 'Touch tracking' "$TEMPLATE" && found=1
+    assert_same "1" "$found"
+}
+
+function test_save_session_template_documents_resolving_pointer_items() {
+    local found=0
+    grep -qi 'resolving a pointer-ized item' "$TEMPLATE" && found=1
+    assert_same "1" "$found"
+}
