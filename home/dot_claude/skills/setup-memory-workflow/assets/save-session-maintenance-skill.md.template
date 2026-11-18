@@ -125,6 +125,29 @@ run `bm_schema(command="validate", note_type="open-item", project="__PROJECT__")
 is read-only, same as Step 0's `memory-doctor` check — and fold any findings into the
 completion summary; never auto-fix them.
 
+### On-request legacy Open-item conversion
+
+Convert a legacy (pre-pointer, freeform-prose) Open item to the pointer shape only when
+the user names one or more specific items for conversion in this maintenance request.
+Never a bulk/automatic sweep of every legacy item still in prose form — the same
+explicit-invocation, no-sweep discipline this template already applies to its
+reference-fact triage above. Absent that explicit naming, leave legacy prose bullets
+untouched, exactly as the save-session template's forward-only rule already does.
+
+For each named item: find its prose bullet in the status note's Open section and infer
+`found_session` from the dated Status Summary entry it originally appeared under (walk
+back through the log/archive chain if it predates the current status note); infer
+`severity` from any existing "(low priority)"-style marker in its text, omitting the
+field if none is present. Create its `open-items/<slug>.md` note with that frontmatter
+(`status: open`, the inferred `found_session`, `last_touched_session` set to today) and
+the item's `[category]` text as its body, using `bm_write(overwrite=false)`. Then
+fresh-read the status note and replace that one prose bullet — and only that bullet —
+with the standard pointer line from the save-session template:
+`- [<category>] <short title> — [[Open: <slug>]]`, via checksum-guarded `bm_edit`. Verify
+both receipts per the contract table above before reporting the conversion done; a
+partial pair (note created but pointer not swapped, or vice versa) is a stop, not a
+best-effort finish.
+
 ## On completion or failure
 
 Confirm touched note titles and returned permalinks/paths, final status size if triaged,

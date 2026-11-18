@@ -107,3 +107,17 @@ function test_maintenance_template_sets_status_stale_on_rollup() {
     grep -q 'status.*stale' "$TEMPLATE_MAINT" && found=1
     assert_same "1" "$found"
 }
+
+function test_maintenance_template_documents_on_request_conversion() {
+    local found=0
+    grep -qi 'on-request' "$TEMPLATE_MAINT" && found=1
+    assert_same "1" "$found"
+}
+
+function test_maintenance_template_conversion_is_not_bulk() {
+    # Guards against this step regressing into an automatic sweep of every
+    # legacy Open item.
+    local found=0
+    grep -qi 'never a bulk' "$TEMPLATE_MAINT" && found=1
+    assert_same "1" "$found"
+}
