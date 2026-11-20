@@ -111,6 +111,38 @@ else:
         self.assertEqual(self.log.read_text(), "add\n")
         self.assertFalse((self.project / ".basic-memory-workflow.json").exists())
 
+    def test_registration_under_bm_permalink_key_is_found(self):
+        # BM 1.x keys "WES.ViewPoint.Sample_API" as "wes.view-point.sample-api".
+        self.project = self.root / "WES.ViewPoint.Sample_API"
+        self.project.mkdir()
+        subprocess.run(["git", "init", "-q", str(self.project)], check=True, env=self.env)
+        p = self.config / "config.json"
+        path = str(self.home / ".local/share/basic-memory/WES.ViewPoint.Sample_API")
+        value = {"projects": {"other": {"path": "/x", "mode": "local"},
+                              "wes.view-point.sample-api": {"path": path, "mode": "local"}}}
+        p.write_text(json.dumps(value))
+        r = self.run_script("check")
+        self.assertIn("REGISTRATION: REGISTERED", r.stdout)
+        self.install()
+        self.assertEqual(json.loads(p.read_text()), value)
+        self.assertFalse(self.log.exists())
+
+    def test_exact_registration_key_wins_over_permalink_match(self):
+        self.project = self.root / "MyProj"
+        self.project.mkdir()
+        subprocess.run(["git", "init", "-q", str(self.project)], check=True, env=self.env)
+        p = self.config / "config.json"
+        p.write_text(json.dumps({"projects": {
+            "my-proj": {"path": "/elsewhere", "mode": "local"},
+            "MyProj": {"path": str(self.home / ".local/share/basic-memory/MyProj"), "mode": "local"}}}))
+        self.assertIn("REGISTRATION: REGISTERED", self.run_script("check").stdout)
+
+    def test_unrelated_registration_keys_stay_missing(self):
+        p = self.config / "config.json"
+        p.write_text(json.dumps({"projects": {"samples": {"path": "/x", "mode": "local"},
+                                              "sam-ple": {"path": "/y", "mode": "local"}}}))
+        self.assertIn("REGISTRATION: MISSING", self.run_script("check").stdout)
+
     def test_existing_custom_registration_is_reused(self):
         p = self.config / "config.json"
         value = {"projects": {"sample": {"path": str(self.root / "custom"), "mode": "local"}}}

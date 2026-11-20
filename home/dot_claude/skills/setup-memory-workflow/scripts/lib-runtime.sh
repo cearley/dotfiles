@@ -37,7 +37,18 @@ bm_registration() {
         echo INVALID
         return
     }
-    entry=$(jq -c --arg p "$PROJECT" '.projects[$p] // null' <<<"$data")
+    # BM 1.x stores a project under its permalink form and compares names that way
+    # (config.get_project), so "WES.ViewPoint" is keyed "wes.view-point". An exact key
+    # wins; otherwise match on that form. Names BM would transliterate or strip a file
+    # extension from are not reproduced here and still need an exact key.
+    entry=$(jq -c --arg p "$PROJECT" '
+        def bm_key: gsub("(?<a>[a-z0-9])(?<b>[A-Z])"; "\(.a)-\(.b)") | ascii_downcase
+            | gsub("_"; "-") | gsub("\u0027"; "") | gsub("[^a-z0-9/.-]"; "-")
+            | gsub("-+"; "-") | sub("^-"; "") | sub("-$"; "");
+        ($p | bm_key) as $k
+        | .projects[$p]
+            // ([.projects | to_entries[] | select((.key | bm_key) == $k) | .value] | first)
+            // null' <<<"$data")
     [ "$entry" != null ] || {
         echo MISSING
         return
