@@ -123,6 +123,7 @@ packages:
       - 'graphviz'
       - 'http-server'
       - 'hugo'
+      - 'just'                         # Command runner for per-project recipes (justfile)
       - 'localstack/tap/localstack-cli'
       - 'lynis'
       - 'nuget'
