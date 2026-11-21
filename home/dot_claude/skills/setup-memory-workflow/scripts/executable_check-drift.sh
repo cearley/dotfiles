@@ -7,49 +7,8 @@ set -euo pipefail
 LANG=${LANG:-C}
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 ASSETS_DIR="$SKILL_DIR/assets"
-# home/scripts/shared-utils.sh is never deployed (home/.chezmoiignore.tmpl ignores
-# scripts/), so this deployed, non-templated script can't source it; inline the
-# two functions it actually needs instead.
-print_message() {
-    local level="$1"
-    local message="$2"
-    local icon ascii
-    case "$level" in
-        "info")
-            icon="🔵"
-            ascii="[INFO]"
-            ;;
-        "success")
-            icon="✅"
-            ascii="[SUCCESS]"
-            ;;
-        "warning")
-            icon="⚠️ "
-            ascii="[WARNING]"
-            ;;
-        "error")
-            icon="❌"
-            ascii="[ERROR]"
-            ;;
-        "skip")
-            icon="⏭️"
-            ascii="[SKIP]"
-            ;;
-        "tip")
-            icon="💡"
-            ascii="[TIP]"
-            ;;
-        *) return ;;
-    esac
-    if [ "${LANG}" != "${LANG%UTF-8*}" ]; then
-        echo "$icon $message" >&2
-    else
-        echo "$ascii $message" >&2
-    fi
-}
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-messaging.sh
+source "$SKILL_DIR/scripts/lib-messaging.sh"
 PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 cd "$PROJECT_ROOT"
 PROJECT_ROOT=$(pwd -P)
@@ -73,35 +32,14 @@ source "$SKILL_DIR/scripts/migrations.sh"
 TEMPLATED_PIECE_NAMES=(save-session-skill save-session-maintenance-skill)
 TEMPLATED_PIECE_PATHS=(.claude/skills/save-session/SKILL.md .claude/skills/save-session-maintenance/SKILL.md)
 TEMPLATED_PIECE_TEMPLATES=("$ASSETS_DIR/save-session-skill.md.template" "$ASSETS_DIR/save-session-maintenance-skill.md.template")
-HOOK_PIECE_NAMES=(hook-config write-guard-hook crash-recovery-hook)
-HOOK_PIECE_EVENTS=(SessionStart PreToolUse SessionStart)
-HOOK_PIECE_MATCHERS=("" 'Bash|Edit|Write' "")
-HOOK_PIECE_SCRIPTS=(session-reminder.sh basic-memory-write-guard.sh crash-recovery-hook.sh)
-HOOK_BASE='${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/setup-memory-workflow/scripts/'
-HOOK_PIECE_CMDS=("\"${HOOK_BASE}session-reminder.sh\"" "\"${HOOK_BASE}basic-memory-write-guard.sh\"" "\"${HOOK_BASE}crash-recovery-hook.sh\"")
+# shellcheck source=home/dot_claude/skills/setup-memory-workflow/scripts/lib-hooks.sh
+source "$SKILL_DIR/scripts/lib-hooks.sh"
 
 validate_project_name() {
     # This workflow stores local projects under one directory; reject path traversal.
     if [ -z "$PROJECT" ] || [[ "$PROJECT" == */* ]] || [ "$PROJECT" = . ] || [ "$PROJECT" = .. ] || [[ "$PROJECT" == *$'\n'* ]]; then
         print_message error 'Invalid local project identity; resolve the override explicitly.'
         return 1
-    fi
-}
-
-hook_handle() {
-    local mode="$1" i="$2" state file=.claude/settings.local.json
-    state=$(hook_piece_status "$file" "${HOOK_PIECE_EVENTS[$i]}" "${HOOK_PIECE_MATCHERS[$i]}" "${HOOK_PIECE_SCRIPTS[$i]}" "${HOOK_PIECE_CMDS[$i]}")
-    printf '%s: %s\n' "$state" "${HOOK_PIECE_NAMES[$i]}"
-    if [ "$state" = INVALID ]; then return 1; fi
-    if [ "$mode" != check ] && { [ "$state" = MISSING ] || { [ "$mode" = update ] && [ "$state" = DRIFT ]; }; }; then
-        hook_piece_apply "$file" "${HOOK_PIECE_EVENTS[$i]}" "${HOOK_PIECE_MATCHERS[$i]}" "${HOOK_PIECE_SCRIPTS[$i]}" "${HOOK_PIECE_CMDS[$i]}"
-    fi
-    # Familiar names alone never establish ownership; surface retained ambiguity.
-    if [ -f "$file" ] && jq -e --arg s "${HOOK_PIECE_SCRIPTS[$i]}" \
-        --argjson owned "$(hook_owned_commands "${HOOK_PIECE_SCRIPTS[$i]}" "${HOOK_PIECE_CMDS[$i]}")" \
-        '[.hooks[][]?.hooks[]?.command // empty | select(contains($s)) |
-          select(. as $c | ($owned | index($c)) == null)] | length > 0' "$file" >/dev/null; then
-        print_message warning "AMBIGUOUS: familiar ${HOOK_PIECE_SCRIPTS[$i]} text preserved."
     fi
 }
 
