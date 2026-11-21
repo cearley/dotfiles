@@ -14,6 +14,15 @@ fi
 
 any_failed=0
 
+report_bundle_failure() { # <label suffix, e.g. " (casks)"> <exit code>
+    local label="$1" exit_code="$2"
+    if [ "$exit_code" -ne 0 ]; then
+        any_failed=1
+        print_message "warning" "brew bundle${label} completed with errors — some packages may not be installed."
+        print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
+    fi
+}
+
 print_message "info" "Installing packages using Homebrew..."
 
 {{ $tapGroups := includeTemplate "package-layer-items" (merge (dict "key" "taps") .) | fromJson -}}
@@ -111,11 +120,7 @@ brew {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ en
 {{- end }}
 BUNDLE_EOF
 
-if [ "$brew_exit" -ne 0 ]; then
-    any_failed=1
-    print_message "warning" "brew bundle completed with errors — some packages may not be installed."
-    print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
-fi
+report_bundle_failure "" "$brew_exit"
 
 {{ if not $hasCasks -}}
 print_message "skip" "No cask packages to install for this tag set"
@@ -134,18 +139,16 @@ cask {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ en
 {{- end }}
 CASK_EOF
 
-if [ "$cask_exit" -ne 0 ]; then
-    any_failed=1
-    print_message "warning" "brew bundle (casks) completed with errors — some packages may not be installed."
-    print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
-fi
+report_bundle_failure " (casks)" "$cask_exit"
 {{ end }}
-
 {{ if not $hasMas -}}
 print_message "skip" "No Mac App Store packages to install for this tag set"
 {{ else -}}
-mas_exit=0
-brew bundle install --no-upgrade -v --file=/dev/stdin <<'MAS_EOF' || mas_exit=$?
+if [ -n "${CI:-}" ]; then
+    print_message "skip" "Skipping Mac App Store packages in CI (CI env var is set) — mas install hangs when not signed into an Apple ID"
+else
+    mas_exit=0
+    brew bundle install --no-upgrade -v --file=/dev/stdin <<'MAS_EOF' || mas_exit=$?
 {{- range $category := prepend .tag_choices "core" }}
   {{- $masItems := index $masByCategory $category }}
   {{- if $masItems }}
@@ -158,18 +161,14 @@ mas {{ . }}
 {{- end }}
 MAS_EOF
 
-if [ "$mas_exit" -ne 0 ]; then
-    any_failed=1
-    print_message "warning" "brew bundle (mas) completed with errors — some packages may not be installed."
-    print_message "info" "Run 'chezmoi apply' again after resolving the issue (e.g., restore network, fix broken cask entry)."
+    report_bundle_failure " (mas)" "$mas_exit"
 fi
 {{ end }}
-
 # Full declared set (taps, formulae, casks, mas), shared by the checks and
 # the upgrade below.
 combined_brewfile=$(mktemp)
 trap 'rm -f "$combined_brewfile"' EXIT
-cat > "$combined_brewfile" <<'CHECK_EOF'
+cat >"$combined_brewfile" <<'CHECK_EOF'
 {{- range .packages.darwin.taps }}
 tap {{ . | quote }}{{ if has . $.packages.darwin.trusted }}, trusted: true{{ end }}
 {{- end }}

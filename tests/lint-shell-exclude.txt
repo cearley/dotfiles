@@ -28,7 +28,6 @@ home/.chezmoiscripts/run_onchange_after_darwin-95-restart-syncthing.sh.tmpl
 home/.chezmoiscripts/run_onchange_before_darwin-10-install-rust.sh.tmpl
 home/.chezmoiscripts/run_onchange_before_darwin-20-install-sdkman.sh.tmpl
 home/.chezmoiscripts/run_onchange_before_darwin-21-install-uv.sh.tmpl
-home/.chezmoiscripts/run_onchange_before_darwin-23-install-packages.sh.tmpl
 home/.chezmoiscripts/run_onchange_before_darwin-24-install-sdks.sh.tmpl
 home/.chezmoiscripts/run_onchange_before_darwin-25-install-tools.sh.tmpl
 home/.chezmoiscripts/run_onchange_before_darwin-26-install-bun-packages.sh.tmpl
