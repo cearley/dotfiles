@@ -13,8 +13,19 @@ jobs:
         shell: bash
         run: |
           # Filenames in home/.chezmoiscripts/ encode execution order as a number
-          # (see home-scripts.md). A duplicate number makes run order ambiguous.
-          dupes="$(ls home/.chezmoiscripts/ | grep -oE '[0-9]+' | sort | uniq -d)"
+          # (see home-scripts.md): darwin-NN-description, or darwin-NN-M-description
+          # for an unambiguous sub-order within slot NN. A filename that doesn't match
+          # this shape fails loudly below instead of silently dropping out of the
+          # check; a duplicate order key makes run order ambiguous.
+          names="$(ls home/.chezmoiscripts/)"
+          bad="$(printf '%s\n' "$names" | grep -vE 'darwin-[0-9]+(-[0-9]+)?-')" || true
+          if [ -n "$bad" ]; then
+            echo "❌ Unparseable script filename(s) (expected .../darwin-NN[-M]-description...):"
+            echo "$bad"
+            exit 1
+          fi
+          keys="$(printf '%s\n' "$names" | sed -nE 's/^.*darwin-([0-9]+(-[0-9]+)?)-.*$/\1/p')"
+          dupes="$(printf '%s\n' "$keys" | sort | uniq -d)"
           if [ -n "$dupes" ]; then
             echo "❌ Duplicate script position number(s):"
             echo "$dupes"
