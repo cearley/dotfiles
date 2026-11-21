@@ -118,22 +118,22 @@ The format layer SHALL run `shfmt -d` with settings from the repo-root `.editorc
 - **THEN** it is skipped, not failed
 
 ### Requirement: Manual check entry points
-A root `Makefile` SHALL provide `lint-sh` (`--all`, or `FILES=...`), `lint` (all linters), `test` (isolated suites), `check` (`lint` plus `test`), `fmt` (rewrite plain `*.sh` outside `.chezmoitemplates/` with shfmt, never templates), and `hooks`.
+A root `justfile` SHALL provide `lint-sh` (`--all`, or a space-separated list of file paths), `lint` (all linters), `test` (isolated suites), `check` (`lint` plus `test`), `fmt` (rewrite plain `*.sh` outside `.chezmoitemplates/` with shfmt, never templates), and `hooks`.
 
 #### Scenario: Lint everything
-- **WHEN** `make lint` is run
-- **THEN** every discovered, non-excluded shell file is checked, and make exits non-zero if any fails
+- **WHEN** `just lint` is run
+- **THEN** every discovered, non-excluded shell file is checked, and the recipe exits non-zero if any fails
 
 #### Scenario: Lint specific files
-- **WHEN** `make lint-sh FILES="a.sh.tmpl b.sh"` is run
+- **WHEN** `just lint-sh a.sh.tmpl b.sh` is run
 - **THEN** only those files are checked, excluded or not
 
 #### Scenario: Format plain scripts
-- **WHEN** `make fmt` is run
+- **WHEN** `just fmt` is run
 - **THEN** plain `*.sh` files under `home/` are rewritten and no `*.tmpl` file is modified
 
 ### Requirement: Pre-commit hook
-A tracked `.githooks/pre-commit` SHALL pass the staged (added, copied, modified, renamed) files under `home/` to `tests/lint-shell` and block the commit on any failure. Unstaged files and the exclude list play no part. The repository SHALL document `make hooks`; `git commit --no-verify` SHALL bypass the hook.
+A tracked `.githooks/pre-commit` SHALL pass the staged (added, copied, modified, renamed) files under `home/` to `tests/lint-shell` and block the commit on any failure. Unstaged files and the exclude list play no part. The repository SHALL document `just hooks`; `git commit --no-verify` SHALL bypass the hook.
 
 #### Scenario: Staged template with a finding
 - **WHEN** a commit stages a `*.sh.tmpl` whose rendered output has a shellcheck finding
