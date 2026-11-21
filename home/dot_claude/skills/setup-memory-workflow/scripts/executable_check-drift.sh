@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 # Pure inspection; explicit installation, scoped repair, and project consent.
-# Hook commands intentionally retain literal environment expressions.
-# shellcheck disable=SC2016
 set -euo pipefail
 # Shared diagnostics inspect LANG; hooks and isolated clients may omit it.
 LANG=${LANG:-C}
