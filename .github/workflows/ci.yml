@@ -83,7 +83,7 @@ jobs:
           exit "$status"
 
       # Shellcheck settings live ONLY in the repo-root .shellcheckrc (shared with
-      # tests/lint-shell, make lint, and the pre-commit hook). Do not add flags here.
+      # tests/lint-shell, just lint, and the pre-commit hook). Do not add flags here.
       - name: shellcheck setup-memory-workflow scripts
         shell: bash
         run: |

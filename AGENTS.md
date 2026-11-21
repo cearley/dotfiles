@@ -14,7 +14,7 @@ bd dolt push          # Push beads data to remote
 
 ## Shell Linting
 
-Run `make lint` (or `tests/lint-shell <file>`) on shell files and templates you change; see `.claude/rules/home-scripts.md`.
+Run `just lint` (or `tests/lint-shell <file>`) on shell files and templates you change; see `.claude/rules/home-scripts.md`.
 
 ## Non-Interactive Shell Commands
 
