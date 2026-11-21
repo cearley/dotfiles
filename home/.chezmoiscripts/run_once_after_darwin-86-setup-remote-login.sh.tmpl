@@ -1,0 +1,22 @@
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $machineKey := index $settings "_machine_key" -}}
+{{- if and (eq .chezmoi.os "darwin") (or (eq $machineKey "Mac Studio") (eq $machineKey "MacBook Pro")) -}}
+#!/bin/bash
+
+set -eufo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+if ! require_tools systemsetup; then
+    exit 1
+fi
+
+print_message "info" "Enabling Remote Login (SSH) for cross-machine and mobile access..."
+
+if sudo systemsetup -setremotelogin on; then
+    print_message "success" "Remote Login enabled"
+else
+    print_message "error" "Failed to enable Remote Login"
+    exit 1
+fi
+{{ end -}}

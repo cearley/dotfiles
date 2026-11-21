@@ -1,0 +1,20 @@
+{{- $settings := includeTemplate "machine-settings" . | fromJson -}}
+{{- $machineKey := index $settings "_machine_key" -}}
+{{- if and .has_keepassxc_db (or (eq $machineKey "Mac Studio") (eq $machineKey "MacBook Pro")) -}}
+#!/bin/bash
+cat <<'EOF'
+{{ keepassxcAttribute "SSH (Mac Studio)" "id_ed25519.pub" | replace "\r" "" | trim }}
+{{ keepassxcAttribute "SSH (MacBook Pro)" "id_ed25519.pub" | replace "\r" "" | trim }}
+# --- end managed ---
+EOF
+
+existing=$(cat)
+tail=$(echo "$existing" | awk '/^# --- end managed ---/{found=1; next} found{print}')
+if [[ -n "$tail" ]]; then
+    printf '%s\n' "$tail"
+fi
+{{ else -}}
+#!/bin/bash
+cat
+{{- end -}}
+
