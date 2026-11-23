@@ -190,6 +190,7 @@ packages:
       - 'block-goose'                  # Open source, extensible AI agent that goes beyond code suggestions
       - 'chatgpt'                      # OpenAI's ChatGPT desktop app
       - 'claude'                       # Anthropic's official Claude AI desktop app
+      - 'herdr-app'                    # herdr desktop app
       - 'manaflow-ai/cmux/cmux'        # Ghostty-based terminal with vertical tabs and notifications for AI coding agents
       #- 'copilot-cli'
       - 'copilot-cli@prerelease'       # Brings the power of Copilot coding agent directly to your terminal
