@@ -1,0 +1,49 @@
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+#!/bin/bash
+
+# run_onchange trigger - Every 30 days: {{ includeTemplate "time-bucket" (dict "days" 30) }}
+# retry trigger - last failure: {{ includeTemplate "failure-stamp" (merge (dict "name" "herdr-core-38") .) }}
+
+set -euo pipefail
+
+source "{{ .chezmoi.sourceDir -}}/scripts/shared-utils.sh"
+
+# Install only: over an existing core, install.sh runs `herdr-core server restart`. Updates
+# are left to Herdr (the app updates its core, or `hc update`). Paths are checked as well as
+# PATH because ~/.local/bin may be missing from it. -L also catches a dangling link.
+core_bin="$HOME/.local/bin/herdr-core"
+core_bundle="$HOME/.local/share/herdr-core/current"
+# Our check: confirms the core really came from Herdr (detects a bad install, can't prevent one).
+signed_by_herdr='=identifier "dev.herdr.core" and anchor apple generic and certificate leaf[subject.OU] = "2W9652Q7QR"'
+if [[ -x "$core_bin" && -e "$core_bundle" ]] && ! /usr/bin/codesign --verify --strict -R "$signed_by_herdr" "$core_bundle"; then
+    print_message "error" "herdr-core doesn't have Herdr's release signature — check $core_bundle (a source build is also unsigned by Herdr)"
+    record_script_failure "herdr-core-38"
+    exit 0
+fi
+if [[ -x "$core_bin" ]] || command_exists herdr-core; then
+    print_message "skip" "herdr-core is already installed (Herdr or hc update updates it)"
+    exit 0
+fi
+# Never install over a partial install; what is there may be in use.
+if [[ -e "$core_bin" || -L "$core_bin" || -e "$core_bundle" || -L "$core_bundle" ]]; then
+    print_message "warning" "herdr-core looks partly installed — check $core_bin and $core_bundle by hand"
+    record_script_failure "herdr-core-38"
+    exit 0
+fi
+
+if ! require_tools curl tar; then
+    exit 1
+fi
+
+print_message "info" "Installing herdr-core (official installer)..."
+
+# Unset the installer's overrides so a stray variable can't redirect the install.
+if curl --proto '=https' --tlsv1.2 -fsSL https://releases.herdr.dev/core/install.sh |
+    env -u HC_INSTALL_DIR -u HC_VERSION -u HC_BUNDLE_ONLY -u HERDR_RELEASES_URL sh &&
+    [[ -x "$core_bin" ]] && /usr/bin/codesign --verify --strict -R "$signed_by_herdr" "$core_bundle"; then
+    print_message "success" "herdr-core installed and signature verified"
+else
+    print_message "error" "Failed to install or verify herdr-core — see https://github.com/herdrdev/herdr-core"
+    record_script_failure "herdr-core-38"
+fi
+{{ end -}}

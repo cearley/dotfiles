@@ -52,7 +52,7 @@ Scripts in `home/.chezmoiscripts/` use structured naming: `{frequency}_{timing}_
 - **00-09**: System Foundation (Rosetta 2)
 - **10-19**: Development Toolchains (Rust)
 - **20-29**: Package Management (SDKMAN, Homebrew packages, SDKs, UV tools, Bun packages, Cargo crates, machine-specific Brewfiles)
-- **30-39**: Environment Managers & AI Tooling (nvm, Claude Code, skills, MCP servers, plugins)
+- **30-39**: Environment Managers & AI Tooling (nvm, Claude Code, skills, MCP servers, plugins, Codex CLI, herdr-core)
 - **40-49**: Environment Setup (Claude LaunchAgent, SpecStory, GitHub/SSH auth)
 - **80-99**: System Configuration (security, VPN, sync services, defaults, validation)
 

@@ -27,6 +27,7 @@ Available in `home/.chezmoitemplates/`:
   {{- $profiles := includeTemplate "profile-list" . | fromJson -}}
   PROFILE_DIRS=({{ range $profiles }}"{{ .dir }}" {{ end }})
   ```
+- `herdr-core-claude-template` - Body of every `private_dot_config/herdr-core/templates/claude-<profile>.md.tmpl` wrapper (pass `profile`): an `hc run` agent template that starts Claude Code in that profile through a login shell. Renders empty, so no file is created, when `profile-list` has no such profile on this machine. A new profile needs one more one-line wrapper.
 - `claude-profile-not-shared-categories` - Plain JSON array of the bare category labels that are NOT shared across Claude Code profiles (`settings.json`, `.claude.json`, `plugins/`, `projects/`, `CLAUDE.md`). Single source of truth consumed by `claude-tooling.md.tmpl`. Formerly also consumed by `executable_claude-profile-mismatch-guard.tmpl` (the same list minus `.claude.json`), retired 2026-11-17 in favor of the `ccenv-profile-guard` mod in the separate `zsh-claude-env` project.
   ```go-template
   {{- $categories := includeTemplate "claude-profile-not-shared-categories" . | fromJson -}}

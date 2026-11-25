@@ -1,0 +1,29 @@
+{{- /* herdr-core (hc) agent template that starts Claude Code in one profile.
+
+     Parameter (merge into the template context):
+     - profile (required): a profile name as returned by profile-list
+
+     Renders empty (so chezmoi creates no file) when this machine lacks the profile or the
+     `ai` tag. `zsh -lic` because hc starts programs with the core's bare PATH; `command`/`env`
+     bypass .zshrc's claude() hcom shadow; the profile is set inside the shell because .zshrc may
+     export one.
+     hc requires the output to start with "---" and reads header values literally (no YAML
+     quoting, no comments). Never name a wrapper claude.md: `hc run claude` would pick it up.
+
+     Example:
+       {{- includeTemplate "herdr-core-claude-template" (merge (dict "profile" "work") .) -}}
+*/ -}}
+{{- if not (hasKey . "profile") -}}
+{{-   fail "herdr-core-claude-template: 'profile' parameter is required" -}}
+{{- end -}}
+{{- $profile := .profile -}}
+{{- if and (eq .chezmoi.os "darwin") (has "ai" .tags) -}}
+{{- range includeTemplate "profile-list" . | fromJson -}}
+{{- if eq .name $profile -}}
+---
+description: Claude Code, {{ .name }} profile, with the login shell's PATH
+command: zsh -lic '{{ if eq .name "default" }}env -u CLAUDE_CONFIG_DIR claude{{ else }}CLAUDE_CONFIG_DIR="{{ .dir }}" command claude{{ end }}'
+---
+{{ end -}}
+{{- end -}}
+{{- end -}}
